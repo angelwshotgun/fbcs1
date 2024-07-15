@@ -69,8 +69,6 @@ coefficients_df = pd.DataFrame(coefficients_list, columns=['Player', 'Coefficien
 def calculate_pair_coefficients(players):
     pair_coefficients = {}
     for p1, p2 in combinations(players, 2):
-        if p1 < p2:  # Chỉ tính toán cho một cặp duy nhất
-            # Lấy các trận đấu mà cả hai người chơi đều tham gia
             matches = df[(df[p1] != 0) & (df[p2] != 0)]
             if not matches.empty:
                 # Tính tỷ lệ thắng khi hai người chơi cùng đội
@@ -78,6 +76,35 @@ def calculate_pair_coefficients(players):
                 # Chuẩn hóa hệ số kết hợp
                 pair_coefficients[(p1, p2)] = (win_rate - 0.5) * 2
     return pair_coefficients
+
+def retrain_model():
+    global coefficients_df, X, y
+    
+    # Read the latest data
+    data = read_csv_from_github()
+    df = pd.DataFrame(data)
+    
+    # Update X and y
+    X = df.drop(columns=['Result'])
+    y = df['Result']
+    
+    coefficients_list = []
+    
+    for player in X.columns:
+        player_data = df[df[player] != 0]
+        
+        if not player_data.empty:
+            X_player = player_data.drop(columns=['Result'])
+            y_player = player_data['Result']
+            
+            model = LogisticRegression(random_state=42)
+            model.fit(X_player, y_player)
+            
+            coefficient = model.coef_[0][X_player.columns.get_loc(player)]
+            coefficients_list.append((player, coefficient))
+    
+    # Update coefficients_df
+    coefficients_df = pd.DataFrame(coefficients_list, columns=['Player', 'Coefficient'])
 
 @app.route('/players', methods=['GET'])
 def get_player_names():
@@ -186,7 +213,10 @@ def update_match_result():
         # Save updated dataframe back to GitHub
         save_csv_to_github(df)
 
-        return jsonify({"message": "Match result updated successfully"}), 200
+        # Retrain the model
+        retrain_model()
+
+        return jsonify({"message": "Match result updated and model retrained successfully"}), 200
     except Exception as e:
         app.logger.error(f"Error in update_match_result: {str(e)}")
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
@@ -213,6 +243,15 @@ def get_pair_coefficients():
     
     return jsonify(pair_coeffs_list)
 
+@app.route('/retrain', methods=['POST'])
+def retrain():
+    try:
+        retrain_model()
+        return jsonify({"message": "Model retrained successfully"}), 200
+    except Exception as e:
+        app.logger.error(f"Error in retraining: {str(e)}")
+        return jsonify({"error": f"An error occurred during retraining: {str(e)}"}), 500
+    
 @app.route('/')
 def serve_frontend():
     return send_from_directory(os.getcwd(), 'index.html')
