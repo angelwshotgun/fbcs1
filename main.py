@@ -64,6 +64,19 @@ for player in X.columns:
 # Tạo DataFrame từ danh sách hệ số và sắp xếp từ cao đến thấp
 coefficients_df = pd.DataFrame(coefficients_list, columns=['Player', 'Coefficient'])
 
+def calculate_pair_coefficients(players):
+    pair_coefficients = {}
+    for p1, p2 in combinations(players, 2):
+        if p1 < p2:  # Chỉ tính toán cho một cặp duy nhất
+            # Lấy các trận đấu mà cả hai người chơi đều tham gia
+            matches = df[(df[p1] != 0) & (df[p2] != 0)]
+            if not matches.empty:
+                # Tính tỷ lệ thắng khi hai người chơi cùng đội
+                win_rate = matches[(matches[p1] == matches[p2]) & (matches['Result'] == matches[p1])].shape[0] / matches.shape[0]
+                # Chuẩn hóa hệ số kết hợp
+                pair_coefficients[(p1, p2)] = (win_rate - 0.5) * 2
+    return pair_coefficients
+
 @app.route('/players', methods=['GET'])
 def get_player_names():
     try:
@@ -73,6 +86,8 @@ def get_player_names():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
+from itertools import combinations
+
 @app.route('/create_teams', methods=['POST'])
 def create_teams():
     selected_players = request.json['players']
@@ -80,14 +95,19 @@ def create_teams():
     # Lấy hệ số của những người chơi được chỉ định
     selected_coefficients = coefficients_df[coefficients_df['Player'].isin(selected_players)]
     
+    # Tính toán hệ số kết hợp cho mỗi cặp người chơi
+    pair_coefficients = calculate_pair_coefficients(selected_players)
+    
     # Tạo tất cả các tổ hợp có thể của 5 người từ danh sách 10 người
     combinations_5 = list(combinations(selected_coefficients['Player'], 5))
     
-    # Tính tổng hệ số của mỗi tổ hợp
+    # Tính tổng hệ số của mỗi tổ hợp, bao gồm cả hệ số kết hợp
     combination_scores = []
     for comb in combinations_5:
-        score = selected_coefficients[selected_coefficients['Player'].isin(comb)]['Coefficient'].sum()
-        combination_scores.append((comb, score))
+        individual_score = selected_coefficients[selected_coefficients['Player'].isin(comb)]['Coefficient'].sum()
+        pair_score = sum(pair_coefficients.get((p1, p2), 0) for p1, p2 in combinations(comb, 2))
+        total_score = individual_score + pair_score
+        combination_scores.append((comb, total_score))
     
     # Tạo DataFrame từ danh sách tổ hợp và tổng hệ số
     combination_scores_df = pd.DataFrame(combination_scores, columns=['Combination', 'Total_Coefficient'])
@@ -125,36 +145,49 @@ def create_teams():
 
 @app.route('/update_match_result', methods=['POST'])
 def update_match_result():
-    data = request.json
-    team1 = data['team1']
-    team2 = data['team2']
-    winner = data['winner']
+    try:
+        data = request.json
+        team1 = data['team1']
+        team2 = data['team2']
+        winner = data['winner']
 
-    # Read current data
-    df = read_csv_from_github()
+        # Read current data
+        df = read_csv_from_github()
 
-    # Create a new row for this match
-    new_row = pd.DataFrame(columns=df.columns)
-    new_row.loc[0] = 0  # Initialize with zeros
+        # Create a new row for this match
+        new_row = pd.DataFrame(columns=df.columns)
+        new_row.loc[0] = 0  # Initialize with zeros
 
-    # Set 1 for players in team1
-    for player in team1:
-        new_row[player] = 1
+        # Set 1 for players in team1
+        for player in team1:
+            if player in new_row.columns:
+                new_row.at[0, player] = 1
+            else:
+                return jsonify({"error": f"Player {player} not found in the dataset"}), 400
 
-    # Set 2 for players in team2
-    for player in team2:
-        new_row[player] = 2
+        # Set 2 for players in team2
+        for player in team2:
+            if player in new_row.columns:
+                new_row.at[0, player] = 2
+            else:
+                return jsonify({"error": f"Player {player} not found in the dataset"}), 400
 
-    # Set the result (1 for team1 win, 2 for team2 win)
-    new_row['Result'] = 1 if winner == 'team1' else 2
+        # Set the result (1 for team1 win, 2 for team2 win)
+        if 'Result' in new_row.columns:
+            new_row.at[0, 'Result'] = 1 if winner == 'team1' else 2
+        else:
+            return jsonify({"error": "Result column not found in the dataset"}), 400
 
-    # Append the new row to the dataframe
-    df = df.append(new_row, ignore_index=True)
+        # Concatenate the new row to the dataframe
+        df = pd.concat([df, new_row], ignore_index=True)
 
-    # Save updated dataframe back to GitHub
-    save_csv_to_github(df)
+        # Save updated dataframe back to GitHub
+        save_csv_to_github(df)
 
-    return jsonify({"message": "Match result updated successfully"}), 200
+        return jsonify({"message": "Match result updated successfully"}), 200
+    except Exception as e:
+        app.logger.error(f"Error in update_match_result: {str(e)}")
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 @app.route('/sorted_coefficients', methods=['GET'])
 def get_sorted_coefficients():
@@ -166,13 +199,27 @@ def get_sorted_coefficients():
     
     return jsonify(coeffs_list)
 
+@app.route('/pair_coefficients', methods=['GET'])
+def get_pair_coefficients():
+    players = X.columns.tolist()
+    pair_coeffs = calculate_pair_coefficients(players)
+    
+    # Convert to a list of dictionaries and sort by coefficient in descending order
+    pair_coeffs_list = [{"player1": p1, "player2": p2, "coefficient": coeff} 
+                        for (p1, p2), coeff in pair_coeffs.items()]
+    pair_coeffs_list.sort(key=lambda x: x['coefficient'], reverse=True)
+    
+    return jsonify(pair_coeffs_list)
+
 @app.route('/')
 def serve_frontend():
     return send_from_directory(os.getcwd(), 'index.html')
 @app.route('/player')
 def index2():
     return send_from_directory(os.getcwd(), 'index2.html')
-
+@app.route('/pair')
+def index3():
+    return send_from_directory(os.getcwd(), 'index3.html')
 
 if __name__ == '__main__':
     app.run(debug=True, port=int(os.environ.get('PORT', 8001)))
