@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -41,7 +42,8 @@ df = pd.DataFrame(data)
 X = df.drop(columns=['Result'])
 y = df['Result']
 
-# Lưu trữ hệ số của các player
+np.random.seed(42)
+
 coefficients_list = []
 
 for player in X.columns:
@@ -53,8 +55,8 @@ for player in X.columns:
         X_player = player_data.drop(columns=['Result'])
         y_player = player_data['Result']
         
-        # Huấn luyện mô hình logistic regression cho player
-        model = LogisticRegression()
+        # Huấn luyện mô hình logistic regression cho player với seed cố định
+        model = LogisticRegression(random_state=42)
         model.fit(X_player, y_player)
         
         # Lấy hệ số của player
