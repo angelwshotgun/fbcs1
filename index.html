@@ -64,13 +64,13 @@
     <header>
         <nav>
           <ul>
-            <li><a href="/">Trang chủ</a></li>
+            <li><a href="/">Chia đội</a></li>
             <li><a href="/player">Elo</a></li>
             <li><a href="/pair">Danh sách 2</a></li>
           </ul>
         </nav>
       </header>
-    <h1>Team Creator</h1>
+    <h1>FBCS AI 2.0</h1>
     <div id="playerButtons"></div>
     <button id="createTeamBtn" onclick="createTeams()">Create Teams</button>
     <div id="result"></div>
@@ -150,6 +150,8 @@
                 const data = await response.json();
                 currentTeams = data;
                 displayResult(data);
+                
+                // Don't clear selectedPlayers here
             } catch (error) {
                 console.error('Error creating teams:', error);
                 alert(error.message);
@@ -198,11 +200,14 @@
 
                 alert(result.message);
                 
-                // Clear the current teams and reset the selection
+                // Clear the current teams
                 currentTeams = null;
-                selectedPlayers = [];
-                updateButtonStyles();
+                
+                // Clear the result display
                 document.getElementById('result').innerHTML = '';
+
+                // Don't clear selectedPlayers, just update the button styles
+                updateButtonStyles();
 
             } catch (error) {
                 console.error('Error updating match result:', error);
