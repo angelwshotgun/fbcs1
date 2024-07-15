@@ -65,7 +65,8 @@
         <nav>
           <ul>
             <li><a href="/">Trang chủ</a></li>
-            <li><a href="/player">Dự đoán</a></li>
+            <li><a href="/player">Danh sách</a></li>
+            <li><a href="/pair">Danh sách 2</a></li>
           </ul>
         </nav>
       </header>
@@ -171,41 +172,42 @@
         }
 
         async function updateMatchResult(winningTeam) {
-        if (!currentTeams) {
-            alert("Please create teams first.");
-            return;
-        }
-
-        try {
-            const response = await fetch('/update_match_result', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    team1: currentTeams.team1,
-                    team2: currentTeams.team2,
-                    winner: winningTeam
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update match result');
-            }
-
-            const result = await response.json();
-            alert(result.message);
-            
-            // Clear the current teams and reset the selection
-            currentTeams = null;
-            selectedPlayers = [];
-            updateButtonStyles();
-            document.getElementById('result').innerHTML = '';
-        } catch (error) {
-            console.error('Error updating match result:', error);
-            alert('An error occurred while updating the match result.');
-        }
+    if (!currentTeams) {
+        alert("Please create teams first.");
+        return;
     }
+
+    try {
+        const response = await fetch('/update_match_result', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                team1: currentTeams.team1,
+                team2: currentTeams.team2,
+                winner: winningTeam
+            }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to update match result');
+        }
+
+        alert(result.message);
+        
+        // Clear the current teams and reset the selection
+        currentTeams = null;
+        selectedPlayers = [];
+        updateButtonStyles();
+        document.getElementById('result').innerHTML = '';
+    } catch (error) {
+        console.error('Error updating match result:', error);
+        alert('An error occurred while updating the match result: ' + error.message);
+    }
+}
 
         // Automatically fetch and display players when the page loads
         document.addEventListener('DOMContentLoaded', displayPlayers);
