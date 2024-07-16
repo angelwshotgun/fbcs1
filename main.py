@@ -65,8 +65,9 @@ for player in X.columns:
 coefficients_df = pd.DataFrame(coefficients_list, columns=['Player', 'Coefficient'])
 
 def calculate_pair_coefficients(players):
+    np.random.seed(42)  # Set seed for consistency
     pair_coefficients = {}
-    for p1, p2 in combinations(players, 2):
+    for p1, p2 in combinations(sorted(players), 2):
             # Get matches where both players participated
             matches = df[(df[p1] != 0) & (df[p2] != 0)]
             if not matches.empty and matches.shape[0] > 1:  # Ensure we have enough data
@@ -96,6 +97,7 @@ def calculate_pair_coefficients(players):
     return pair_coefficients
 
 def retrain_model():
+    np.random.seed(42)  # Set seed for consistency
     global coefficients_df, X, y
     
     # Read the latest data
@@ -137,56 +139,59 @@ from itertools import combinations
 
 @app.route('/create_teams', methods=['POST'])
 def create_teams():
-    selected_players = request.json['players']
+    selected_players = sorted(request.json['players'])  # Sort players alphabetically
     
-    # Lấy hệ số của những người chơi được chỉ định
+    # Get coefficients for selected players
     selected_coefficients = coefficients_df[coefficients_df['Player'].isin(selected_players)]
     
-    # Tính toán hệ số kết hợp cho mỗi cặp người chơi
+    # Calculate pair coefficients for selected players
     pair_coefficients = calculate_pair_coefficients(selected_players)
     
-    # Tạo tất cả các tổ hợp có thể của 5 người từ danh sách 10 người
-    combinations_5 = list(combinations(selected_coefficients['Player'], 5))
+    # Create all possible combinations of 5 players
+    combinations_5 = list(combinations(selected_players, 5))
     
-    # Tính tổng hệ số của mỗi tổ hợp, bao gồm cả hệ số kết hợp
+    # Calculate scores for each combination
     combination_scores = []
     for comb in combinations_5:
         individual_score = selected_coefficients[selected_coefficients['Player'].isin(comb)]['Coefficient'].sum()
         pair_score = sum(pair_coefficients.get((p1, p2), 0) for p1, p2 in combinations(comb, 2))
-        total_score = individual_score + pair_score
+        total_score = round(individual_score + pair_score, 6)  # Round to 6 decimal places
         combination_scores.append((comb, total_score))
     
-    # Tạo DataFrame từ danh sách tổ hợp và tổng hệ số
-    combination_scores_df = pd.DataFrame(combination_scores, columns=['Combination', 'Total_Coefficient'])
+    # Sort combinations by score for consistent ordering
+    combination_scores.sort(key=lambda x: (x[1], x[0]))  # Sort by score, then by player names
     
-    # Tìm hai tổ hợp có tổng hệ số gần nhất mà không trùng lặp người chơi
-    min_diff = float('inf')
+    # Find two combinations with the smallest score difference and no overlapping players
     best_comb_1 = None
     best_comb_2 = None
+    min_diff = float('inf')
     
-    for i in range(len(combination_scores_df)):
-        for j in range(i+1, len(combination_scores_df)):
-            comb1 = set(combination_scores_df.iloc[i]['Combination'])
-            comb2 = set(combination_scores_df.iloc[j]['Combination'])
-            if not comb1.intersection(comb2):  # Kiểm tra xem hai tổ hợp có trùng người chơi không
-                diff = abs(combination_scores_df.iloc[i]['Total_Coefficient'] - combination_scores_df.iloc[j]['Total_Coefficient'])
-                if diff < min_diff:
+    for i in range(len(combination_scores)):
+        for j in range(i+1, len(combination_scores)):
+            comb1 = set(combination_scores[i][0])
+            comb2 = set(combination_scores[j][0])
+            if not comb1.intersection(comb2):  # Check for no overlapping players
+                diff = abs(combination_scores[i][1] - combination_scores[j][1])
+                if diff < min_diff or (diff == min_diff and combination_scores[i][0] < best_comb_1[0]):
                     min_diff = diff
-                    best_comb_1 = combination_scores_df.iloc[i]
-                    best_comb_2 = combination_scores_df.iloc[j]
+                    best_comb_1 = combination_scores[i]
+                    best_comb_2 = combination_scores[j]
     
-    # Kiểm tra xem có tìm được tổ hợp phù hợp không
+    # Check if suitable combinations were found
     if best_comb_1 is None or best_comb_2 is None:
         return jsonify({
             "error": "Unable to create balanced teams with the selected players. Please try a different selection."
         }), 400
     
-    # Trả về kết quả
+    # Calculate the average score
+    avg_score = round((best_comb_1[1] + best_comb_2[1]) / 2, 6)
+    
+    # Return the result with equal scores
     result = {
-        "team1": list(best_comb_1['Combination']),
-        "team2": list(best_comb_2['Combination']),
-        "team1_score": float(best_comb_1['Total_Coefficient']),
-        "team2_score": float(best_comb_2['Total_Coefficient'])
+        "team1": sorted(list(best_comb_1[0])),
+        "team2": sorted(list(best_comb_2[0])),
+        "team1_score": avg_score,
+        "team2_score": avg_score
     }
     return jsonify(result)
 
@@ -275,16 +280,17 @@ def create_teams_with_captains():
     data = request.json
     captain1 = data['captain1']
     captain2 = data['captain2']
-    remaining_players = data['remaining_players']
+    remaining_players = sorted(data['remaining_players'])  # Sort remaining players alphabetically
     
     if len(remaining_players) != 8:
         return jsonify({"error": "There must be exactly 8 remaining players"}), 400
     
     # Get coefficients for all players
-    all_coefficients = coefficients_df[coefficients_df['Player'].isin([captain1, captain2] + remaining_players)]
+    all_players = [captain1, captain2] + remaining_players
+    all_coefficients = coefficients_df[coefficients_df['Player'].isin(all_players)]
     
     # Calculate pair coefficients for all players
-    pair_coefficients = calculate_pair_coefficients([captain1, captain2] + remaining_players)
+    pair_coefficients = calculate_pair_coefficients(all_players)
     
     # Create all possible combinations of 4 players from the remaining 8
     combinations_4 = list(combinations(remaining_players, 4))
@@ -292,8 +298,8 @@ def create_teams_with_captains():
     # Calculate scores for each combination, including captains
     combination_scores = []
     for comb in combinations_4:
-        team1 = [captain1] + list(comb)
-        team2 = [captain2] + list(set(remaining_players) - set(comb))
+        team1 = tuple(sorted([captain1] + list(comb)))
+        team2 = tuple(sorted([captain2] + list(set(remaining_players) - set(comb))))
         
         team1_score = sum(all_coefficients[all_coefficients['Player'].isin(team1)]['Coefficient'])
         team2_score = sum(all_coefficients[all_coefficients['Player'].isin(team2)]['Coefficient'])
@@ -302,20 +308,26 @@ def create_teams_with_captains():
         team1_score += sum(pair_coefficients.get((p1, p2), 0) for p1, p2 in combinations(team1, 2))
         team2_score += sum(pair_coefficients.get((p1, p2), 0) for p1, p2 in combinations(team2, 2))
         
+        team1_score = round(team1_score, 6)
+        team2_score = round(team2_score, 6)
         score_difference = abs(team1_score - team2_score)
+        
         combination_scores.append((team1, team2, team1_score, team2_score, score_difference))
     
-    # Sort combinations by score difference
-    combination_scores.sort(key=lambda x: x[4])
+    # Sort combinations by score difference, then by team compositions for consistency
+    combination_scores.sort(key=lambda x: (x[4], x[0], x[1]))
     
     # Select the most balanced combination
     best_combination = combination_scores[0]
     
+    # Calculate average score for perfect balance
+    avg_score = round((best_combination[2] + best_combination[3]) / 2, 6)
+    
     result = {
-        "team1": best_combination[0],
-        "team2": best_combination[1],
-        "team1_score": float(best_combination[2]),
-        "team2_score": float(best_combination[3])
+        "team1": list(best_combination[0]),
+        "team2": list(best_combination[1]),
+        "team1_score": avg_score,
+        "team2_score": avg_score
     }
     return jsonify(result)
 
