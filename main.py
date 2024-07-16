@@ -67,12 +67,32 @@ coefficients_df = pd.DataFrame(coefficients_list, columns=['Player', 'Coefficien
 def calculate_pair_coefficients(players):
     pair_coefficients = {}
     for p1, p2 in combinations(players, 2):
+            # Get matches where both players participated
             matches = df[(df[p1] != 0) & (df[p2] != 0)]
-            if not matches.empty:
-                # Tính tỷ lệ thắng khi hai người chơi cùng đội
-                win_rate = matches[(matches[p1] == matches[p2]) & (matches['Result'] == matches[p1])].shape[0] / matches.shape[0]
-                # Chuẩn hóa hệ số kết hợp
-                pair_coefficients[(p1, p2)] = (win_rate - 0.5) * 2
+            if not matches.empty and matches.shape[0] > 1:  # Ensure we have enough data
+                # Prepare the features (whether players are on the same team)
+                X = (matches[p1] == matches[p2]).values.reshape(-1, 1)
+                # Prepare the target (match result)
+                y = (matches['Result'] == matches[p1]).astype(int)
+                
+                # Check if we have more than one class
+                if len(np.unique(y)) > 1:
+                    # Train a logistic regression model
+                    model = LogisticRegression(random_state=42)
+                    model.fit(X, y)
+                    
+                    # The coefficient represents the impact of being on the same team
+                    coefficient = model.coef_[0][0]
+                    
+                    # Normalize the coefficient to be between -1 and 1
+                    normalized_coeff = 2 * (1 / (1 + np.exp(-coefficient)) - 0.5)
+                else:
+                    # If we only have one class, use the win rate instead
+                    win_rate = y.mean()
+                    normalized_coeff = (win_rate - 0.5) * 2
+                
+                pair_coefficients[(p1, p2)] = normalized_coeff
+
     return pair_coefficients
 
 def retrain_model():
@@ -250,6 +270,55 @@ def retrain():
         app.logger.error(f"Error in retraining: {str(e)}")
         return jsonify({"error": f"An error occurred during retraining: {str(e)}"}), 500
     
+@app.route('/create_teams_with_captains', methods=['POST'])
+def create_teams_with_captains():
+    data = request.json
+    captain1 = data['captain1']
+    captain2 = data['captain2']
+    remaining_players = data['remaining_players']
+    
+    if len(remaining_players) != 8:
+        return jsonify({"error": "There must be exactly 8 remaining players"}), 400
+    
+    # Get coefficients for all players
+    all_coefficients = coefficients_df[coefficients_df['Player'].isin([captain1, captain2] + remaining_players)]
+    
+    # Calculate pair coefficients for all players
+    pair_coefficients = calculate_pair_coefficients([captain1, captain2] + remaining_players)
+    
+    # Create all possible combinations of 4 players from the remaining 8
+    combinations_4 = list(combinations(remaining_players, 4))
+    
+    # Calculate scores for each combination, including captains
+    combination_scores = []
+    for comb in combinations_4:
+        team1 = [captain1] + list(comb)
+        team2 = [captain2] + list(set(remaining_players) - set(comb))
+        
+        team1_score = sum(all_coefficients[all_coefficients['Player'].isin(team1)]['Coefficient'])
+        team2_score = sum(all_coefficients[all_coefficients['Player'].isin(team2)]['Coefficient'])
+        
+        # Add pair coefficients
+        team1_score += sum(pair_coefficients.get((p1, p2), 0) for p1, p2 in combinations(team1, 2))
+        team2_score += sum(pair_coefficients.get((p1, p2), 0) for p1, p2 in combinations(team2, 2))
+        
+        score_difference = abs(team1_score - team2_score)
+        combination_scores.append((team1, team2, team1_score, team2_score, score_difference))
+    
+    # Sort combinations by score difference
+    combination_scores.sort(key=lambda x: x[4])
+    
+    # Select the most balanced combination
+    best_combination = combination_scores[0]
+    
+    result = {
+        "team1": best_combination[0],
+        "team2": best_combination[1],
+        "team1_score": float(best_combination[2]),
+        "team2_score": float(best_combination[3])
+    }
+    return jsonify(result)
+
 @app.route('/')
 def serve_frontend():
     return send_from_directory(os.getcwd(), 'index.html')
@@ -259,6 +328,9 @@ def index2():
 @app.route('/pair')
 def index3():
     return send_from_directory(os.getcwd(), 'index3.html')
+@app.route('/captains')
+def index4():
+    return send_from_directory(os.getcwd(), 'index4.html')
 
 if __name__ == '__main__':
     app.run(debug=True, port=int(os.environ.get('PORT', 8001)))
