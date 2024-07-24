@@ -150,12 +150,21 @@ def create_teams():
     # Create all possible combinations of 5 players
     combinations_5 = list(combinations(selected_players, 5))
     
+    max_individual_coeff = max(abs(coeff) for _, coeff in coefficients_list)
+    max_pair_coeff = max(abs(coeff) for coeff in pair_coefficients.values())
+
+    # Hệ số cân bằng (có thể điều chỉnh)
+    individual_weight = 0.8
+    pair_weight = 0.2
+
     # Calculate scores for each combination
     combination_scores = []
     for comb in combinations_5:
-        individual_score = selected_coefficients[selected_coefficients['Player'].isin(comb)]['Coefficient'].sum()
-        pair_score = sum(pair_coefficients.get((p1, p2), 0) for p1, p2 in combinations(comb, 2))
-        total_score = round(individual_score + pair_score, 6)  # Round to 6 decimal places
+        individual_score = sum(selected_coefficients[selected_coefficients['Player'].isin(comb)]['Coefficient']) / max_individual_coeff
+        pair_score = sum(pair_coefficients.get((p1, p2), 0) for p1, p2 in combinations(comb, 2)) / max_pair_coeff
+        
+        total_score = (individual_score * individual_weight) + (pair_score * pair_weight)
+        total_score = round(total_score, 6)
         combination_scores.append((comb, total_score))
     
     # Sort combinations by score for consistent ordering
