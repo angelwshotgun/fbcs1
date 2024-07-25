@@ -354,4 +354,4 @@ def index4():
     return send_from_directory(os.getcwd(), 'index4.html')
 
 if __name__ == '__main__':
-    app.run(debug=True, port=int(os.environ.get('PORT', 8001)))
+    app.run(debug=True)
