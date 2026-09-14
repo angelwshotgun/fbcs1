@@ -5,6 +5,13 @@ let selectedCaptains = [];
 let selectedCaptainMembers = [];
 let currentTeamsResult = null;
 
+// Trạng thái cho tab Mô Phỏng 5vs5 (Simulation)
+let simTeam1 = [null, null, null, null, null];
+let simTeam2 = [null, null, null, null, null];
+let simUnmatchedSlotInfo = { team1: {}, team2: {} };
+let pendingSlotAssignment = null;
+let lastOcrResult = null;
+
 const SWAL_THEME = {
     background: '#ffffff',
     color: '#0f172a',
@@ -47,6 +54,7 @@ function switchTab(tabId) {
     if (tabId === 'players') renderAdminPlayers();
     if (tabId === 'captains') renderCaptainPlayers();
     if (tabId === 'matchmaker') renderMatchmakerPlayers();
+    if (tabId === 'simulation') renderSimulationBoard();
 }
 
 // ==========================================
@@ -62,6 +70,7 @@ async function loadAllPlayers() {
             renderAdminPlayers();
             renderLeaderboard();
             renderCaptainPlayers();
+            renderSimulationBoard();
             document.getElementById('total-players-badge').innerText = `${allPlayers.length} Tuyển Thủ`;
         }
     } catch (err) {
@@ -899,6 +908,14 @@ async function handleSavePlayer(e) {
                 ...SWAL_THEME
             });
             await loadAllPlayers();
+            if (pendingSlotAssignment) {
+                const { team, slotIdx } = pendingSlotAssignment;
+                if (team === 'team1') simTeam1[slotIdx] = id;
+                if (team === 'team2') simTeam2[slotIdx] = id;
+                if (simUnmatchedSlotInfo[team]) delete simUnmatchedSlotInfo[team][slotIdx];
+                pendingSlotAssignment = null;
+                renderSimulationBoard();
+            }
         } else {
             Swal.fire({
                 icon: 'error',
@@ -1241,6 +1258,311 @@ function saveGeminiApiKey() {
 }
 
 // ==========================================
+// TAB: SIMULATION 5VS5 (MÔ PHỎNG & TRẬN ĐẤU TÙY CHỈNH)
+// ==========================================
+function renderSimulationBoard() {
+    const t1Container = document.getElementById('sim-t1-slots');
+    const t2Container = document.getElementById('sim-t2-slots');
+    if (!t1Container || !t2Container) return;
+
+    t1Container.innerHTML = '';
+    t2Container.innerHTML = '';
+
+    for (let i = 0; i < 5; i++) {
+        t1Container.appendChild(createSimulationSlotCard('team1', i));
+        t2Container.appendChild(createSimulationSlotCard('team2', i));
+    }
+
+    updateSimulationLiveStats();
+}
+
+function createSimulationSlotCard(team, slotIdx) {
+    const isTeam1 = team === 'team1';
+    const currentPid = isTeam1 ? simTeam1[slotIdx] : simTeam2[slotIdx];
+    const playerObj = allPlayers.find(p => p.id === currentPid);
+    const unmatchedRawName = simUnmatchedSlotInfo[team]?.[slotIdx] || null;
+
+    const div = document.createElement('div');
+    div.className = `flex items-center gap-2.5 p-2.5 rounded-2xl bg-white border ${
+        isTeam1 ? 'border-blue-200/90 hover:border-blue-300' : 'border-rose-200/90 hover:border-rose-300'
+    } shadow-xs transition`;
+
+    // Slot badge
+    const badgeColor = isTeam1 ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800';
+    const avatarSrc = playerObj ? playerObj.avatar : (unmatchedRawName ? `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(unmatchedRawName)}` : 'https://api.dicebear.com/7.x/bottts/svg?seed=empty');
+
+    // Build Select HTML
+    let selectOptions = `<option value="">-- Chọn tuyển thủ (Slot ${slotIdx + 1}) --</option>`;
+
+    // If an unmatched raw name exists for this slot, insert it as an option
+    if (unmatchedRawName && !playerObj) {
+        selectOptions += `<option value="__unmatched__:${unmatchedRawName}" selected>⚠️ ${unmatchedRawName} (Chưa có trong data)</option>`;
+    }
+
+    // Sort players alphabetically by nickname
+    const sortedPlayers = [...allPlayers].sort((a, b) => a.nickname.localeCompare(b.nickname));
+    sortedPlayers.forEach(p => {
+        const isSelected = p.id === currentPid;
+        selectOptions += `<option value="${p.id}" ${isSelected ? 'selected' : ''}>${p.nickname} (Elo ${Math.round(p.hidden_elo)})</option>`;
+    });
+
+    const escapedRawName = unmatchedRawName ? unmatchedRawName.replace(/'/g, "\\'") : '';
+
+    div.innerHTML = `
+        <span class="w-7 h-7 rounded-xl ${badgeColor} text-xs font-black flex items-center justify-center shadow-2xs">${slotIdx + 1}</span>
+        <div class="relative flex-shrink-0">
+            <img src="${avatarSrc}" class="w-8 h-8 rounded-xl object-cover bg-slate-100 border border-slate-200" alt="Avatar">
+            ${playerObj?.form?.icon ? `<span class="absolute -bottom-1 -right-1 text-[9px]">${playerObj.form.icon}</span>` : ''}
+        </div>
+        <div class="flex-1 min-w-0">
+            <select onchange="onSimulationSlotChange('${team}', ${slotIdx}, this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500 transition truncate">
+                ${selectOptions}
+            </select>
+        </div>
+        <div class="flex items-center gap-1">
+            ${unmatchedRawName && !playerObj ? `
+                <button type="button" onclick="quickCreatePlayerFromSlot('${team}', ${slotIdx}, '${escapedRawName}')" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shadow-xs transition flex items-center gap-1">
+                    <i class="fa-solid fa-user-plus text-[10px]"></i>
+                    <span>+ Tạo</span>
+                </button>
+            ` : `
+                <button type="button" onclick="quickCreatePlayerFromSlot('${team}', ${slotIdx})" title="Thêm tuyển thủ mới" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-user-plus text-xs"></i>
+                </button>
+            `}
+            <button type="button" onclick="clearSimulationSlot('${team}', ${slotIdx})" title="Xóa slot" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 transition">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+        </div>
+    `;
+
+    return div;
+}
+
+function onSimulationSlotChange(team, slotIdx, selectedVal) {
+    if (selectedVal && selectedVal.startsWith('__unmatched__:')) {
+        const rawName = selectedVal.replace('__unmatched__:', '');
+        quickCreatePlayerFromSlot(team, slotIdx, rawName);
+        return;
+    }
+
+    if (!selectedVal) {
+        if (team === 'team1') simTeam1[slotIdx] = null;
+        else simTeam2[slotIdx] = null;
+        if (simUnmatchedSlotInfo[team]) delete simUnmatchedSlotInfo[team][slotIdx];
+        renderSimulationBoard();
+        return;
+    }
+
+    // Check duplicate
+    const currentTeam = team === 'team1' ? simTeam1 : simTeam2;
+    const otherTeam = team === 'team1' ? simTeam2 : simTeam1;
+
+    const inOtherSlotCurrent = currentTeam.findIndex((pid, idx) => idx !== slotIdx && pid === selectedVal);
+    const inOtherSlotOther = otherTeam.findIndex(pid => pid === selectedVal);
+
+    if (inOtherSlotCurrent > -1) {
+        currentTeam[inOtherSlotCurrent] = null;
+    }
+    if (inOtherSlotOther > -1) {
+        otherTeam[inOtherSlotOther] = null;
+    }
+
+    if (team === 'team1') simTeam1[slotIdx] = selectedVal;
+    else simTeam2[slotIdx] = selectedVal;
+
+    if (simUnmatchedSlotInfo[team]) delete simUnmatchedSlotInfo[team][slotIdx];
+
+    renderSimulationBoard();
+}
+
+function clearSimulationSlot(team, slotIdx) {
+    if (team === 'team1') simTeam1[slotIdx] = null;
+    else simTeam2[slotIdx] = null;
+    if (simUnmatchedSlotInfo[team]) delete simUnmatchedSlotInfo[team][slotIdx];
+    renderSimulationBoard();
+}
+
+function clearSimulationSlots() {
+    simTeam1 = [null, null, null, null, null];
+    simTeam2 = [null, null, null, null, null];
+    simUnmatchedSlotInfo = { team1: {}, team2: {} };
+    renderSimulationBoard();
+}
+
+function quickCreatePlayerFromSlot(team, slotIdx, defaultNickname = '') {
+    pendingSlotAssignment = { team, slotIdx };
+    openPlayerModal('add');
+
+    if (defaultNickname) {
+        document.getElementById('form-nickname').value = defaultNickname;
+        const cleanId = defaultNickname.toLowerCase().replace(/[^a-z0-9]/g, '') || `player_${Math.floor(Math.random() * 10000)}`;
+        document.getElementById('form-id').value = cleanId;
+        document.getElementById('form-avatar-preview').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanId}`;
+    }
+}
+
+function updateSimulationLiveStats() {
+    const t1Players = simTeam1.map(id => allPlayers.find(p => p.id === id)).filter(Boolean);
+    const t2Players = simTeam2.map(id => allPlayers.find(p => p.id === id)).filter(Boolean);
+
+    const t1TotalElo = Math.round(t1Players.reduce((sum, p) => sum + (p.hidden_elo || 1200), 0));
+    const t2TotalElo = Math.round(t2Players.reduce((sum, p) => sum + (p.hidden_elo || 1200), 0));
+
+    const t1AvgElo = t1Players.length ? Math.round(t1TotalElo / t1Players.length) : 0;
+    const t2AvgElo = t2Players.length ? Math.round(t2TotalElo / t2Players.length) : 0;
+
+    const diffElo = Math.abs(t1TotalElo - t2TotalElo);
+
+    let prob1 = 50;
+    let prob2 = 50;
+    if (t1Players.length > 0 || t2Players.length > 0) {
+        const d = (t1TotalElo - t2TotalElo) / (Math.max(t1Players.length, t2Players.length) || 5);
+        prob1 = Math.round((1.0 / (1.0 + Math.pow(10.0, -d / 400.0))) * 100);
+        prob1 = Math.max(5, Math.min(95, prob1));
+        prob2 = 100 - prob1;
+    }
+
+    const t1TotalElem = document.getElementById('sim-t1-total-elo');
+    if (t1TotalElem) t1TotalElem.innerText = t1TotalElo;
+    const t1AvgElem = document.getElementById('sim-t1-avg-elo');
+    if (t1AvgElem) t1AvgElem.innerText = t1AvgElo;
+
+    const t2TotalElem = document.getElementById('sim-t2-total-elo');
+    if (t2TotalElem) t2TotalElem.innerText = t2TotalElo;
+    const t2AvgElem = document.getElementById('sim-t2-avg-elo');
+    if (t2AvgElem) t2AvgElem.innerText = t2AvgElo;
+
+    const diffElem = document.getElementById('sim-diff-elo');
+    if (diffElem) diffElem.innerText = diffElo;
+    const probText = document.getElementById('sim-prob-text');
+    if (probText) probText.innerText = `${prob1}% - ${prob2}%`;
+
+    const barT1 = document.getElementById('sim-bar-t1');
+    const barT2 = document.getElementById('sim-bar-t2');
+    if (barT1 && barT2) {
+        barT1.style.width = `${prob1}%`;
+        barT2.style.width = `${prob2}%`;
+    }
+
+    const t1CountBadge = document.getElementById('sim-t1-count-badge');
+    if (t1CountBadge) t1CountBadge.innerText = `${t1Players.length}/5`;
+    const t2CountBadge = document.getElementById('sim-t2-count-badge');
+    if (t2CountBadge) t2CountBadge.innerText = `${t2Players.length}/5`;
+}
+
+function transferSimulationToMatchmaker() {
+    const chosenIds = [...simTeam1, ...simTeam2].filter(Boolean);
+    if (chosenIds.length === 0) {
+        Swal.fire({
+            icon: 'info',
+            title: 'Chưa chọn tuyển thủ',
+            text: 'Vui lòng chọn tuyển thủ vào các slot trước khi chuyển sang Chia Đội.',
+            ...SWAL_THEME
+        });
+        return;
+    }
+
+    selectedMatchmaker = chosenIds.slice(0, 10);
+    switchTab('matchmaker');
+    renderMatchmakerPlayers();
+    Swal.fire({
+        icon: 'success',
+        title: `Đã chọn ${selectedMatchmaker.length}/10 tuyển thủ`,
+        text: 'Bạn có thể bấm Chia Đội Tối Ưu để thuật toán AI cân bằng lại 2 đội.',
+        timer: 1500,
+        showConfirmButton: false,
+        ...SWAL_THEME
+    });
+}
+
+function transferOcrToSimulation() {
+    switchTab('simulation');
+    renderSimulationBoard();
+}
+
+let isSubmittingSimulationMatch = false;
+
+async function submitSimulationWinner(winningTeam) {
+    if (isSubmittingSimulationMatch) return;
+
+    const t1Filled = simTeam1.filter(Boolean);
+    const t2Filled = simTeam2.filter(Boolean);
+
+    if (t1Filled.length !== 5 || t2Filled.length !== 5) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Chưa đủ 10 người',
+            text: `Vui lòng chọn đủ 5 người cho Đội Xanh (hiện có ${t1Filled.length}/5) và 5 người cho Đội Đỏ (hiện có ${t2Filled.length}/5).`,
+            ...SWAL_THEME
+        });
+        return;
+    }
+
+    const allChosen = [...t1Filled, ...t2Filled];
+    const uniqueChosen = new Set(allChosen);
+    if (uniqueChosen.size !== 10) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Trùng lặp người chơi',
+            text: 'Có tuyển thủ bị chọn nhiều hơn 1 lần giữa 2 đội. Vui lòng kiểm tra lại.',
+            ...SWAL_THEME
+        });
+        return;
+    }
+
+    const winnerLabel = winningTeam === 'team1' ? 'Đội Xanh (Team 1)' : 'Đội Đỏ (Team 2)';
+
+    const confirm = await Swal.fire({
+        title: `Xác nhận ${winnerLabel} Thắng?`,
+        text: 'Hệ thống sẽ lưu kết quả trận đấu, tự động cập nhật Elo ẩn và tính lại chuỗi Phong độ cho 10 tuyển thủ.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Đồng Ý Lưu & Cập Nhật Elo',
+        cancelButtonText: 'Hủy',
+        showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            isSubmittingSimulationMatch = true;
+            try {
+                const res = await fetch('/api/update_match_result', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        team1: simTeam1,
+                        team2: simTeam2,
+                        winner: winningTeam
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Lỗi khi lưu kết quả trận đấu');
+                }
+                return data;
+            } catch (err) {
+                Swal.showValidationMessage(err.message || 'Lỗi kết nối khi lưu kết quả');
+            } finally {
+                isSubmittingSimulationMatch = false;
+            }
+        },
+        allowOutsideClick: () => !Swal.isLoading(),
+        ...SWAL_THEME
+    });
+
+    if (confirm.isConfirmed && confirm.value) {
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã cập nhật trận đấu!',
+            text: 'Elo ẩn và Phong độ đã được cập nhật thành công.',
+            timer: 2000,
+            showConfirmButton: false,
+            ...SWAL_THEME
+        });
+        await loadAllPlayers();
+        await loadStatus();
+    }
+}
+
+// ==========================================
 // SCREENSHOT OCR (QUÉT ẢNH PHÒNG ĐẤU AI)
 // ==========================================
 window.addEventListener('paste', handleGlobalScreenshotPaste);
@@ -1254,7 +1576,6 @@ function handleGlobalScreenshotPaste(e) {
         if (item.kind === 'file' && item.type.startsWith('image/')) {
             const blob = item.getAsFile();
             if (blob) {
-                switchTab('matchmaker');
                 processScreenshotFile(blob);
                 e.preventDefault();
                 break;
@@ -1342,7 +1663,6 @@ async function processScreenshotFile(file) {
                     const keyInputElem = document.getElementById('input-gemini-key');
                     if (keyInputElem) keyInputElem.value = apiKey;
                     
-                    // Thử quét lại
                     if (spinner) spinner.classList.remove('hidden');
                     res = await fetch('/api/ocr_screenshot', {
                         method: 'POST',
@@ -1361,37 +1681,81 @@ async function processScreenshotFile(file) {
 
             if (spinner) spinner.classList.add('hidden');
 
-            if (data.success && data.matched_player_ids && data.matched_player_ids.length > 0) {
-                selectedMatchmaker = data.matched_player_ids.slice(0, 10);
-                renderMatchmakerPlayers();
+            if (data.success) {
+                lastOcrResult = data;
 
-                const matchedNicknames = selectedMatchmaker.map(pid => {
+                // 1. Phân bổ vào các slot Mô Phỏng 5vs5
+                simUnmatchedSlotInfo = { team1: {}, team2: {} };
+
+                if (data.team1_slots && data.team1_slots.length > 0) {
+                    data.team1_slots.forEach((slot, idx) => {
+                        if (idx < 5) {
+                            if (slot.matched_id) {
+                                simTeam1[idx] = slot.matched_id;
+                            } else if (slot.raw_name) {
+                                simTeam1[idx] = null;
+                                simUnmatchedSlotInfo.team1[idx] = slot.raw_name;
+                            }
+                        }
+                    });
+                }
+                if (data.team2_slots && data.team2_slots.length > 0) {
+                    data.team2_slots.forEach((slot, idx) => {
+                        if (idx < 5) {
+                            if (slot.matched_id) {
+                                simTeam2[idx] = slot.matched_id;
+                            } else if (slot.raw_name) {
+                                simTeam2[idx] = null;
+                                simUnmatchedSlotInfo.team2[idx] = slot.raw_name;
+                            }
+                        }
+                    });
+                }
+
+                // 2. Điền vào matchmaker nếu có người khớp
+                if (data.matched_player_ids && data.matched_player_ids.length > 0) {
+                    selectedMatchmaker = data.matched_player_ids.slice(0, 10);
+                    renderMatchmakerPlayers();
+                }
+
+                renderSimulationBoard();
+
+                const matchedNicknames = (data.matched_player_ids || []).map(pid => {
                     const found = allPlayers.find(x => x.id === pid);
                     return found ? found.nickname : pid;
                 });
+
+                const allDetected = data.detected_names || [];
+                const unmatchedCount = allDetected.length - (data.matched_player_ids || []).length;
 
                 const summaryBox = document.getElementById('ocr-result-summary');
                 const namesElem = document.getElementById('ocr-detected-names');
                 if (summaryBox && namesElem) {
                     summaryBox.classList.remove('hidden');
-                    namesElem.innerText = `${matchedNicknames.length}/10 người: ${matchedNicknames.join(', ')}`;
+                    namesElem.innerText = `${matchedNicknames.length} tuyển thủ: ${matchedNicknames.join(', ')}` + 
+                        (unmatchedCount > 0 ? ` (kèm ${unmatchedCount} tên mới)` : '');
                 }
 
                 Swal.fire({
                     icon: 'success',
-                    title: `🎯 Nhận diện thành công ${selectedMatchmaker.length}/10 tuyển thủ!`,
+                    title: `🎯 Nhận diện thành công ${allDetected.length || data.count || 0} tuyển thủ!`,
                     html: `
-                        <div class="text-left text-xs text-slate-700 mt-2 space-y-1">
-                            <p><b>Tuyển thủ đã chọn:</b> ${matchedNicknames.join(', ')}</p>
-                            ${data.detected_names?.length ? `<p class="text-[11px] text-slate-500">Tên quét được từ ảnh: ${data.detected_names.join(', ')}</p>` : ''}
+                        <div class="text-left text-xs text-slate-700 mt-2 space-y-2">
+                            ${matchedNicknames.length ? `<p><b>Đã khớp dữ liệu (${matchedNicknames.length}):</b> ${matchedNicknames.join(', ')}</p>` : ''}
+                            ${allDetected.length ? `<p class="text-[11px] text-slate-500"><b>Tất cả tên đọc được từ ảnh:</b> ${allDetected.join(', ')}</p>` : ''}
+                            ${unmatchedCount > 0 ? `<p class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200">💡 <b>Có ${unmatchedCount} tên chưa có trong danh sách</b>. Bạn có thể mở Giao Diện 5vs5 để bấm <b>+ Tạo</b> tuyển thủ mới ngay lập tức!</p>` : ''}
                         </div>
                     `,
-                    confirmButtonText: 'Chia Đội Cân Bằng Ngay',
+                    confirmButtonText: '🎮 Mở Giao Diện 5vs5',
                     showCancelButton: true,
-                    cancelButtonText: 'Kiểm Tra Lại',
+                    cancelButtonText: selectedMatchmaker.length === 10 ? '⚡ Chia Đội Ngay' : 'Đóng',
+                    confirmButtonColor: '#7c3aed',
+                    cancelButtonColor: '#4f46e5',
                     ...SWAL_THEME
                 }).then((result) => {
                     if (result.isConfirmed) {
+                        switchTab('simulation');
+                    } else if (result.dismiss === Swal.DismissReason.cancel && selectedMatchmaker.length === 10) {
                         handleCreateTeams();
                     }
                 });
@@ -1400,7 +1764,7 @@ async function processScreenshotFile(file) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Chưa tìm thấy tuyển thủ phù hợp',
-                    text: data.error || 'AI không nhận diện được tên tuyển thủ nào khớp với danh sách hệ thống trong bức ảnh này. Vui lòng thử ảnh rõ nét hơn.',
+                    text: data.error || 'AI không nhận diện được tên tuyển thủ nào trong bức ảnh này. Vui lòng thử ảnh rõ nét hơn.',
                     ...SWAL_THEME
                 });
             }

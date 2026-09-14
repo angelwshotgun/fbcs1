@@ -98,6 +98,10 @@
                         <i class="fa-solid fa-crown text-amber-500"></i>
                         <span>Đội Trưởng</span>
                     </button>
+                    <button onclick="switchTab('simulation')" id="tab-btn-simulation" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-bold font-heading transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                        <i class="fa-solid fa-gamepad text-purple-600"></i>
+                        <span>Mô Phỏng 5vs5</span>
+                    </button>
                     <button onclick="switchTab('players')" id="tab-btn-players" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-bold font-heading transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
                         <i class="fa-solid fa-users-gear text-indigo-500"></i>
                         <span>Quản Trị</span>
@@ -189,9 +193,15 @@
                         <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
                         <span class="text-slate-700 font-medium">Đã tìm thấy: <b id="ocr-detected-names" class="text-slate-900 font-bold"></b></span>
                     </div>
-                    <button onclick="handleCreateTeams()" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold font-heading text-xs shadow-xs transition">
-                        Chia Đội Ngay
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="transferOcrToSimulation()" class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold font-heading text-xs shadow-xs transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-gamepad"></i>
+                            <span>Giao Diện 5vs5</span>
+                        </button>
+                        <button onclick="handleCreateTeams()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold font-heading text-xs shadow-xs transition">
+                            Chia Đội Ngay
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -402,6 +412,150 @@
                 </div>
                 <div id="captains-players-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 custom-scrollbar max-h-[500px] overflow-y-auto p-1">
                     <!-- Rendered via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- TAB: MÔ PHỎNG & TRẬN ĐẤU TÙY CHỈNH 5VS5 -->
+        <!-- ============================================== -->
+        <section id="tab-content-simulation" class="tab-pane hidden space-y-6">
+            <!-- Header Bar -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-5">
+                <div>
+                    <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
+                        <span>🎮 Mô Phỏng Trận Đấu & Nhập Kèo 5vs5</span>
+                        <span class="text-xs px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-bold">
+                            Chế Độ Tự Do / Quét OCR / Lưu Elo
+                        </span>
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Sắp xếp 10 tuyển thủ vào 2 đội (hoặc bấm <kbd class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 font-mono text-[11px] text-slate-700 font-bold">Ctrl + V</kbd> dán ảnh sảnh chờ/bảng điểm). Chọn đội thắng để ghi nhận kết quả và cập nhật Elo!
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <button onclick="clearSimulationSlots()" class="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition shadow-xs">
+                        <i class="fa-solid fa-rotate-left mr-1.5 text-slate-400"></i> Đặt lại
+                    </button>
+                    <button onclick="transferSimulationToMatchmaker()" class="px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold font-heading transition shadow-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-bolt text-indigo-500"></i>
+                        <span>Đưa Sang Chia Đội Cân Bằng</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Simulation Image Dropzone (Quick Paste & Scan) -->
+            <div class="bg-gradient-to-br from-purple-50/40 via-white to-indigo-50/30 p-4 rounded-3xl border border-purple-200/80 shadow-xs">
+                <div onclick="document.getElementById('sim-file-input').click()" class="border-2 border-dashed border-purple-200 hover:border-purple-400 bg-white/80 hover:bg-purple-50/40 rounded-2xl p-4 text-center cursor-pointer transition-all duration-150 flex items-center justify-between gap-4">
+                    <input type="file" id="sim-file-input" accept="image/*" class="hidden" onchange="handleScreenshotFileSelect(event)">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-lg shadow-xs">
+                            <i class="fa-solid fa-camera"></i>
+                        </div>
+                        <div class="text-left">
+                            <h4 class="text-xs font-bold font-heading text-slate-900">Dán ảnh sảnh chờ hoặc bảng điểm trận đấu (<kbd class="px-1 py-0.5 rounded bg-purple-100 text-purple-800 font-mono text-[10px] font-bold">Ctrl + V</kbd>)</h4>
+                            <p class="text-[11px] text-slate-500">AI tự động nhận diện tối đa 10 tuyển thủ và điền vào các slot 5vs5 bên dưới</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-bold text-purple-700 px-3 py-1.5 rounded-xl bg-purple-50 border border-purple-200 hidden sm:inline-block">
+                        <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Tải ảnh lên
+                    </span>
+                </div>
+            </div>
+
+            <!-- Live Match Elo Comparison & Prediction Bar -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-3">
+                        <span class="font-extrabold font-heading text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span> Đội Xanh
+                        </span>
+                        <span class="text-slate-500">Tổng Elo: <b id="sim-t1-total-elo" class="text-blue-700 font-bold">0</b></span>
+                        <span>•</span>
+                        <span class="text-slate-500">TB: <b id="sim-t1-avg-elo" class="text-slate-800 font-bold">0</b></span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-50 px-3 py-1 rounded-full border border-slate-200 font-medium">
+                        <span>Chênh lệch: <b id="sim-diff-elo" class="text-slate-900 font-bold">0</b> Elo</span>
+                        <span>•</span>
+                        <span>Tỷ lệ dự đoán: <b id="sim-prob-text" class="text-indigo-600 font-bold">50% - 50%</b></span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-slate-500">TB: <b id="sim-t2-avg-elo" class="text-slate-800 font-bold">0</b></span>
+                        <span>•</span>
+                        <span class="text-slate-500">Tổng Elo: <b id="sim-t2-total-elo" class="text-rose-700 font-bold">0</b></span>
+                        <span class="font-extrabold font-heading text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block"></span> Đội Đỏ
+                        </span>
+                    </div>
+                </div>
+                <!-- Probability Bar -->
+                <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden flex shadow-inner">
+                    <div id="sim-bar-t1" class="bg-blue-600 h-full transition-all duration-300" style="width: 50%"></div>
+                    <div id="sim-bar-t2" class="bg-rose-600 h-full transition-all duration-300" style="width: 50%"></div>
+                </div>
+            </div>
+
+            <!-- 5vs5 Interactive Slot Board -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Team 1: Blue Side -->
+                <div class="bg-gradient-to-br from-blue-50/60 to-indigo-50/20 border-2 border-blue-200 rounded-3xl p-5 shadow-xs space-y-3.5">
+                    <div class="flex items-center justify-between border-b border-blue-200/80 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow-xs">1</div>
+                            <div>
+                                <h3 class="font-black font-heading text-blue-900 text-base">ĐỘI XANH (BLUE TEAM)</h3>
+                                <p class="text-[11px] text-slate-500">Chọn 5 thành viên cho Đội Xanh</p>
+                            </div>
+                        </div>
+                        <span id="sim-t1-count-badge" class="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold text-xs">0/5</span>
+                    </div>
+
+                    <!-- 5 Slot Cards for Team 1 -->
+                    <div id="sim-t1-slots" class="space-y-2.5">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Team 2: Red Side -->
+                <div class="bg-gradient-to-br from-rose-50/60 to-red-50/20 border-2 border-rose-200 rounded-3xl p-5 shadow-xs space-y-3.5">
+                    <div class="flex items-center justify-between border-b border-rose-200/80 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-rose-600 text-white font-black flex items-center justify-center text-sm shadow-xs">2</div>
+                            <div>
+                                <h3 class="font-black font-heading text-rose-900 text-base">ĐỘI ĐỎ (RED TEAM)</h3>
+                                <p class="text-[11px] text-slate-500">Chọn 5 thành viên cho Đội Đỏ</p>
+                            </div>
+                        </div>
+                        <span id="sim-t2-count-badge" class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-xs">0/5</span>
+                    </div>
+
+                    <!-- 5 Slot Cards for Team 2 -->
+                    <div id="sim-t2-slots" class="space-y-2.5">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Match Winner Bar -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <h4 class="font-bold font-heading text-slate-900 text-base flex items-center gap-2">
+                        <i class="fa-solid fa-trophy text-amber-500"></i>
+                        <span>Ghi Nhận Kết Quả & Cập Nhật Elo Trận Đấu</span>
+                    </h4>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Sau khi chọn đủ 10 người chơi, bấm chọn đội giành chiến thắng để hệ thống tự động lưu trận và tính toán lại Elo.
+                    </p>
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <button onclick="submitSimulationWinner('team1')" id="btn-sim-t1-win" class="flex-1 sm:flex-initial px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold font-heading text-xs shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-trophy"></i>
+                        <span>Đội Xanh Thắng</span>
+                    </button>
+                    <button onclick="submitSimulationWinner('team2')" id="btn-sim-t2-win" class="flex-1 sm:flex-initial px-5 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold font-heading text-xs shadow-md shadow-rose-500/20 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-trophy"></i>
+                        <span>Đội Đỏ Thắng</span>
+                    </button>
                 </div>
             </div>
         </section>

@@ -175,6 +175,12 @@ def api_update_match_result():
         if not team1 or not team2 or winner not in ['team1', 'team2']:
             return jsonify({'success': False, 'error': 'Dữ liệu trận đấu không hợp lệ'}), 400
 
+        # Nếu chưa truyền power, tự động tính tổng Elo 2 đội
+        if team1_power == 0.0 or team2_power == 0.0:
+            all_p_map = {p['id'].lower(): p for p in player_service.get_all_players()}
+            team1_power = round(sum(all_p_map.get(str(pid).lower(), {}).get('hidden_elo', 1200.0) for pid in team1), 1)
+            team2_power = round(sum(all_p_map.get(str(pid).lower(), {}).get('hidden_elo', 1200.0) for pid in team2), 1)
+
         # Lưu trận đấu mới vào Supabase và local cache
         data_manager.append_match(
             team1=team1,
