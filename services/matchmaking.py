@@ -1,3 +1,5 @@
+import math
+import random
 from itertools import combinations
 from typing import List, Dict, Any, Tuple
 from services.player_service import player_service
@@ -48,8 +50,173 @@ class MatchmakingService:
             return float(synergy_map[pair_key2].get('synergy_score', 0.0))
         return 0.0
 
-    def create_balanced_teams(self, player_ids: List[str]) -> Dict[str, Any]:
-        """Chia 10 người chơi thành 2 đội 5-5 cân bằng nhất."""
+    def _get_trio_synergy(self, p1: str, p2: str, p3: str, trio_synergy_map: Dict[str, Any]) -> float:
+        sorted_keys = sorted([p1, p2, p3])
+        trio_key = "|".join(sorted_keys)
+        if trio_key in trio_synergy_map:
+            return float(trio_synergy_map[trio_key].get('synergy_score', 0.0))
+        return 0.0
+
+    def _evaluate_team(
+        self,
+        team_tuple: Tuple[str, ...],
+        p_map: Dict[str, Any],
+        pair_synergy_map: Dict[str, Any],
+        trio_synergy_map: Dict[str, Any]
+    ) -> Tuple[float, List[Dict[str, Any]]]:
+        """
+        Đánh giá toàn diện sức mạnh của 1 đội 5 người:
+        1. Base Power: Tổng effective_power của từng người chơi.
+        2. Duo Synergy: Cặp bài trùng 2 người cùng team có tỷ lệ thắng cao hoặc thấp.
+        3. Trio Synergy: Bộ ba tam tấu 3 người cùng chơi tốt khi chung đội.
+        4. Natural Chemistry: Bổ trợ lẫn nhau (Mũi nhọn + Trụ cột, Đa năng flex lane, Cộng hưởng phong độ).
+        """
+        base_power = sum(p_map[p]['effective_power'] for p in team_tuple)
+        synergies: List[Dict[str, Any]] = []
+
+        # 1. Duo Synergy (Cặp 2 người)
+        duo_bonus_sum = 0.0
+        for p1, p2 in combinations(team_tuple, 2):
+            syn = self._get_pair_synergy(p1, p2, pair_synergy_map)
+            if syn > 0.15:
+                duo_bonus_sum += syn * 0.25
+                synergies.append({
+                    'type': 'duo',
+                    'icon': '🤝',
+                    'label': 'Cặp bài trùng',
+                    'players': [p1, p2],
+                    'names': f"{p_map[p1]['nickname']} + {p_map[p2]['nickname']}",
+                    'bonus': round(syn * 0.25, 2)
+                })
+            elif syn < -0.2:
+                duo_bonus_sum += syn * 0.20
+                synergies.append({
+                    'type': 'anti_duo',
+                    'icon': '💔',
+                    'label': 'Khắc khẩu',
+                    'players': [p1, p2],
+                    'names': f"{p_map[p1]['nickname']} + {p_map[p2]['nickname']}",
+                    'bonus': round(syn * 0.20, 2)
+                })
+
+        # 2. Trio Synergy (Bộ ba 3 người cùng chơi tốt)
+        trio_bonus_sum = 0.0
+        for p1, p2, p3 in combinations(team_tuple, 3):
+            t_syn = self._get_trio_synergy(p1, p2, p3, trio_synergy_map)
+            if t_syn > 0.15:
+                trio_bonus_sum += t_syn * 0.35
+                synergies.append({
+                    'type': 'trio',
+                    'icon': '🌟',
+                    'label': 'Bộ ba tam tấu',
+                    'players': [p1, p2, p3],
+                    'names': f"{p_map[p1]['nickname']} + {p_map[p2]['nickname']} + {p_map[p3]['nickname']}",
+                    'bonus': round(t_syn * 0.35, 2)
+                })
+            elif t_syn < -0.2:
+                trio_bonus_sum += t_syn * 0.25
+                synergies.append({
+                    'type': 'anti_trio',
+                    'icon': '⚠️',
+                    'label': 'Bộ ba xung đột',
+                    'players': [p1, p2, p3],
+                    'names': f"{p_map[p1]['nickname']} + {p_map[p2]['nickname']} + {p_map[p3]['nickname']}",
+                    'bonus': round(t_syn * 0.25, 2)
+                })
+
+        # 3. Chemistry Bổ trợ tự nhiên (Stats & Form Heuristics)
+        chem_bonus = 0.0
+        # Mũi nhọn (Skill >= 7.8) + Trụ cột (Consistency >= 7.5) bù trừ cho nhau
+        sharps = [p for p in team_tuple if p_map[p]['skill'] >= 7.8]
+        anchors = [p for p in team_tuple if p_map[p]['consistency'] >= 7.5]
+        if sharps and anchors:
+            chem_bonus += 0.12
+            synergies.append({
+                'type': 'chemistry',
+                'icon': '⚡',
+                'label': 'Bổ trợ chiến thuật',
+                'names': f"{p_map[sharps[0]]['nickname']} (Mũi nhọn) & {p_map[anchors[0]]['nickname']} (Trụ cột)",
+                'bonus': 0.12
+            })
+
+        # Bộ ba linh hoạt flex lane (>= 3 người có flex_lane >= 7.0)
+        flex_players = [p for p in team_tuple if p_map[p]['flex_lane'] >= 7.0]
+        if len(flex_players) >= 3:
+            chem_bonus += 0.10
+            synergies.append({
+                'type': 'chemistry',
+                'icon': '🔄',
+                'label': 'Đa năng biến ảo',
+                'names': f"{len(flex_players)} người chơi flex lane cao",
+                'bonus': 0.10
+            })
+
+        # Cộng hưởng phong độ (Form resonance)
+        hot_count = sum(1 for p in team_tuple if p_map[p].get('form', {}).get('status') in ['on_fire', 'good'])
+        cold_count = sum(1 for p in team_tuple if p_map[p].get('form', {}).get('status') in ['cold', 'slump'])
+        if hot_count >= 3:
+            chem_bonus += 0.15
+            synergies.append({
+                'type': 'chemistry',
+                'icon': '🔥',
+                'label': 'Cộng hưởng hưng phấn',
+                'names': f"{hot_count} tuyển thủ đang phong độ cao",
+                'bonus': 0.15
+            })
+        elif cold_count >= 3:
+            chem_bonus -= 0.15
+            synergies.append({
+                'type': 'chemistry',
+                'icon': '❄️',
+                'label': 'Áp lực tâm lý',
+                'names': f"{cold_count} tuyển thủ đang xuống phong độ",
+                'bonus': -0.15
+            })
+
+        total_score = round(base_power + duo_bonus_sum + trio_bonus_sum + chem_bonus, 2)
+        return total_score, synergies
+
+    def _select_candidate_with_rng(
+        self,
+        candidates: List[Dict[str, Any]],
+        allow_rng: bool = True,
+        rng_tolerance: float = 0.6
+    ) -> Tuple[Dict[str, Any], float, int]:
+        """
+        Chọn kết quả chia đội có tính toán ngẫu nhiên (RNG) trong ngưỡng cân bằng:
+        - Sắp xếp các phương án chia theo độ chênh lệch tăng dần.
+        - Lọc các phương án có diff <= min_diff + rng_tolerance (tối đa diff <= 1.25).
+        - Chọn ngẫu nhiên có trọng số (weighted random), đảm bảo kết quả luôn cân bằng cao
+          nhưng không bị cố định một mẫu rập khuôn mỗi lần bấm.
+        """
+        candidates.sort(key=lambda x: x['diff'])
+        min_diff = candidates[0]['diff']
+
+        if not allow_rng or len(candidates) == 1:
+            return candidates[0], min_diff, 1
+
+        tolerance = max(0.2, min(1.2, float(rng_tolerance)))
+        viable = [
+            c for c in candidates
+            if c['diff'] <= (min_diff + tolerance) and c['diff'] <= 1.3
+        ]
+
+        viable = viable[:6]
+        if not viable:
+            viable = [candidates[0]]
+
+        # Trọng số mềm (phương án càng gần min_diff càng có xác suất cao)
+        weights = [math.exp(-2.2 * (c['diff'] - min_diff)) for c in viable]
+        chosen = random.choices(viable, weights=weights, k=1)[0]
+        return chosen, min_diff, len(viable)
+
+    def create_balanced_teams(
+        self,
+        player_ids: List[str],
+        allow_rng: bool = True,
+        rng_tolerance: float = 0.6
+    ) -> Dict[str, Any]:
+        """Chia 10 người chơi thành 2 đội 5-5 với tính toán cân bằng và sai số RNG thông minh."""
         if len(player_ids) != 10:
             raise ValueError("Cần chọn chính xác 10 người chơi để chia đội")
 
@@ -59,15 +226,12 @@ class MatchmakingService:
 
         p_map = self._get_player_map(unique_players)
         metrics = player_service.get_metrics()
-        synergy_map = metrics.get('pair_synergy', {})
+        pair_synergy = metrics.get('pair_synergy', {})
+        trio_synergy = metrics.get('trio_synergy', {})
 
         comb_5 = list(combinations(unique_players, 5))
-        best_team1, best_team2 = None, None
-        min_diff = float('inf')
-        best_score1, best_score2 = 0.0, 0.0
-
-        # C(10, 5) = 252. Chia đôi là 126 cặp đối xứng
         evaluated_pairs = set()
+        candidates: List[Dict[str, Any]] = []
 
         for t1_tuple in comb_5:
             t1_set = set(t1_tuple)
@@ -79,50 +243,36 @@ class MatchmakingService:
                 continue
             evaluated_pairs.add(pair_signature)
 
-            # Tính điểm sức mạnh Team 1
-            power_1 = sum(p_map[p]['effective_power'] for p in t1_tuple)
-            syn_1 = sum(self._get_pair_synergy(p1, p2, synergy_map) for p1, p2 in combinations(t1_tuple, 2))
-            total_1 = power_1 + (syn_1 * 0.25)
+            score_1, syns_1 = self._evaluate_team(t1_tuple, p_map, pair_synergy, trio_synergy)
+            score_2, syns_2 = self._evaluate_team(t2_tuple, p_map, pair_synergy, trio_synergy)
+            diff = abs(score_1 - score_2)
 
-            # Tính điểm sức mạnh Team 2
-            power_2 = sum(p_map[p]['effective_power'] for p in t2_tuple)
-            syn_2 = sum(self._get_pair_synergy(p1, p2, synergy_map) for p1, p2 in combinations(t2_tuple, 2))
-            total_2 = power_2 + (syn_2 * 0.25)
+            candidates.append({
+                'team1': t1_tuple,
+                'team2': t2_tuple,
+                'score1': score_1,
+                'score2': score_2,
+                'diff': diff,
+                'syns1': syns_1,
+                'syns2': syns_2
+            })
 
-            diff = abs(total_1 - total_2)
-            if diff < min_diff:
-                min_diff = diff
-                best_team1 = t1_tuple
-                best_team2 = t2_tuple
-                best_score1 = total_1
-                best_score2 = total_2
+        chosen, min_diff, pool_count = self._select_candidate_with_rng(
+            candidates,
+            allow_rng=allow_rng,
+            rng_tolerance=rng_tolerance
+        )
+
+        best_team1 = chosen['team1']
+        best_team2 = chosen['team2']
+        best_score1 = chosen['score1']
+        best_score2 = chosen['score2']
+        diff = chosen['diff']
 
         # Tính tỷ lệ thắng dự đoán
         diff_power = best_score1 - best_score2
-        # Logistic curve: scale 4.0
         prob_1 = round((1.0 / (1.0 + 10.0 ** (-diff_power / 4.0))) * 100, 1)
         prob_2 = round(100.0 - prob_1, 1)
-
-        # Lấy thông tin chi tiết các cặp đôi ăn ý trong mỗi team
-        t1_synergies = []
-        for p1, p2 in combinations(best_team1, 2):
-            syn = self._get_pair_synergy(p1, p2, synergy_map)
-            if syn > 0.15:
-                t1_synergies.append({
-                    'p1': p_map[p1]['nickname'],
-                    'p2': p_map[p2]['nickname'],
-                    'bonus': syn
-                })
-
-        t2_synergies = []
-        for p1, p2 in combinations(best_team2, 2):
-            syn = self._get_pair_synergy(p1, p2, synergy_map)
-            if syn > 0.15:
-                t2_synergies.append({
-                    'p1': p_map[p1]['nickname'],
-                    'p2': p_map[p2]['nickname'],
-                    'bonus': syn
-                })
 
         return {
             'team1': [p_map[p] for p in best_team1],
@@ -131,15 +281,26 @@ class MatchmakingService:
             'team2_names': list(best_team2),
             'team1_power': round(best_score1, 2),
             'team2_power': round(best_score2, 2),
-            'power_difference': round(min_diff, 2),
+            'power_difference': round(diff, 2),
             'team1_win_prob': prob_1,
             'team2_win_prob': prob_2,
-            'team1_synergies': t1_synergies,
-            'team2_synergies': t2_synergies
+            'team1_synergies': chosen['syns1'],
+            'team2_synergies': chosen['syns2'],
+            'rng_applied': allow_rng,
+            'rng_tolerance': rng_tolerance,
+            'min_power_diff': round(min_diff, 2),
+            'pool_candidates_count': pool_count
         }
 
-    def create_teams_with_captains(self, captain1: str, captain2: str, remaining_players: List[str]) -> Dict[str, Any]:
-        """Chia đội với 2 Đội trưởng cố định và 8 thành viên còn lại."""
+    def create_teams_with_captains(
+        self,
+        captain1: str,
+        captain2: str,
+        remaining_players: List[str],
+        allow_rng: bool = True,
+        rng_tolerance: float = 0.6
+    ) -> Dict[str, Any]:
+        """Chia đội với 2 Đội trưởng cố định và 8 thành viên còn lại (hỗ trợ RNG cân bằng)."""
         if len(remaining_players) != 8:
             raise ValueError("Cần chính xác 8 người chơi còn lại cho 2 đội trưởng")
 
@@ -149,32 +310,41 @@ class MatchmakingService:
 
         p_map = self._get_player_map(all_players)
         metrics = player_service.get_metrics()
-        synergy_map = metrics.get('pair_synergy', {})
+        pair_synergy = metrics.get('pair_synergy', {})
+        trio_synergy = metrics.get('trio_synergy', {})
 
         comb_4 = list(combinations(remaining_players, 4))
-        best_team1, best_team2 = None, None
-        min_diff = float('inf')
-        best_score1, best_score2 = 0.0, 0.0
+        candidates: List[Dict[str, Any]] = []
 
         for comb in comb_4:
             t1 = tuple([captain1] + list(comb))
             t2 = tuple([captain2] + list(set(remaining_players) - set(comb)))
 
-            power_1 = sum(p_map[p]['effective_power'] for p in t1)
-            syn_1 = sum(self._get_pair_synergy(p1, p2, synergy_map) for p1, p2 in combinations(t1, 2))
-            total_1 = power_1 + (syn_1 * 0.25)
+            score_1, syns_1 = self._evaluate_team(t1, p_map, pair_synergy, trio_synergy)
+            score_2, syns_2 = self._evaluate_team(t2, p_map, pair_synergy, trio_synergy)
+            diff = abs(score_1 - score_2)
 
-            power_2 = sum(p_map[p]['effective_power'] for p in t2)
-            syn_2 = sum(self._get_pair_synergy(p1, p2, synergy_map) for p1, p2 in combinations(t2, 2))
-            total_2 = power_2 + (syn_2 * 0.25)
+            candidates.append({
+                'team1': t1,
+                'team2': t2,
+                'score1': score_1,
+                'score2': score_2,
+                'diff': diff,
+                'syns1': syns_1,
+                'syns2': syns_2
+            })
 
-            diff = abs(total_1 - total_2)
-            if diff < min_diff:
-                min_diff = diff
-                best_team1 = t1
-                best_team2 = t2
-                best_score1 = total_1
-                best_score2 = total_2
+        chosen, min_diff, pool_count = self._select_candidate_with_rng(
+            candidates,
+            allow_rng=allow_rng,
+            rng_tolerance=rng_tolerance
+        )
+
+        best_team1 = chosen['team1']
+        best_team2 = chosen['team2']
+        best_score1 = chosen['score1']
+        best_score2 = chosen['score2']
+        diff = chosen['diff']
 
         diff_power = best_score1 - best_score2
         prob_1 = round((1.0 / (1.0 + 10.0 ** (-diff_power / 4.0))) * 100, 1)
@@ -189,9 +359,15 @@ class MatchmakingService:
             'team2_names': list(best_team2),
             'team1_power': round(best_score1, 2),
             'team2_power': round(best_score2, 2),
-            'power_difference': round(min_diff, 2),
+            'power_difference': round(diff, 2),
             'team1_win_prob': prob_1,
-            'team2_win_prob': prob_2
+            'team2_win_prob': prob_2,
+            'team1_synergies': chosen['syns1'],
+            'team2_synergies': chosen['syns2'],
+            'rng_applied': allow_rng,
+            'rng_tolerance': rng_tolerance,
+            'min_power_diff': round(min_diff, 2),
+            'pool_candidates_count': pool_count
         }
 
 

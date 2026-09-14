@@ -24,6 +24,7 @@ class EloService:
                 'form': {},
                 'stats': {},
                 'pair_synergy': {},
+                'trio_synergy': {},
                 'elo_normalized': {}
             }
 
@@ -37,6 +38,7 @@ class EloService:
         }
 
         pair_stats: Dict[Tuple[str, str], Dict[str, int]] = {}
+        trio_stats: Dict[Tuple[str, str, str], Dict[str, int]] = {}
 
         # Duyệt qua từng trận đấu theo thứ tự từ đầu đến cuối
         for idx, row in df.iterrows():
@@ -86,7 +88,7 @@ class EloService:
                     stats[p]['losses'] += 1
                     match_history[p].append('L')
 
-            # Ghi nhận cặp đồng đội (Team 1)
+            # Ghi nhận cặp đồng đội (Duo - Team 1)
             for p1, p2 in combinations(sorted(team1), 2):
                 pair = (p1, p2)
                 if pair not in pair_stats:
@@ -95,7 +97,16 @@ class EloService:
                 if result == 1:
                     pair_stats[pair]['together_wins'] += 1
 
-            # Ghi nhận cặp đồng đội (Team 2)
+            # Ghi nhận bộ ba đồng đội (Trio - Team 1)
+            for p1, p2, p3 in combinations(sorted(team1), 3):
+                trio = (p1, p2, p3)
+                if trio not in trio_stats:
+                    trio_stats[trio] = {'together_matches': 0, 'together_wins': 0}
+                trio_stats[trio]['together_matches'] += 1
+                if result == 1:
+                    trio_stats[trio]['together_wins'] += 1
+
+            # Ghi nhận cặp đồng đội (Duo - Team 2)
             for p1, p2 in combinations(sorted(team2), 2):
                 pair = (p1, p2)
                 if pair not in pair_stats:
@@ -103,6 +114,15 @@ class EloService:
                 pair_stats[pair]['together_matches'] += 1
                 if result == 2:
                     pair_stats[pair]['together_wins'] += 1
+
+            # Ghi nhận bộ ba đồng đội (Trio - Team 2)
+            for p1, p2, p3 in combinations(sorted(team2), 3):
+                trio = (p1, p2, p3)
+                if trio not in trio_stats:
+                    trio_stats[trio] = {'together_matches': 0, 'together_wins': 0}
+                trio_stats[trio]['together_matches'] += 1
+                if result == 2:
+                    trio_stats[trio]['together_wins'] += 1
 
         # ================================
         # TÍNH TOÁN PHONG ĐỘ TỰ ĐỘNG (FORM)
@@ -218,7 +238,7 @@ class EloService:
             w = stats[p]['wins']
             stats[p]['winrate'] = round((w / m * 100), 1) if m > 0 else 0.0
 
-        # Chuẩn hóa Pair Synergy
+        # Chuẩn hóa Pair Synergy (Duo)
         pair_synergy: Dict[str, Dict[str, Any]] = {}
         for (p1, p2), p_data in pair_stats.items():
             tm = p_data['together_matches']
@@ -237,12 +257,33 @@ class EloService:
                     'synergy_score': synergy_score
                 }
 
+        # Chuẩn hóa Trio Synergy (Bộ ba tam tấu - 3 người cùng team)
+        trio_synergy: Dict[str, Dict[str, Any]] = {}
+        for (p1, p2, p3), t_data in trio_stats.items():
+            tm = t_data['together_matches']
+            tw = t_data['together_wins']
+            if tm >= 2:
+                wr = tw / tm
+                # Synergy bonus từ -0.6 đến +0.6
+                synergy_score = round((wr - 0.5) * 2.4, 3)
+                key = f"{p1}|{p2}|{p3}"
+                trio_synergy[key] = {
+                    'p1': p1,
+                    'p2': p2,
+                    'p3': p3,
+                    'matches': tm,
+                    'wins': tw,
+                    'winrate': round(wr * 100, 1),
+                    'synergy_score': synergy_score
+                }
+
         return {
             'elo': elo,
             'elo_normalized': elo_normalized,
             'form': form_data,
             'stats': stats,
-            'pair_synergy': pair_synergy
+            'pair_synergy': pair_synergy,
+            'trio_synergy': trio_synergy
         }
 
 

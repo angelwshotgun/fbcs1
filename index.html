@@ -210,35 +210,61 @@
             <!-- Matchmaking Result View (Hidden until teams are created) -->
             <div id="teams-result-section" class="hidden space-y-6">
                 <div class="bg-white p-7 rounded-3xl border border-indigo-200/80 shadow-lg">
-                    <div class="text-center mb-6">
-                        <span class="px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-xs font-bold font-heading uppercase tracking-wider">
-                            ✨ KẾT QUẢ PHÂN CHIA ĐỘI HÌNH TỐI ƯU
-                        </span>
-                        <div class="flex items-center justify-center gap-6 mt-3 text-sm text-slate-600 font-medium">
-                            <span>Chênh lệch sức mạnh: <b id="res-power-diff" class="text-slate-900 text-base font-bold font-heading">0.0</b></span>
-                            <span>•</span>
-                            <span class="text-indigo-600 font-bold">Tỷ lệ dự đoán: <span id="res-win-prob-label">50% - 50%</span></span>
+                    <!-- Results Header & Controls -->
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-5 border-b border-indigo-100">
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="px-3.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-xs font-bold font-heading uppercase tracking-wider">
+                                    ✨ KẾT QUẢ PHÂN CHIA ĐỘI HÌNH
+                                </span>
+                                <span id="res-rng-badge" class="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold font-heading flex items-center gap-1.5">
+                                    <i class="fa-solid fa-dice"></i> <span>RNG Cân Bằng: Sai số ±0.5</span>
+                                </span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-500 font-medium">
+                                <span>Chênh lệch sức mạnh: <b id="res-power-diff" class="text-slate-900 text-sm font-bold font-heading">0.0</b></span>
+                                <span>•</span>
+                                <span class="text-indigo-600 font-bold">Tỷ lệ dự đoán: <span id="res-win-prob-label">50% - 50%</span></span>
+                                <span class="hidden sm:inline">•</span>
+                                <span id="res-pool-count-label" class="text-slate-500">Đã chọn từ nhóm phương án tối ưu</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <button onclick="rerollTeams()" id="btn-reroll-teams" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold font-heading shadow-xs transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-dice text-sm"></i>
+                                <span>Xếp Lại (RNG)</span>
+                            </button>
                         </div>
                     </div>
 
                     <!-- Teams Side-by-Side Comparison -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <!-- Team 1 (Blue) -->
-                        <div class="bg-gradient-to-br from-blue-50/80 to-indigo-50/20 border border-blue-200/90 rounded-3xl p-6 relative overflow-hidden shadow-xs">
-                            <div class="flex items-center justify-between mb-4 border-b border-blue-200/60 pb-3">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white text-base shadow-xs">1</div>
-                                    <div>
-                                        <h3 class="font-black font-heading text-blue-900 text-lg">ĐỘI XANH (TEAM 1)</h3>
-                                        <p class="text-xs text-slate-500 font-medium">Sức mạnh tổng: <b id="team1-power-text" class="text-blue-700 font-bold">0</b></p>
+                        <div class="bg-gradient-to-br from-blue-50/80 to-indigo-50/20 border border-blue-200/90 rounded-3xl p-6 relative overflow-hidden shadow-xs flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-4 border-b border-blue-200/60 pb-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white text-base shadow-xs">1</div>
+                                        <div>
+                                            <h3 class="font-black font-heading text-blue-900 text-lg">ĐỘI XANH (TEAM 1)</h3>
+                                            <p class="text-xs text-slate-500 font-medium">Sức mạnh tổng: <b id="team1-power-text" class="text-blue-700 font-bold">0</b></p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span id="team1-prob-badge" class="px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-xs border border-blue-200">50% Win</span>
                                     </div>
                                 </div>
-                                <div class="text-right">
-                                    <span id="team1-prob-badge" class="px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-xs border border-blue-200">50% Win</span>
+                                <div id="team1-players-list" class="space-y-2.5">
+                                    <!-- Rendered via JS -->
                                 </div>
-                            </div>
-                            <div id="team1-players-list" class="space-y-2.5">
-                                <!-- Rendered via JS -->
+
+                                <!-- Team 1 Synergies & Chemistry -->
+                                <div id="team1-synergies-container" class="mt-4 pt-3 border-t border-blue-200/60 hidden">
+                                    <span class="text-[11px] font-bold text-blue-900 flex items-center gap-1.5 mb-2">
+                                        <i class="fa-solid fa-handshake-simple text-blue-600"></i> Điểm ăn ý & Bổ trợ đội hình:
+                                    </span>
+                                    <div id="team1-synergies-list" class="flex flex-wrap gap-1.5"></div>
+                                </div>
                             </div>
                             <div class="mt-5 pt-3.5 border-t border-blue-200/60 flex items-center justify-between">
                                 <span class="text-xs text-slate-500 font-medium">Xác nhận kết quả:</span>
@@ -249,21 +275,31 @@
                         </div>
 
                         <!-- Team 2 (Red) -->
-                        <div class="bg-gradient-to-br from-rose-50/80 to-orange-50/20 border border-rose-200/90 rounded-3xl p-6 relative overflow-hidden shadow-xs">
-                            <div class="flex items-center justify-between mb-4 border-b border-rose-200/60 pb-3">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-xl bg-rose-600 flex items-center justify-center font-bold text-white text-base shadow-xs">2</div>
-                                    <div>
-                                        <h3 class="font-black font-heading text-rose-900 text-lg">ĐỘI ĐỎ (TEAM 2)</h3>
-                                        <p class="text-xs text-slate-500 font-medium">Sức mạnh tổng: <b id="team2-power-text" class="text-rose-700 font-bold">0</b></p>
+                        <div class="bg-gradient-to-br from-rose-50/80 to-orange-50/20 border border-rose-200/90 rounded-3xl p-6 relative overflow-hidden shadow-xs flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-4 border-b border-rose-200/60 pb-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-rose-600 flex items-center justify-center font-bold text-white text-base shadow-xs">2</div>
+                                        <div>
+                                            <h3 class="font-black font-heading text-rose-900 text-lg">ĐỘI ĐỎ (TEAM 2)</h3>
+                                            <p class="text-xs text-slate-500 font-medium">Sức mạnh tổng: <b id="team2-power-text" class="text-rose-700 font-bold">0</b></p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span id="team2-prob-badge" class="px-3 py-1 rounded-full bg-rose-100 text-rose-800 font-bold text-xs border border-rose-200">50% Win</span>
                                     </div>
                                 </div>
-                                <div class="text-right">
-                                    <span id="team2-prob-badge" class="px-3 py-1 rounded-full bg-rose-100 text-rose-800 font-bold text-xs border border-rose-200">50% Win</span>
+                                <div id="team2-players-list" class="space-y-2.5">
+                                    <!-- Rendered via JS -->
                                 </div>
-                            </div>
-                            <div id="team2-players-list" class="space-y-2.5">
-                                <!-- Rendered via JS -->
+
+                                <!-- Team 2 Synergies & Chemistry -->
+                                <div id="team2-synergies-container" class="mt-4 pt-3 border-t border-rose-200/60 hidden">
+                                    <span class="text-[11px] font-bold text-rose-900 flex items-center gap-1.5 mb-2">
+                                        <i class="fa-solid fa-handshake-simple text-rose-600"></i> Điểm ăn ý & Bổ trợ đội hình:
+                                    </span>
+                                    <div id="team2-synergies-list" class="flex flex-wrap gap-1.5"></div>
+                                </div>
                             </div>
                             <div class="mt-5 pt-3.5 border-t border-rose-200/60 flex items-center justify-between">
                                 <span class="text-xs text-slate-500 font-medium">Xác nhận kết quả:</span>
@@ -446,19 +482,35 @@
         </section>
 
         <!-- ============================================== -->
-        <!-- TAB 5: CẶP BÀI TRÙNG & ĂN Ý (SYNERGIES) -->
+        <!-- TAB 5: CẶP BÀI TRÙNG & BỘ BA ĂN Ý (SYNERGIES) -->
         <!-- ============================================== -->
         <section id="tab-content-synergies" class="tab-pane hidden space-y-6">
-            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
-                <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
-                    <span>🤝 Cặp Bài Trùng Ăn Ý Nhất</span>
-                </h2>
-                <p class="text-sm text-slate-500 mt-1">
-                    Thống kê tỷ lệ thắng khi 2 tuyển thủ cùng chiến tuyến trong các trận đấu đã ghi nhận.
-                </p>
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
+                        <span>🤝 Thống Kê Ăn Ý & Tam Tấu</span>
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Thống kê tỷ lệ thắng khi 2 hoặc 3 tuyển thủ cùng chung chiến tuyến trong các trận đấu đã ghi nhận.
+                    </p>
+                </div>
+                <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold font-heading">
+                    <button id="btn-synergy-duo" onclick="switchSynergyView('duo')" class="px-3.5 py-1.5 rounded-xl bg-white text-indigo-700 shadow-xs transition">
+                        🤝 Cặp Đôi (Duo)
+                    </button>
+                    <button id="btn-synergy-trio" onclick="switchSynergyView('trio')" class="px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition">
+                        🌟 Bộ Ba (Trio)
+                    </button>
+                </div>
             </div>
 
-            <div id="synergies-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <!-- Duo Grid (Default) -->
+            <div id="synergies-duo-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <!-- Dynamically rendered via JS -->
+            </div>
+
+            <!-- Trio Grid (Hidden initially) -->
+            <div id="synergies-trio-container" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <!-- Dynamically rendered via JS -->
             </div>
         </section>
@@ -476,13 +528,63 @@
                     <p class="text-sm text-slate-500 mt-1">Các thông số cấu hình và môi trường kết nối cơ sở dữ liệu.</p>
                 </div>
 
+                <!-- Supabase PostgreSQL Integration Card -->
+                <div class="p-6 rounded-2xl bg-gradient-to-br from-indigo-50/60 via-white to-emerald-50/40 border border-indigo-200 shadow-xs space-y-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-indigo-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg font-bold shadow-xs">
+                                <i class="fa-solid fa-database"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold font-heading text-slate-900 flex items-center gap-2">
+                                    <span>Supabase PostgreSQL (Cơ Sở Dữ Liệu Đa Chiều)</span>
+                                </h4>
+                                <p class="text-xs text-slate-500">Lưu trữ quan hệ: tuyển thủ, trận đấu, đội hình và thống kê nâng cao.</p>
+                            </div>
+                        </div>
+                        <span id="supabase-status-badge" class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold font-heading flex items-center gap-1.5">
+                            <i class="fa-solid fa-spinner fa-spin"></i> <span>Đang kiểm tra...</span>
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div class="p-3 rounded-xl bg-white border border-slate-200">
+                            <span class="text-slate-400 font-medium">Bảng Tuyển Thủ (players):</span>
+                            <p id="supabase-players-count" class="font-bold text-slate-900 text-sm mt-0.5">-</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-white border border-slate-200">
+                            <span class="text-slate-400 font-medium">Bảng Trận Đấu (matches):</span>
+                            <p id="supabase-matches-count" class="font-bold text-slate-900 text-sm mt-0.5">-</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-white border border-slate-200">
+                            <span class="text-slate-400 font-medium">Chế độ hoạt động:</span>
+                            <p id="supabase-mode-text" class="font-bold text-indigo-600 text-sm mt-0.5">SUPABASE PRIMARY</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                        <span class="text-[11px] text-slate-500 font-medium">
+                            <i class="fa-solid fa-shield-halved text-emerald-600 mr-1"></i> Tự động đồng bộ song song với bộ đệm cục bộ (Dual-Cache).
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="checkSupabaseStatus()" class="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold font-heading transition">
+                                <i class="fa-solid fa-arrows-rotate mr-1 text-slate-400"></i> Kiểm Tra
+                            </button>
+                            <button onclick="handleSyncToSupabase()" id="btn-sync-supabase" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold font-heading shadow-xs transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span>Đồng Bộ Tuyển Thủ Lên Supabase</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Storage Info Card -->
                 <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                    <h4 class="text-xs font-bold font-heading text-slate-500 uppercase tracking-wider">Trạng Thái Dữ Liệu</h4>
+                    <h4 class="text-xs font-bold font-heading text-slate-500 uppercase tracking-wider">Trạng Thái Bộ Nhớ Cục Bộ</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                         <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
                             <span class="text-xs text-slate-400 font-medium">Chế độ lưu trữ:</span>
-                            <p id="storage-mode-text" class="font-bold text-indigo-600 mt-0.5">LOCAL / GITHUB</p>
+                            <p id="storage-mode-text" class="font-bold text-indigo-600 mt-0.5">SUPABASE / LOCAL</p>
                         </div>
                         <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
                             <span class="text-xs text-slate-400 font-medium">Số trận đã ghi:</span>

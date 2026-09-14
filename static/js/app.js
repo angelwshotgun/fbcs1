@@ -74,15 +74,16 @@ async function loadStatus() {
         const res = await fetch('/api/status');
         const data = await res.json();
         if (data.success) {
-            document.getElementById('storage-mode-text').innerText = data.storage_mode.toUpperCase();
+            document.getElementById('storage-mode-text').innerText = (data.storage_mode || 'LOCAL').toUpperCase();
             document.getElementById('storage-matches-text').innerText = `${data.total_matches} trận`;
             document.getElementById('storage-players-text').innerText = `${data.total_players} người`;
             const badge = document.getElementById('gemini-status-badge');
-            if (data.has_gemini) {
-                badge.innerText = "Đã cấu hình Key";
-                badge.className = "text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold";
+            if (badge && data.has_gemini) {
+                badge.innerText = "Đã cấu hình Key (.env)";
+                badge.className = "text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold";
             }
         }
+        checkSupabaseStatus();
     } catch (err) {
         console.error("Lỗi khi tải trạng thái hệ thống:", err);
     }
@@ -227,6 +228,23 @@ function displayTeamsResult(data) {
     document.getElementById('res-power-diff').innerText = data.power_difference;
     document.getElementById('res-win-prob-label').innerText = `${data.team1_win_prob}% - ${data.team2_win_prob}%`;
 
+    // RNG info badge
+    const rngBadge = document.getElementById('res-rng-badge');
+    if (rngBadge) {
+        if (data.rng_applied) {
+            rngBadge.innerHTML = `<i class="fa-solid fa-dice"></i> <span>RNG Cân Bằng: Sai số ±${data.power_difference}</span>`;
+            rngBadge.className = "px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold font-heading flex items-center gap-1.5";
+        } else {
+            rngBadge.innerHTML = `<i class="fa-solid fa-scale-balanced"></i> <span>Cân bằng tuyệt đối</span>`;
+            rngBadge.className = "px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold font-heading flex items-center gap-1.5";
+        }
+    }
+
+    const poolLabel = document.getElementById('res-pool-count-label');
+    if (poolLabel) {
+        poolLabel.innerText = `Đã chọn từ nhóm ${data.pool_candidates_count || 1} phương án tối ưu`;
+    }
+
     document.getElementById('team1-power-text').innerText = data.team1_power;
     document.getElementById('team2-power-text').innerText = data.team2_power;
 
@@ -240,6 +258,28 @@ function displayTeamsResult(data) {
         t1List.appendChild(createTeamPlayerCard(p, 'blue'));
     });
 
+    // Render Team 1 Synergies & Chemistry
+    const t1SynContainer = document.getElementById('team1-synergies-container');
+    const t1SynList = document.getElementById('team1-synergies-list');
+    if (t1SynContainer && t1SynList) {
+        if (data.team1_synergies && data.team1_synergies.length > 0) {
+            t1SynContainer.classList.remove('hidden');
+            t1SynList.innerHTML = '';
+            data.team1_synergies.forEach(s => {
+                const span = document.createElement('span');
+                const isPositive = (s.bonus || 0) >= 0;
+                span.className = `text-[10px] font-semibold px-2 py-1 rounded-lg border flex items-center gap-1 ${
+                    isPositive ? 'bg-blue-100/70 border-blue-200 text-blue-800' : 'bg-rose-100/70 border-rose-200 text-rose-800'
+                }`;
+                span.title = s.label || '';
+                span.innerHTML = `<span>${s.icon || '🤝'}</span> <span><b class="font-heading">${s.names}</b> (${isPositive ? '+' : ''}${s.bonus})</span>`;
+                t1SynList.appendChild(span);
+            });
+        } else {
+            t1SynContainer.classList.add('hidden');
+        }
+    }
+
     // Render Team 2
     const t2List = document.getElementById('team2-players-list');
     t2List.innerHTML = '';
@@ -247,11 +287,52 @@ function displayTeamsResult(data) {
         t2List.appendChild(createTeamPlayerCard(p, 'rose'));
     });
 
+    // Render Team 2 Synergies & Chemistry
+    const t2SynContainer = document.getElementById('team2-synergies-container');
+    const t2SynList = document.getElementById('team2-synergies-list');
+    if (t2SynContainer && t2SynList) {
+        if (data.team2_synergies && data.team2_synergies.length > 0) {
+            t2SynContainer.classList.remove('hidden');
+            t2SynList.innerHTML = '';
+            data.team2_synergies.forEach(s => {
+                const span = document.createElement('span');
+                const isPositive = (s.bonus || 0) >= 0;
+                span.className = `text-[10px] font-semibold px-2 py-1 rounded-lg border flex items-center gap-1 ${
+                    isPositive ? 'bg-rose-100/70 border-rose-200 text-rose-800' : 'bg-slate-100 border-slate-200 text-slate-700'
+                }`;
+                span.title = s.label || '';
+                span.innerHTML = `<span>${s.icon || '🤝'}</span> <span><b class="font-heading">${s.names}</b> (${isPositive ? '+' : ''}${s.bonus})</span>`;
+                t2SynList.appendChild(span);
+            });
+        } else {
+            t2SynContainer.classList.add('hidden');
+        }
+    }
+
     // Auto scroll to results
     section.scrollIntoView({ behavior: 'smooth' });
 
     // Auto trigger initial AI analysis preview
     requestAiAnalysis();
+}
+
+async function rerollTeams() {
+    const btn = document.getElementById('btn-reroll-teams');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i> <span>Đang xếp...</span>';
+    }
+
+    if (captain1 && captain2 && selectedCaptainsRemaining.length === 8) {
+        await handleCreateTeamsWithCaptains();
+    } else {
+        await handleCreateTeams();
+    }
+
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-dice text-sm"></i> <span>Xếp Lại (RNG)</span>';
+    }
 }
 
 function createTeamPlayerCard(p, teamColor) {
@@ -302,7 +383,13 @@ async function submitMatchWinner(winningTeam) {
             body: JSON.stringify({
                 team1: currentTeamsResult.team1_names,
                 team2: currentTeamsResult.team2_names,
-                winner: winningTeam
+                winner: winningTeam,
+                team1_power: currentTeamsResult.team1_power || 0,
+                team2_power: currentTeamsResult.team2_power || 0,
+                synergies: {
+                    team1: currentTeamsResult.team1_synergies || [],
+                    team2: currentTeamsResult.team2_synergies || []
+                }
             })
         });
         const data = await res.json();
@@ -856,45 +943,106 @@ function loadLeaderboard() {
 }
 
 // ==========================================
-// TAB 5: SYNERGIES (CẶP BÀI TRÙNG)
+// TAB 5: SYNERGIES (CẶP BÀI TRÙNG & TAM TẤU)
 // ==========================================
+let currentSynergyView = 'duo';
+
+function switchSynergyView(view) {
+    currentSynergyView = view;
+    const btnDuo = document.getElementById('btn-synergy-duo');
+    const btnTrio = document.getElementById('btn-synergy-trio');
+    const containerDuo = document.getElementById('synergies-duo-container');
+    const containerTrio = document.getElementById('synergies-trio-container');
+
+    if (!btnDuo || !btnTrio || !containerDuo || !containerTrio) return;
+
+    if (view === 'duo') {
+        btnDuo.className = "px-3.5 py-1.5 rounded-xl bg-white text-indigo-700 shadow-xs transition";
+        btnTrio.className = "px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition";
+        containerDuo.classList.remove('hidden');
+        containerTrio.classList.add('hidden');
+    } else {
+        btnTrio.className = "px-3.5 py-1.5 rounded-xl bg-white text-indigo-700 shadow-xs transition";
+        btnDuo.className = "px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition";
+        containerTrio.classList.remove('hidden');
+        containerDuo.classList.add('hidden');
+    }
+}
+
 async function loadSynergies() {
-    const container = document.getElementById('synergies-container');
-    if (!container) return;
-    container.innerHTML = '<div class="col-span-3 text-center text-slate-400 py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang tải thống kê cặp đôi...</div>';
+    const duoContainer = document.getElementById('synergies-duo-container');
+    const trioContainer = document.getElementById('synergies-trio-container');
+    if (!duoContainer || !trioContainer) return;
+
+    duoContainer.innerHTML = '<div class="col-span-3 text-center text-slate-400 py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang tải thống kê cặp đôi...</div>';
+    trioContainer.innerHTML = '<div class="col-span-3 text-center text-slate-400 py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang tải thống kê tam tấu...</div>';
 
     try {
         const res = await fetch('/api/synergies');
         const data = await res.json();
-        if (data.success && data.synergies) {
-            container.innerHTML = '';
-            if (data.synergies.length === 0) {
-                container.innerHTML = '<div class="col-span-3 text-center text-slate-500 py-8">Chưa có dữ liệu cặp đôi nào trong các trận mới. Hãy ghi nhận trận đấu để xem thống kê ăn ý!</div>';
-                return;
-            }
-            data.synergies.slice(0, 30).forEach(pair => {
-                const p1 = allPlayers.find(p => p.id === pair.p1) || { nickname: pair.p1, avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${pair.p1}` };
-                const p2 = allPlayers.find(p => p.id === pair.p2) || { nickname: pair.p2, avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${pair.p2}` };
+        if (data.success) {
+            // Render Duo
+            duoContainer.innerHTML = '';
+            const pairs = data.pairs || data.synergies || [];
+            if (pairs.length === 0) {
+                duoContainer.innerHTML = '<div class="col-span-3 text-center text-slate-500 py-8">Chưa có dữ liệu cặp đôi nào trong các trận mới (cần từ 2 trận chung đội). Hãy ghi nhận kết quả trận đấu để xem thống kê ăn ý!</div>';
+            } else {
+                pairs.slice(0, 30).forEach(pair => {
+                    const p1 = allPlayers.find(p => p.id === pair.p1) || { nickname: pair.p1, avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${pair.p1}` };
+                    const p2 = allPlayers.find(p => p.id === pair.p2) || { nickname: pair.p2, avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${pair.p2}` };
 
-                const card = document.createElement('div');
-                card.className = "bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between shadow-xs";
-                card.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <img src="${p1.avatar}" class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 object-cover">
-                        <span class="text-slate-400 font-bold text-xs">+</span>
-                        <img src="${p2.avatar}" class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 object-cover">
-                        <div class="ml-2">
-                            <h5 class="font-bold text-xs text-slate-900">${p1.nickname} & ${p2.nickname}</h5>
-                            <span class="text-[10px] text-slate-500">${pair.matches} trận cùng team</span>
+                    const card = document.createElement('div');
+                    card.className = "bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between shadow-xs hover:border-indigo-300 transition";
+                    card.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <img src="${p1.avatar}" class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 object-cover">
+                            <span class="text-slate-400 font-bold text-xs">+</span>
+                            <img src="${p2.avatar}" class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 object-cover">
+                            <div class="ml-2">
+                                <h5 class="font-bold font-heading text-xs text-slate-900">${p1.nickname} & ${p2.nickname}</h5>
+                                <span class="text-[10px] text-slate-500">${pair.matches} trận cùng team</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-sm font-black text-indigo-600">${pair.winrate}%</span>
-                        <div class="text-[10px] text-slate-400">${pair.wins} thắng</div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
+                        <div class="text-right">
+                            <span class="text-sm font-black text-indigo-600 font-heading">${pair.winrate}%</span>
+                            <div class="text-[10px] text-slate-400">${pair.wins} thắng</div>
+                        </div>
+                    `;
+                    duoContainer.appendChild(card);
+                });
+            }
+
+            // Render Trio
+            trioContainer.innerHTML = '';
+            const trios = data.trios || [];
+            if (trios.length === 0) {
+                trioContainer.innerHTML = '<div class="col-span-3 text-center text-slate-500 py-8">Chưa có dữ liệu bộ ba nào trong các trận mới (cần từ 2 trận cùng 3 người). Hãy ghi nhận kết quả trận đấu để xem thống kê tam tấu!</div>';
+            } else {
+                trios.slice(0, 30).forEach(trio => {
+                    const p1 = allPlayers.find(p => p.id === trio.p1) || { nickname: trio.p1, avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${trio.p1}` };
+                    const p2 = allPlayers.find(p => p.id === trio.p2) || { nickname: trio.p2, avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${trio.p2}` };
+                    const p3 = allPlayers.find(p => p.id === trio.p3) || { nickname: trio.p3, avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${trio.p3}` };
+
+                    const card = document.createElement('div');
+                    card.className = "bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between shadow-xs hover:border-amber-300 transition";
+                    card.innerHTML = `
+                        <div class="flex items-center gap-1.5">
+                            <img src="${p1.avatar}" class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 object-cover">
+                            <img src="${p2.avatar}" class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 object-cover">
+                            <img src="${p3.avatar}" class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 object-cover">
+                            <div class="ml-2">
+                                <h5 class="font-bold font-heading text-xs text-slate-900 truncate max-w-[120px] sm:max-w-[150px]">${p1.nickname}, ${p2.nickname}, ${p3.nickname}</h5>
+                                <span class="text-[10px] text-slate-500">${trio.matches} trận cùng team</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-sm font-black text-amber-600 font-heading">${trio.winrate}%</span>
+                            <div class="text-[10px] text-slate-400">${trio.wins} thắng</div>
+                        </div>
+                    `;
+                    trioContainer.appendChild(card);
+                });
+            }
         }
     } catch (err) {
         console.error("Lỗi synergies:", err);
@@ -902,8 +1050,86 @@ async function loadSynergies() {
 }
 
 // ==========================================
-// TAB 6: SETTINGS (CÀI ĐẶT)
+// TAB 6: SETTINGS & SUPABASE (CÀI ĐẶT)
 // ==========================================
+async function checkSupabaseStatus() {
+    const badge = document.getElementById('supabase-status-badge');
+    const pCount = document.getElementById('supabase-players-count');
+    const mCount = document.getElementById('supabase-matches-count');
+    const modeText = document.getElementById('supabase-mode-text');
+
+    if (!badge) return;
+
+    try {
+        const res = await fetch('/api/supabase/status');
+        const data = await res.json();
+
+        if (data.success && data.connected) {
+            badge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600"></i> <span class="text-emerald-800">Online • Sẵn sàng</span>';
+            badge.className = "px-3 py-1 rounded-full bg-emerald-100 text-xs font-bold font-heading flex items-center gap-1.5";
+            if (pCount) pCount.innerText = `${data.players_count} tuyển thủ`;
+            if (mCount) mCount.innerText = `${data.matches_count} trận đấu`;
+            if (modeText) modeText.innerText = (data.storage_mode || 'SUPABASE').toUpperCase();
+        } else {
+            badge.innerHTML = '<i class="fa-solid fa-circle-exclamation text-amber-600"></i> <span class="text-amber-800">Chưa kết nối bảng</span>';
+            badge.className = "px-3 py-1 rounded-full bg-amber-100 text-xs font-bold font-heading flex items-center gap-1.5";
+            if (pCount) pCount.innerText = "0 tuyển thủ";
+            if (mCount) mCount.innerText = "0 trận";
+            if (modeText) modeText.innerText = "FALLBACK LOCAL";
+        }
+    } catch (err) {
+        console.error("Lỗi kiểm tra Supabase:", err);
+        badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-600"></i> <span class="text-rose-800">Offline (Dùng Local)</span>';
+        badge.className = "px-3 py-1 rounded-full bg-rose-100 text-xs font-bold font-heading flex items-center gap-1.5";
+    }
+}
+
+async function handleSyncToSupabase() {
+    const btn = document.getElementById('btn-sync-supabase');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Đang đồng bộ...';
+    }
+
+    try {
+        const res = await fetch('/api/supabase/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Đồng bộ thành công!',
+                text: data.message || `Đã đồng bộ ${data.synced_count} tuyển thủ lên Supabase.`,
+                ...SWAL_THEME
+            });
+            await checkSupabaseStatus();
+            await loadAllPlayers();
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Chưa thể đồng bộ',
+                text: data.error || 'Vui lòng kiểm tra lại bảng dữ liệu trên Supabase.',
+                ...SWAL_THEME
+            });
+        }
+    } catch (err) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi đồng bộ',
+            text: err.message,
+            ...SWAL_THEME
+        });
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> Đồng Bộ Tuyển Thủ Lên Supabase';
+        }
+    }
+}
+
 function saveGeminiApiKey() {
     const key = document.getElementById('input-gemini-key').value.trim();
     if (!key) {

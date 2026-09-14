@@ -195,13 +195,13 @@ class PlayerService:
         return False, "Lỗi khi cập nhật dữ liệu", None
 
     def delete_player(self, player_id: str) -> Tuple[bool, str]:
+        pid = player_id.strip().lower()
         profiles = data_manager.read_players_data()
-        if player_id in profiles:
-            del profiles[player_id]
-            data_manager.save_players_data(profiles)
+        if pid in profiles:
+            data_manager.delete_single_player(pid)
             self.refresh_metrics()
-            return True, f"Đã xóa hồ sơ người chơi '{player_id}'"
-        return False, f"Không tìm thấy người chơi '{player_id}' trong danh sách hồ sơ"
+            return True, f"Đã xóa hồ sơ người chơi '{pid}'"
+        return False, f"Không tìm thấy người chơi '{pid}' trong danh sách hồ sơ"
 
 
 player_service = PlayerService()
