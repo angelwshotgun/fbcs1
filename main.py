@@ -111,6 +111,7 @@ def api_create_teams():
         players = data.get('players', [])
         allow_rng = data.get('allow_rng', True)
         rng_tolerance = float(data.get('rng_tolerance', 0.6))
+        balance_mode = data.get('balance_mode') or data.get('mode') or 'composite'
 
         if len(players) != 10:
             return jsonify({'success': False, 'error': 'Vui lòng chọn chính xác 10 người chơi'}), 400
@@ -118,7 +119,8 @@ def api_create_teams():
         result = matchmaking_service.create_balanced_teams(
             players,
             allow_rng=allow_rng,
-            rng_tolerance=rng_tolerance
+            rng_tolerance=rng_tolerance,
+            balance_mode=balance_mode
         )
         return jsonify({'success': True, **result}), 200
     except Exception as e:
@@ -136,6 +138,7 @@ def api_create_teams_with_captains():
         remaining = data.get('remaining_players', [])
         allow_rng = data.get('allow_rng', True)
         rng_tolerance = float(data.get('rng_tolerance', 0.6))
+        balance_mode = data.get('balance_mode') or data.get('mode') or 'composite'
 
         if not captain1 or not captain2:
             return jsonify({'success': False, 'error': 'Vui lòng chọn đủ 2 Đội trưởng'}), 400
@@ -147,7 +150,8 @@ def api_create_teams_with_captains():
             captain2,
             remaining,
             allow_rng=allow_rng,
-            rng_tolerance=rng_tolerance
+            rng_tolerance=rng_tolerance,
+            balance_mode=balance_mode
         )
         return jsonify({'success': True, **result}), 200
     except Exception as e:

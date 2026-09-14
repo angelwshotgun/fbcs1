@@ -198,11 +198,16 @@ async function handleCreateTeams() {
         return;
     }
 
+    const balanceMode = document.getElementById('matchmaking-mode')?.value || 'composite';
+
     try {
         const res = await fetch('/api/create_teams', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ players: selectedMatchmaker })
+            body: JSON.stringify({ 
+                players: selectedMatchmaker,
+                balance_mode: balanceMode
+            })
         });
         const data = await res.json();
         if (data.success) {
@@ -225,14 +230,29 @@ function displayTeamsResult(data) {
     const section = document.getElementById('teams-result-section');
     section.classList.remove('hidden');
 
-    document.getElementById('res-power-diff').innerText = data.power_difference;
+    const isPureElo = data.balance_mode === 'pure_elo';
+
+    document.getElementById('res-power-diff').innerText = isPureElo ? `${data.power_difference} Elo` : data.power_difference;
     document.getElementById('res-win-prob-label').innerText = `${data.team1_win_prob}% - ${data.team2_win_prob}%`;
+
+    // Mode badge
+    const modeBadge = document.getElementById('res-mode-badge');
+    if (modeBadge) {
+        if (isPureElo) {
+            modeBadge.innerHTML = `<i class="fa-solid fa-crosshairs"></i> <span>Chế độ: Thuần Elo Ẩn</span>`;
+            modeBadge.className = "px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold font-heading flex items-center gap-1.5";
+        } else {
+            modeBadge.innerHTML = `<i class="fa-solid fa-bolt"></i> <span>Chế độ: Toàn Diện (Elo + Stats)</span>`;
+            modeBadge.className = "px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold font-heading flex items-center gap-1.5";
+        }
+    }
 
     // RNG info badge
     const rngBadge = document.getElementById('res-rng-badge');
     if (rngBadge) {
         if (data.rng_applied) {
-            rngBadge.innerHTML = `<i class="fa-solid fa-dice"></i> <span>RNG Cân Bằng: Sai số ±${data.power_difference}</span>`;
+            const diffText = isPureElo ? `Sai số ±${data.power_difference} Elo` : `Sai số ±${data.power_difference}`;
+            rngBadge.innerHTML = `<i class="fa-solid fa-dice"></i> <span>RNG Cân Bằng: ${diffText}</span>`;
             rngBadge.className = "px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold font-heading flex items-center gap-1.5";
         } else {
             rngBadge.innerHTML = `<i class="fa-solid fa-scale-balanced"></i> <span>Cân bằng tuyệt đối</span>`;
@@ -245,8 +265,8 @@ function displayTeamsResult(data) {
         poolLabel.innerText = `Đã chọn từ nhóm ${data.pool_candidates_count || 1} phương án tối ưu`;
     }
 
-    document.getElementById('team1-power-text').innerText = data.team1_power;
-    document.getElementById('team2-power-text').innerText = data.team2_power;
+    document.getElementById('team1-power-text').innerText = isPureElo ? `Elo ${data.team1_power}` : data.team1_power;
+    document.getElementById('team2-power-text').innerText = isPureElo ? `Elo ${data.team2_power}` : data.team2_power;
 
     document.getElementById('team1-prob-badge').innerText = `${data.team1_win_prob}% Thắng`;
     document.getElementById('team2-prob-badge').innerText = `${data.team2_win_prob}% Thắng`;
@@ -255,7 +275,7 @@ function displayTeamsResult(data) {
     const t1List = document.getElementById('team1-players-list');
     t1List.innerHTML = '';
     data.team1.forEach(p => {
-        t1List.appendChild(createTeamPlayerCard(p, 'blue'));
+        t1List.appendChild(createTeamPlayerCard(p, 'blue', isPureElo));
     });
 
     // Render Team 1 Synergies & Chemistry
@@ -284,7 +304,7 @@ function displayTeamsResult(data) {
     const t2List = document.getElementById('team2-players-list');
     t2List.innerHTML = '';
     data.team2.forEach(p => {
-        t2List.appendChild(createTeamPlayerCard(p, 'rose'));
+        t2List.appendChild(createTeamPlayerCard(p, 'rose', isPureElo));
     });
 
     // Render Team 2 Synergies & Chemistry
@@ -339,27 +359,49 @@ async function rerollTeams() {
     }
 }
 
-function createTeamPlayerCard(p, teamColor) {
+function createTeamPlayerCard(p, teamColor, isPureElo = false) {
     const div = document.createElement('div');
     div.className = "flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/90 shadow-xs";
-    div.innerHTML = `
-        <div class="flex items-center gap-3">
-            <div class="relative">
-                <img src="${p.avatar}" class="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 object-cover" alt="${p.nickname}">
-                <span class="absolute -bottom-1 -right-1 text-[10px]">${p.form?.icon || '🌱'}</span>
+    
+    if (isPureElo) {
+        div.innerHTML = `
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <img src="${p.avatar}" class="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 object-cover" alt="${p.nickname}">
+                    <span class="absolute -bottom-1 -right-1 text-[10px]">${p.form?.icon || '🌱'}</span>
+                </div>
+                <div>
+                    <h5 class="font-bold font-heading text-xs text-slate-900">${p.nickname}</h5>
+                    <span class="text-[10px] text-slate-500">Elo Ẩn: <b class="text-indigo-600 font-bold">${Math.round(p.hidden_elo)}</b></span>
+                </div>
             </div>
-            <div>
-                <h5 class="font-bold font-heading text-xs text-slate-900">${p.nickname}</h5>
-                <span class="text-[10px] text-slate-500">Elo: <b class="text-slate-700">${Math.round(p.hidden_elo)}</b> • Kỹ năng: <b class="text-amber-600">${p.skill}/10</b></span>
+            <div class="text-right">
+                <span class="text-xs font-black ${teamColor === 'blue' ? 'text-blue-700' : 'text-rose-700'}">
+                    Elo ${Math.round(p.hidden_elo)}
+                </span>
+                <div class="text-[10px] text-slate-400">${p.form?.label?.split(' ')[0] || ''}</div>
             </div>
-        </div>
-        <div class="text-right">
-            <span class="text-xs font-black ${teamColor === 'blue' ? 'text-blue-700' : 'text-rose-700'}">
-                ${p.effective_power}
-            </span>
-            <div class="text-[10px] text-slate-400">${p.form?.label?.split(' ')[0] || ''}</div>
-        </div>
-    `;
+        `;
+    } else {
+        div.innerHTML = `
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <img src="${p.avatar}" class="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 object-cover" alt="${p.nickname}">
+                    <span class="absolute -bottom-1 -right-1 text-[10px]">${p.form?.icon || '🌱'}</span>
+                </div>
+                <div>
+                    <h5 class="font-bold font-heading text-xs text-slate-900">${p.nickname}</h5>
+                    <span class="text-[10px] text-slate-500">Elo: <b class="text-slate-700">${Math.round(p.hidden_elo)}</b> • Kỹ năng: <b class="text-amber-600">${p.skill}/10</b></span>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="text-xs font-black ${teamColor === 'blue' ? 'text-blue-700' : 'text-rose-700'}">
+                    ${p.effective_power}
+                </span>
+                <div class="text-[10px] text-slate-400">${p.form?.label?.split(' ')[0] || ''}</div>
+            </div>
+        `;
+    }
     return div;
 }
 
@@ -573,6 +615,8 @@ async function handleCreateTeamsWithCaptains() {
         return;
     }
 
+    const balanceMode = document.getElementById('captain-matchmaking-mode')?.value || document.getElementById('matchmaking-mode')?.value || 'composite';
+
     try {
         const res = await fetch('/api/create_teams_with_captains', {
             method: 'POST',
@@ -580,7 +624,8 @@ async function handleCreateTeamsWithCaptains() {
             body: JSON.stringify({
                 captain1: selectedCaptains[0],
                 captain2: selectedCaptains[1],
-                remaining_players: selectedCaptainMembers
+                remaining_players: selectedCaptainMembers,
+                balance_mode: balanceMode
             })
         });
         const data = await res.json();
@@ -722,14 +767,14 @@ function openPlayerModal(mode, playerId = null) {
         document.getElementById('form-nickname').value = '';
         document.getElementById('form-avatar').value = '';
         document.getElementById('form-avatar-preview').src = 'https://api.dicebear.com/7.x/bottts/svg?seed=new';
-        document.getElementById('form-skill').value = 7.0;
-        document.getElementById('val-skill').innerText = '7.0';
-        document.getElementById('form-pool').value = 7.0;
-        document.getElementById('val-pool').innerText = '7.0';
-        document.getElementById('form-flex').value = 6.5;
-        document.getElementById('val-flex').innerText = '6.5';
-        document.getElementById('form-consist').value = 7.0;
-        document.getElementById('val-consist').innerText = '7.0';
+        document.getElementById('form-skill').value = 5.0;
+        document.getElementById('val-skill').innerText = '5.0';
+        document.getElementById('form-pool').value = 5.0;
+        document.getElementById('val-pool').innerText = '5.0';
+        document.getElementById('form-flex').value = 5.0;
+        document.getElementById('val-flex').innerText = '5.0';
+        document.getElementById('form-consist').value = 5.0;
+        document.getElementById('val-consist').innerText = '5.0';
         document.getElementById('form-display-badge').innerText = '🌱 Tân Binh (Auto)';
     } else {
         title.innerHTML = '<i class="fa-solid fa-user-pen text-indigo-600"></i><span>Chỉnh Sửa Tuyển Thủ</span>';

@@ -45,11 +45,11 @@ class PlayerService:
         for pid in all_ids:
             profile = profiles_lower.get(pid, {})
 
-            # Stats cơ bản (thang điểm 1 - 10)
-            skill = float(profile.get('skill', 7.0))
-            champ_pool = float(profile.get('champion_pool', 7.0))
-            flex_lane = float(profile.get('flex_lane', 6.5))
-            consistency = float(profile.get('consistency', 7.0))
+            # Stats cơ bản (thang điểm 1 - 10, mặc định 5.0)
+            skill = float(profile.get('skill', 5.0))
+            champ_pool = float(profile.get('champion_pool', 5.0))
+            flex_lane = float(profile.get('flex_lane', 5.0))
+            consistency = float(profile.get('consistency', 5.0))
 
             # Tính điểm Stats OVR tổng hợp
             stats_ovr = round(
@@ -131,13 +131,13 @@ class PlayerService:
         if any(k.lower() == player_id for k in profiles.keys()):
             return False, f"Người chơi '{player_id}' đã tồn tại", None
 
-        # Khởi tạo thông số chuẩn hóa thang 1-10
+        # Khởi tạo thông số chuẩn hóa thang 1-10 (mặc định 5.0)
         nickname = data.get('nickname', '').strip() or player_id.capitalize()
         avatar = data.get('avatar', '').strip() or f"https://api.dicebear.com/7.x/bottts/svg?seed={player_id}"
-        skill = max(1.0, min(10.0, float(data.get('skill', 7.0))))
-        champ_pool = max(1.0, min(10.0, float(data.get('champion_pool', 7.0))))
-        flex_lane = max(1.0, min(10.0, float(data.get('flex_lane', 6.5))))
-        consistency = max(1.0, min(10.0, float(data.get('consistency', 7.0))))
+        skill = max(1.0, min(10.0, float(data.get('skill', 5.0))))
+        champ_pool = max(1.0, min(10.0, float(data.get('champion_pool', 5.0))))
+        flex_lane = max(1.0, min(10.0, float(data.get('flex_lane', 5.0))))
+        consistency = max(1.0, min(10.0, float(data.get('consistency', 5.0))))
         fav_champs = data.get('favorite_champions', [])
         primary_role = data.get('primary_role', 'MID')
 

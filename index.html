@@ -139,11 +139,18 @@
                         Chọn đủ 10 tuyển thủ (hoặc bấm <kbd class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 font-mono text-[11px] text-slate-700 font-bold">Ctrl + V</kbd> dán ảnh sảnh chờ). Thuật toán AI sẽ cân bằng 2 đội tối ưu nhất.
                     </p>
                 </div>
-                <div class="flex items-center gap-3 w-full md:w-auto">
-                    <button onclick="clearSelectedPlayers()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold transition shadow-xs">
+                <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                    <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 shadow-2xs">
+                        <span class="text-xs text-slate-500 font-semibold hidden sm:inline"><i class="fa-solid fa-sliders text-indigo-500 mr-1"></i>Chế độ:</span>
+                        <select id="matchmaking-mode" class="bg-transparent text-xs text-slate-800 font-bold focus:outline-none cursor-pointer">
+                            <option value="composite">⚡ Toàn Diện (Elo + Stats)</option>
+                            <option value="pure_elo">🎯 Thuần Elo Ẩn (Không dùng Stat)</option>
+                        </select>
+                    </div>
+                    <button onclick="clearSelectedPlayers()" class="px-3.5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition shadow-xs">
                         <i class="fa-solid fa-rotate-left mr-1.5 text-slate-400"></i> Bỏ chọn
                     </button>
-                    <button onclick="handleCreateTeams()" id="btn-create-teams" class="flex-1 md:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold font-heading text-sm shadow-md shadow-indigo-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button onclick="handleCreateTeams()" id="btn-create-teams" class="flex-1 md:flex-initial px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold font-heading text-xs shadow-md shadow-indigo-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed">
                         <i class="fa-solid fa-bolt mr-1.5"></i> Chia Đội Tối Ưu
                     </button>
                 </div>
@@ -216,6 +223,9 @@
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="px-3.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-xs font-bold font-heading uppercase tracking-wider">
                                     ✨ KẾT QUẢ PHÂN CHIA ĐỘI HÌNH
+                                </span>
+                                <span id="res-mode-badge" class="px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold font-heading flex items-center gap-1.5">
+                                    <i class="fa-solid fa-bolt"></i> <span>Chế độ: Toàn diện</span>
                                 </span>
                                 <span id="res-rng-badge" class="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold font-heading flex items-center gap-1.5">
                                     <i class="fa-solid fa-dice"></i> <span>RNG Cân Bằng: Sai số ±0.5</span>
@@ -345,11 +355,18 @@
                         Chọn 2 tuyển thủ làm Đội trưởng (đánh dấu vương miện), sau đó chọn thêm 8 tuyển thủ còn lại để xếp đội.
                     </p>
                 </div>
-                <div class="flex items-center gap-3">
-                    <button onclick="clearCaptainSelection()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold transition">
+                <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                    <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 shadow-2xs">
+                        <span class="text-xs text-slate-500 font-semibold hidden sm:inline"><i class="fa-solid fa-sliders text-amber-500 mr-1"></i>Chế độ:</span>
+                        <select id="captain-matchmaking-mode" class="bg-transparent text-xs text-slate-800 font-bold focus:outline-none cursor-pointer">
+                            <option value="composite">⚡ Toàn Diện (Elo + Stats)</option>
+                            <option value="pure_elo">🎯 Thuần Elo Ẩn (Không dùng Stat)</option>
+                        </select>
+                    </div>
+                    <button onclick="clearCaptainSelection()" class="px-3.5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition">
                         <i class="fa-solid fa-rotate-left mr-1 text-slate-400"></i> Đặt lại
                     </button>
-                    <button onclick="handleCreateTeamsWithCaptains()" class="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold font-heading text-sm shadow transition">
+                    <button onclick="handleCreateTeamsWithCaptains()" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold font-heading text-xs shadow transition">
                         <i class="fa-solid fa-crown mr-1"></i> Xếp Đội Cân Bằng
                     </button>
                 </div>
@@ -668,36 +685,36 @@
                     <div>
                         <div class="flex justify-between font-semibold mb-1">
                             <span class="text-slate-700">🎯 Kỹ Năng Cá Nhân (Skill):</span>
-                            <b id="val-skill" class="text-amber-600 font-bold">7.5</b>
+                            <b id="val-skill" class="text-amber-600 font-bold">5.0</b>
                         </div>
-                        <input type="range" id="form-skill" min="1.0" max="10.0" step="0.5" value="7.5" oninput="document.getElementById('val-skill').innerText = this.value" class="w-full accent-amber-500 cursor-pointer">
+                        <input type="range" id="form-skill" min="1.0" max="10.0" step="0.5" value="5.0" oninput="document.getElementById('val-skill').innerText = this.value" class="w-full accent-amber-500 cursor-pointer">
                     </div>
 
                     <!-- 2. Bể tướng -->
                     <div>
                         <div class="flex justify-between font-semibold mb-1">
                             <span class="text-slate-700">⚔️ Bể Tướng (Champion Pool):</span>
-                            <b id="val-pool" class="text-blue-600 font-bold">7.0</b>
+                            <b id="val-pool" class="text-blue-600 font-bold">5.0</b>
                         </div>
-                        <input type="range" id="form-pool" min="1.0" max="10.0" step="0.5" value="7.0" oninput="document.getElementById('val-pool').innerText = this.value" class="w-full accent-blue-500 cursor-pointer">
+                        <input type="range" id="form-pool" min="1.0" max="10.0" step="0.5" value="5.0" oninput="document.getElementById('val-pool').innerText = this.value" class="w-full accent-blue-500 cursor-pointer">
                     </div>
 
                     <!-- 3. Flex lane -->
                     <div>
                         <div class="flex justify-between font-semibold mb-1">
                             <span class="text-slate-700">🔄 Flex Lane (Độ Linh Hoạt Vị Trí):</span>
-                            <b id="val-flex" class="text-purple-600 font-bold">6.5</b>
+                            <b id="val-flex" class="text-purple-600 font-bold">5.0</b>
                         </div>
-                        <input type="range" id="form-flex" min="1.0" max="10.0" step="0.5" value="6.5" oninput="document.getElementById('val-flex').innerText = this.value" class="w-full accent-purple-500 cursor-pointer">
+                        <input type="range" id="form-flex" min="1.0" max="10.0" step="0.5" value="5.0" oninput="document.getElementById('val-flex').innerText = this.value" class="w-full accent-purple-500 cursor-pointer">
                     </div>
 
                     <!-- 4. Tính ổn định -->
                     <div>
                         <div class="flex justify-between font-semibold mb-1">
                             <span class="text-slate-700">🛡️ Tính Ổn Định (Consistency):</span>
-                            <b id="val-consist" class="text-emerald-600 font-bold">7.0</b>
+                            <b id="val-consist" class="text-emerald-600 font-bold">5.0</b>
                         </div>
-                        <input type="range" id="form-consist" min="1.0" max="10.0" step="0.5" value="7.0" oninput="document.getElementById('val-consist').innerText = this.value" class="w-full accent-emerald-500 cursor-pointer">
+                        <input type="range" id="form-consist" min="1.0" max="10.0" step="0.5" value="5.0" oninput="document.getElementById('val-consist').innerText = this.value" class="w-full accent-emerald-500 cursor-pointer">
                     </div>
                 </div>
 
