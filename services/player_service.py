@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from services.data_manager import data_manager
 from services.elo_service import elo_service
 
