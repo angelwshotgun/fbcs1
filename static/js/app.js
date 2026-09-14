@@ -1,9 +1,16 @@
-// FBCS AI 3.0 Client Application Logic
+// FBCS AI 3.0 Client Application Logic (Clean Modern Light Theme)
 let allPlayers = [];
 let selectedMatchmaker = [];
 let selectedCaptains = [];
 let selectedCaptainMembers = [];
 let currentTeamsResult = null;
+
+const SWAL_THEME = {
+    background: '#ffffff',
+    color: '#0f172a',
+    confirmButtonColor: '#4f46e5',
+    cancelButtonColor: '#94a3b8'
+};
 
 // ==========================================
 // INITIALIZATION & TAB SWITCHING
@@ -19,8 +26,8 @@ function switchTab(tabId) {
 
     // Deactivate all tab buttons
     document.querySelectorAll('.nav-tab').forEach(btn => {
-        btn.classList.remove('bg-amber-500', 'text-gray-950', 'shadow-md');
-        btn.classList.add('text-gray-400');
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+        btn.classList.add('text-slate-600');
     });
 
     // Show selected tab pane
@@ -30,8 +37,8 @@ function switchTab(tabId) {
     // Activate selected button
     const targetBtn = document.getElementById(`tab-btn-${tabId}`);
     if (targetBtn) {
-        targetBtn.classList.remove('text-gray-400');
-        targetBtn.classList.add('bg-amber-500', 'text-gray-950', 'shadow-md');
+        targetBtn.classList.remove('text-slate-600');
+        targetBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
     }
 
     // Tab-specific refreshes
@@ -73,7 +80,7 @@ async function loadStatus() {
             const badge = document.getElementById('gemini-status-badge');
             if (data.has_gemini) {
                 badge.innerText = "Đã cấu hình Key";
-                badge.className = "text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400";
+                badge.className = "text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold";
             }
         }
     } catch (err) {
@@ -99,10 +106,10 @@ function renderMatchmakerPlayers() {
         const isSelected = selectedMatchmaker.includes(p.id);
 
         const card = document.createElement('div');
-        card.className = `p-3 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center relative select-none ${
+        card.className = `p-3 rounded-2xl border cursor-pointer transition-all duration-150 flex flex-col items-center text-center relative select-none ${
             isSelected 
-                ? 'bg-amber-500/15 border-amber-400 shadow-md shadow-amber-500/20 scale-[1.02]' 
-                : 'bg-gray-900/80 border-gray-800 hover:border-gray-700 hover:bg-gray-800/60'
+                ? 'bg-indigo-50/90 border-indigo-600 ring-2 ring-indigo-500/20 shadow-sm scale-[1.02]' 
+                : 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-xs'
         }`;
 
         card.onclick = () => toggleMatchmakerPlayer(p.id);
@@ -110,24 +117,24 @@ function renderMatchmakerPlayers() {
         // Form icon badge
         const formIcon = p.form?.icon || '🌱';
         const formStatus = p.form?.status || 'neutral';
-        const formBadgeColor = formStatus === 'on_fire' ? 'text-amber-400' : (formStatus === 'cold' ? 'text-blue-400' : 'text-gray-400');
+        const formBadgeColor = formStatus === 'on_fire' ? 'text-amber-600' : (formStatus === 'cold' ? 'text-blue-600' : 'text-slate-600');
 
         card.innerHTML = `
             ${isSelected ? `
-                <div class="absolute top-2 right-2 w-5 h-5 rounded-full bg-amber-400 text-gray-950 flex items-center justify-center text-[10px] font-black">
+                <div class="absolute top-2 right-2 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black shadow-xs">
                     <i class="fa-solid fa-check"></i>
                 </div>
             ` : ''}
             <div class="relative mb-2">
-                <img src="${p.avatar}" alt="${p.nickname}" class="w-12 h-12 rounded-xl object-cover bg-gray-950 border border-gray-700">
+                <img src="${p.avatar}" alt="${p.nickname}" class="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-200">
                 <span class="absolute -bottom-1 -right-1 text-xs" title="${p.form?.label || ''}">${formIcon}</span>
             </div>
-            <h4 class="font-bold text-xs text-white truncate max-w-[95px]">${p.nickname}</h4>
-            <div class="flex items-center gap-1.5 mt-1">
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-cyan-400 font-semibold border border-gray-700">
+            <h4 class="font-bold text-xs text-slate-900 truncate max-w-[95px]">${p.nickname}</h4>
+            <div class="flex items-center gap-1.5 mt-1.5">
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
                     Elo ${Math.round(p.hidden_elo)}
                 </span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 ${formBadgeColor} font-bold border border-gray-700">
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 ${formBadgeColor} font-bold border border-slate-200">
                     ${p.effective_power}
                 </span>
             </div>
@@ -152,9 +159,7 @@ function toggleMatchmakerPlayer(id) {
                 icon: 'warning',
                 title: 'Đã đủ 10 người',
                 text: 'Chỉ được chọn tối đa 10 tuyển thủ để chia thành 2 đội 5-5.',
-                background: '#111827',
-                color: '#f3f4f6',
-                confirmButtonColor: '#f59e0b'
+                ...SWAL_THEME
             });
             return;
         }
@@ -168,9 +173,9 @@ function updateMatchmakerCounter() {
     document.getElementById('selected-count-text').innerText = count;
     const badge = document.getElementById('selected-counter-badge');
     if (count === 10) {
-        badge.className = "text-sm px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold";
+        badge.className = "text-sm px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold";
     } else {
-        badge.className = "text-sm px-3 py-1 rounded-full bg-gray-800 text-amber-400 border border-amber-500/30 font-semibold";
+        badge.className = "text-sm px-3 py-1 rounded-full bg-slate-100 text-indigo-700 border border-slate-200 font-bold";
     }
 }
 
@@ -187,9 +192,7 @@ async function handleCreateTeams() {
             icon: 'info',
             title: 'Chưa đủ người',
             text: `Bạn hiện mới chọn ${selectedMatchmaker.length}/10 tuyển thủ. Vui lòng chọn đủ 10 người để chia đội.`,
-            background: '#111827',
-            color: '#f3f4f6',
-            confirmButtonColor: '#f59e0b'
+            ...SWAL_THEME
         });
         return;
     }
@@ -209,9 +212,7 @@ async function handleCreateTeams() {
                 icon: 'error',
                 title: 'Lỗi chia đội',
                 text: data.error || 'Không thể tính toán phân chia đội hình.',
-                background: '#111827',
-                color: '#f3f4f6',
-                confirmButtonColor: '#ef4444'
+                ...SWAL_THEME
             });
         }
     } catch (err) {
@@ -243,7 +244,7 @@ function displayTeamsResult(data) {
     const t2List = document.getElementById('team2-players-list');
     t2List.innerHTML = '';
     data.team2.forEach(p => {
-        t2List.appendChild(createTeamPlayerCard(p, 'red'));
+        t2List.appendChild(createTeamPlayerCard(p, 'rose'));
     });
 
     // Auto scroll to results
@@ -255,23 +256,23 @@ function displayTeamsResult(data) {
 
 function createTeamPlayerCard(p, teamColor) {
     const div = document.createElement('div');
-    div.className = "flex items-center justify-between p-2.5 rounded-xl bg-gray-900/90 border border-gray-800";
+    div.className = "flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/90 shadow-xs";
     div.innerHTML = `
         <div class="flex items-center gap-3">
             <div class="relative">
-                <img src="${p.avatar}" class="w-9 h-9 rounded-lg bg-gray-950 border border-gray-700 object-cover" alt="${p.nickname}">
+                <img src="${p.avatar}" class="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 object-cover" alt="${p.nickname}">
                 <span class="absolute -bottom-1 -right-1 text-[10px]">${p.form?.icon || '🌱'}</span>
             </div>
             <div>
-                <h5 class="font-bold text-xs text-white">${p.nickname}</h5>
-                <span class="text-[10px] text-gray-400">Elo: <b class="text-gray-300">${Math.round(p.hidden_elo)}</b> • Kỹ năng: <b class="text-amber-400">${p.skill}/10</b></span>
+                <h5 class="font-bold text-xs text-slate-900">${p.nickname}</h5>
+                <span class="text-[10px] text-slate-500">Elo: <b class="text-slate-700">${Math.round(p.hidden_elo)}</b> • Kỹ năng: <b class="text-amber-600">${p.skill}/10</b></span>
             </div>
         </div>
         <div class="text-right">
-            <span class="text-xs font-black ${teamColor === 'blue' ? 'text-blue-400' : 'text-red-400'}">
+            <span class="text-xs font-black ${teamColor === 'blue' ? 'text-blue-700' : 'text-rose-700'}">
                 ${p.effective_power}
             </span>
-            <div class="text-[10px] text-gray-400">${p.form?.label?.split(' ')[0] || ''}</div>
+            <div class="text-[10px] text-slate-400">${p.form?.label?.split(' ')[0] || ''}</div>
         </div>
     `;
     return div;
@@ -284,15 +285,12 @@ async function submitMatchWinner(winningTeam) {
 
     const confirm = await Swal.fire({
         title: `Xác nhận ${winnerLabel} Thắng?`,
-        text: 'Hệ thống sẽ lưu kết quả trận đấu, tự động cập nhật Elo ẩn và tính lại chuỗi Phong độ cho 10 người chơi.',
+        text: 'Hệ thống sẽ lưu kết quả trận đấu, tự động cập nhật Elo ẩn và tính lại chuỗi Phong độ cho 10 tuyển thủ.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Đồng Ý Lưu',
         cancelButtonText: 'Hủy',
-        background: '#111827',
-        color: '#f3f4f6',
-        confirmButtonColor: '#f59e0b',
-        cancelButtonColor: '#374151'
+        ...SWAL_THEME
     });
 
     if (!confirm.isConfirmed) return;
@@ -315,10 +313,8 @@ async function submitMatchWinner(winningTeam) {
                 text: 'Elo ẩn và Phong độ đã được cập nhật thành công.',
                 timer: 2000,
                 showConfirmButton: false,
-                background: '#111827',
-                color: '#f3f4f6'
+                ...SWAL_THEME
             });
-            // Reload all metrics & players
             await loadAllPlayers();
             await loadStatus();
             clearSelectedPlayers();
@@ -327,8 +323,7 @@ async function submitMatchWinner(winningTeam) {
                 icon: 'error',
                 title: 'Lỗi',
                 text: data.error,
-                background: '#111827',
-                color: '#f3f4f6'
+                ...SWAL_THEME
             });
         }
     } catch (err) {
@@ -339,7 +334,7 @@ async function submitMatchWinner(winningTeam) {
 async function requestAiAnalysis() {
     if (!currentTeamsResult) return;
     const box = document.getElementById('ai-analysis-content');
-    box.innerHTML = '<span class="text-amber-400 animate-pulse"><i class="fa-solid fa-spinner fa-spin mr-2"></i> AI đang phân tích chiến thuật đội hình...</span>';
+    box.innerHTML = '<span class="text-indigo-600 animate-pulse font-semibold"><i class="fa-solid fa-spinner fa-spin mr-2"></i> AI đang phân tích chiến thuật đội hình...</span>';
 
     try {
         const res = await fetch('/api/ai_analyze', {
@@ -352,7 +347,6 @@ async function requestAiAnalysis() {
         });
         const data = await res.json();
         if (data.success) {
-            // Render formatted markdown/text
             box.innerHTML = formatAiMarkdown(data.analysis);
         } else {
             box.innerText = data.error || 'Không thể phân tích lúc này.';
@@ -364,9 +358,9 @@ async function requestAiAnalysis() {
 
 function formatAiMarkdown(text) {
     return text
-        .replace(/### (.*)/g, '<h4 class="font-bold text-amber-300 text-sm mt-2 mb-1">$1</h4>')
-        .replace(/\*\*(.*?)\*\*/g, '<b class="text-white">$1</b>')
-        .replace(/- (.*)/g, '<li class="ml-4 list-disc">$1</li>')
+        .replace(/### (.*)/g, '<h4 class="font-bold text-indigo-700 text-sm mt-2 mb-1">$1</h4>')
+        .replace(/\*\*(.*?)\*\*/g, '<b class="text-slate-900 font-bold">$1</b>')
+        .replace(/- (.*)/g, '<li class="ml-4 list-disc text-slate-700">$1</li>')
         .replace(/\n\n/g, '<br>');
 }
 
@@ -384,37 +378,36 @@ function renderCaptainPlayers() {
         const isMember = selectedCaptainMembers.includes(p.id);
 
         const card = document.createElement('div');
-        let cardStyle = 'bg-gray-900/80 border-gray-800 hover:border-gray-700';
+        let cardStyle = 'bg-white border-slate-200 hover:border-slate-300';
         let badgeText = '';
 
         if (isCap1) {
-            cardStyle = 'bg-amber-500/20 border-amber-400 shadow-md shadow-amber-500/25 scale-[1.02]';
+            cardStyle = 'bg-amber-50 border-amber-400 ring-2 ring-amber-400/20 shadow-sm scale-[1.02]';
             badgeText = '👑 Cap 1';
         } else if (isCap2) {
-            cardStyle = 'bg-amber-500/20 border-amber-400 shadow-md shadow-amber-500/25 scale-[1.02]';
+            cardStyle = 'bg-amber-50 border-amber-400 ring-2 ring-amber-400/20 shadow-sm scale-[1.02]';
             badgeText = '👑 Cap 2';
         } else if (isMember) {
-            cardStyle = 'bg-cyan-500/15 border-cyan-400 shadow-md shadow-cyan-500/20';
+            cardStyle = 'bg-indigo-50 border-indigo-400 shadow-xs';
             badgeText = 'Member';
         }
 
-        card.className = `p-3 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center relative select-none ${cardStyle}`;
+        card.className = `p-3 rounded-2xl border cursor-pointer transition-all duration-150 flex flex-col items-center text-center relative select-none ${cardStyle}`;
         card.onclick = () => toggleCaptainSelection(p.id);
 
         card.innerHTML = `
             ${badgeText ? `
-                <span class="absolute top-1.5 right-1.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${isCap1 || isCap2 ? 'bg-amber-400 text-gray-950' : 'bg-cyan-400 text-gray-950'}">
+                <span class="absolute top-1.5 right-1.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${isCap1 || isCap2 ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}">
                     ${badgeText}
                 </span>
             ` : ''}
-            <img src="${p.avatar}" class="w-11 h-11 rounded-xl bg-gray-950 border border-gray-700 object-cover mb-1.5">
-            <h4 class="font-bold text-xs text-white truncate max-w-[95px]">${p.nickname}</h4>
-            <span class="text-[10px] text-gray-400 mt-0.5">Elo: ${Math.round(p.hidden_elo)}</span>
+            <img src="${p.avatar}" class="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 object-cover mb-1.5">
+            <h4 class="font-bold text-xs text-slate-900 truncate max-w-[95px]">${p.nickname}</h4>
+            <span class="text-[10px] text-slate-500 mt-0.5">Elo: ${Math.round(p.hidden_elo)}</span>
         `;
         grid.appendChild(card);
     });
 
-    // Update Captains overview labels
     const cap1Obj = allPlayers.find(p => p.id === selectedCaptains[0]);
     const cap2Obj = allPlayers.find(p => p.id === selectedCaptains[1]);
     document.getElementById('cap1-display-name').innerText = cap1Obj ? cap1Obj.nickname : 'Chưa chọn';
@@ -425,19 +418,16 @@ function renderCaptainPlayers() {
 }
 
 function toggleCaptainSelection(id) {
-    // If clicking on Captain 1 -> remove
     if (selectedCaptains[0] === id) {
         selectedCaptains.splice(0, 1);
         renderCaptainPlayers();
         return;
     }
-    // If clicking on Captain 2 -> remove
     if (selectedCaptains[1] === id) {
         selectedCaptains.splice(1, 1);
         renderCaptainPlayers();
         return;
     }
-    // If clicking on existing member -> remove
     const mIdx = selectedCaptainMembers.indexOf(id);
     if (mIdx > -1) {
         selectedCaptainMembers.splice(mIdx, 1);
@@ -445,18 +435,15 @@ function toggleCaptainSelection(id) {
         return;
     }
 
-    // New selection: If < 2 captains, add as captain
     if (selectedCaptains.length < 2) {
         selectedCaptains.push(id);
     } else {
-        // Add as member (up to 8)
         if (selectedCaptainMembers.length >= 8) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Đã đủ 8 thành viên',
                 text: 'Đã chọn đủ 2 Đội trưởng và 8 tuyển thủ.',
-                background: '#111827',
-                color: '#f3f4f6'
+                ...SWAL_THEME
             });
             return;
         }
@@ -477,8 +464,7 @@ async function handleCreateTeamsWithCaptains() {
             icon: 'info',
             title: 'Chọn 2 Đội Trưởng',
             text: 'Vui lòng chọn chính xác 2 Đội trưởng trước.',
-            background: '#111827',
-            color: '#f3f4f6'
+            ...SWAL_THEME
         });
         return;
     }
@@ -487,8 +473,7 @@ async function handleCreateTeamsWithCaptains() {
             icon: 'info',
             title: 'Chọn đủ 8 Thành Viên',
             text: `Bạn mới chọn ${selectedCaptainMembers.length}/8 thành viên. Cần đủ 8 người.`,
-            background: '#111827',
-            color: '#f3f4f6'
+            ...SWAL_THEME
         });
         return;
     }
@@ -505,7 +490,6 @@ async function handleCreateTeamsWithCaptains() {
         });
         const data = await res.json();
         if (data.success) {
-            // Switch to matchmaker tab to display result nicely
             switchTab('matchmaker');
             selectedMatchmaker = [...selectedCaptains, ...selectedCaptainMembers];
             currentTeamsResult = data;
@@ -515,8 +499,7 @@ async function handleCreateTeamsWithCaptains() {
                 icon: 'error',
                 title: 'Lỗi',
                 text: data.error,
-                background: '#111827',
-                color: '#f3f4f6'
+                ...SWAL_THEME
             });
         }
     } catch (err) {
@@ -533,11 +516,10 @@ function renderAdminPlayers() {
     container.innerHTML = '';
 
     const query = (document.getElementById('admin-player-search')?.value || '').toLowerCase().trim();
-    const sortBy = document.getElementById('admin-sort-by')?.value || 'elo';
+    const sortBy = document.getElementById('admin-sort-by')?.value || 'skill';
 
     let list = [...allPlayers];
 
-    // Sorting
     if (sortBy === 'elo') list.sort((a, b) => b.hidden_elo - a.hidden_elo);
     if (sortBy === 'skill') list.sort((a, b) => b.skill - a.skill);
     if (sortBy === 'form') list.sort((a, b) => (b.form?.score || 0) - (a.form?.score || 0));
@@ -550,9 +532,9 @@ function renderAdminPlayers() {
         }
 
         const card = document.createElement('div');
-        card.className = "bg-gray-900 border border-gray-800 hover:border-gray-700 p-4 rounded-2xl flex flex-col justify-between space-y-4 transition shadow";
+        card.className = "bg-white border border-slate-200 hover:border-slate-300 p-4 rounded-2xl flex flex-col justify-between space-y-4 transition shadow-xs hover:shadow-sm";
 
-        const formLabel = p.form?.label || 'Bình ổn';
+        const formLabel = p.form?.label || 'Tân binh';
         const formIcon = p.form?.icon || '🌱';
         const formScore = p.form?.score || 5.0;
 
@@ -560,14 +542,14 @@ function renderAdminPlayers() {
             <div>
                 <div class="flex items-start justify-between gap-3">
                     <div class="flex items-center gap-3">
-                        <img src="${p.avatar}" class="w-12 h-12 rounded-xl object-cover bg-gray-950 border border-gray-700" alt="${p.nickname}">
+                        <img src="${p.avatar}" class="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-200" alt="${p.nickname}">
                         <div>
-                            <h4 class="font-bold text-sm text-white">${p.nickname}</h4>
-                            <span class="text-xs text-gray-400">@${p.id}</span>
+                            <h4 class="font-bold text-sm text-slate-900">${p.nickname}</h4>
+                            <span class="text-xs text-slate-400">@${p.id}</span>
                         </div>
                     </div>
                     <div class="text-right">
-                        <span class="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-black text-xs border border-cyan-500/30">
+                        <span class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-black text-xs border border-indigo-200">
                             Elo ${Math.round(p.hidden_elo)}
                         </span>
                     </div>
@@ -575,47 +557,47 @@ function renderAdminPlayers() {
 
                 <!-- 4 Stats Sliders Display (1 - 10) -->
                 <div class="grid grid-cols-2 gap-2 mt-4 text-[11px]">
-                    <div class="bg-gray-950/60 p-2 rounded-lg border border-gray-800/80">
-                        <span class="text-gray-400">Kỹ năng:</span>
-                        <b class="text-amber-400 ml-1">${p.skill}/10</b>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <span class="text-slate-500">Kỹ năng:</span>
+                        <b class="text-amber-600 ml-1 font-bold">${p.skill}/10</b>
                     </div>
-                    <div class="bg-gray-950/60 p-2 rounded-lg border border-gray-800/80">
-                        <span class="text-gray-400">Bể tướng:</span>
-                        <b class="text-cyan-400 ml-1">${p.champion_pool}/10</b>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <span class="text-slate-500">Bể tướng:</span>
+                        <b class="text-blue-600 ml-1 font-bold">${p.champion_pool}/10</b>
                     </div>
-                    <div class="bg-gray-950/60 p-2 rounded-lg border border-gray-800/80">
-                        <span class="text-gray-400">Flex lane:</span>
-                        <b class="text-blue-400 ml-1">${p.flex_lane}/10</b>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <span class="text-slate-500">Flex lane:</span>
+                        <b class="text-purple-600 ml-1 font-bold">${p.flex_lane}/10</b>
                     </div>
-                    <div class="bg-gray-950/60 p-2 rounded-lg border border-gray-800/80">
-                        <span class="text-gray-400">Ổn định:</span>
-                        <b class="text-emerald-400 ml-1">${p.consistency}/10</b>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <span class="text-slate-500">Ổn định:</span>
+                        <b class="text-emerald-600 ml-1 font-bold">${p.consistency}/10</b>
                     </div>
                 </div>
 
                 <!-- Form Display (Auto) -->
-                <div class="mt-3 p-2 rounded-xl bg-gray-950 border border-gray-800 flex items-center justify-between text-xs">
-                    <span class="text-gray-400">Phong độ:</span>
-                    <span class="font-bold text-amber-400 flex items-center gap-1">
+                <div class="mt-3 p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                    <span class="text-slate-500">Phong độ:</span>
+                    <span class="font-bold text-indigo-700 flex items-center gap-1">
                         <span>${formIcon}</span>
                         <span>${formScore}/10 (${formLabel})</span>
                     </span>
                 </div>
 
                 <!-- Match Stats -->
-                <div class="flex items-center justify-between text-[11px] text-gray-400 mt-2 px-1">
-                    <span>Số trận: <b class="text-gray-200">${p.matches}</b></span>
-                    <span>Tỷ lệ thắng: <b class="text-emerald-400">${p.winrate}%</b></span>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 mt-2 px-1">
+                    <span>Số trận: <b class="text-slate-800">${p.matches}</b></span>
+                    <span>Tỷ lệ thắng: <b class="text-emerald-600">${p.winrate}%</b></span>
                 </div>
             </div>
 
             <!-- Card Actions -->
-            <div class="flex items-center gap-2 pt-2 border-t border-gray-800/80">
-                <button onclick="openPlayerModal('edit', '${p.id}')" class="flex-1 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold transition flex items-center justify-center gap-1.5">
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <button onclick="openPlayerModal('edit', '${p.id}')" class="flex-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-pen-to-square"></i>
                     <span>Sửa</span>
                 </button>
-                <button onclick="confirmDeletePlayer('${p.id}')" class="py-1.5 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 text-red-400 text-xs font-semibold transition">
+                <button onclick="confirmDeletePlayer('${p.id}')" class="py-1.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-xs font-semibold transition">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
             </div>
@@ -639,7 +621,7 @@ function openPlayerModal(mode, playerId = null) {
     modeInput.value = mode;
 
     if (mode === 'add') {
-        title.innerHTML = '<i class="fa-solid fa-user-plus text-cyan-400"></i><span>Thêm Tuyển Thủ Mới</span>';
+        title.innerHTML = '<i class="fa-solid fa-user-plus text-indigo-600"></i><span>Thêm Tuyển Thủ Mới</span>';
         idInput.disabled = false;
         idInput.value = '';
         document.getElementById('form-nickname').value = '';
@@ -655,7 +637,7 @@ function openPlayerModal(mode, playerId = null) {
         document.getElementById('val-consist').innerText = '7.0';
         document.getElementById('form-display-badge').innerText = '🌱 Tân Binh (Auto)';
     } else {
-        title.innerHTML = '<i class="fa-solid fa-user-pen text-amber-400"></i><span>Chỉnh Sửa Tuyển Thủ</span>';
+        title.innerHTML = '<i class="fa-solid fa-user-pen text-indigo-600"></i><span>Chỉnh Sửa Tuyển Thủ</span>';
         idInput.disabled = true;
         const p = allPlayers.find(x => x.id === playerId);
         if (!p) return;
@@ -677,7 +659,7 @@ function openPlayerModal(mode, playerId = null) {
         document.getElementById('form-consist').value = p.consistency;
         document.getElementById('val-consist').innerText = p.consistency;
 
-        const formLabel = p.form?.label || 'Bình ổn';
+        const formLabel = p.form?.label || 'Tân binh';
         const formIcon = p.form?.icon || '🌱';
         const formScore = p.form?.score || 5.0;
         document.getElementById('form-display-badge').innerText = `${formIcon} ${formScore}/10 (${formLabel})`;
@@ -746,8 +728,7 @@ async function handleSavePlayer(e) {
                 text: data.message,
                 timer: 1500,
                 showConfirmButton: false,
-                background: '#111827',
-                color: '#f3f4f6'
+                ...SWAL_THEME
             });
             closePlayerModal();
             await loadAllPlayers();
@@ -756,8 +737,7 @@ async function handleSavePlayer(e) {
                 icon: 'error',
                 title: 'Lỗi',
                 text: data.error,
-                background: '#111827',
-                color: '#f3f4f6'
+                ...SWAL_THEME
             });
         }
     } catch (err) {
@@ -768,14 +748,15 @@ async function handleSavePlayer(e) {
 async function confirmDeletePlayer(id) {
     const confirm = await Swal.fire({
         title: `Xóa tuyển thủ @${id}?`,
-        text: 'Hồ sơ người chơi sẽ bị xóa khỏi danh sách quản lý.',
+        text: 'Hồ sơ tuyển thủ sẽ bị xóa khỏi danh sách quản lý.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Đồng ý xóa',
         cancelButtonText: 'Hủy',
-        background: '#111827',
-        color: '#f3f4f6',
-        confirmButtonColor: '#ef4444'
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#94a3b8',
+        background: '#ffffff',
+        color: '#0f172a'
     });
 
     if (!confirm.isConfirmed) return;
@@ -790,8 +771,7 @@ async function confirmDeletePlayer(id) {
                 text: data.message,
                 timer: 1500,
                 showConfirmButton: false,
-                background: '#111827',
-                color: '#f3f4f6'
+                ...SWAL_THEME
             });
             await loadAllPlayers();
         } else {
@@ -799,8 +779,7 @@ async function confirmDeletePlayer(id) {
                 icon: 'error',
                 title: 'Lỗi',
                 text: data.error,
-                background: '#111827',
-                color: '#f3f4f6'
+                ...SWAL_THEME
             });
         }
     } catch (err) {
@@ -820,52 +799,51 @@ function renderLeaderboard() {
 
     sortedList.forEach((p, idx) => {
         const rank = idx + 1;
-        let rankBadge = `<span class="font-bold text-gray-400">#${rank}</span>`;
-        if (rank === 1) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-400 text-gray-950 font-black flex items-center justify-center mx-auto shadow-lg shadow-amber-500/30">1</span>`;
-        if (rank === 2) rankBadge = `<span class="w-7 h-7 rounded-full bg-gray-300 text-gray-950 font-black flex items-center justify-center mx-auto shadow-md">2</span>`;
-        if (rank === 3) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-700 text-white font-black flex items-center justify-center mx-auto shadow-md">3</span>`;
+        let rankBadge = `<span class="font-bold text-slate-500">#${rank}</span>`;
+        if (rank === 1) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-400 text-slate-900 font-black flex items-center justify-center mx-auto shadow-xs">1</span>`;
+        if (rank === 2) rankBadge = `<span class="w-7 h-7 rounded-full bg-slate-300 text-slate-900 font-black flex items-center justify-center mx-auto shadow-xs">2</span>`;
+        if (rank === 3) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-700 text-white font-black flex items-center justify-center mx-auto shadow-xs">3</span>`;
 
-        // Render recent 5 matches badges
         const recentBadges = (p.form?.recent_5 || []).map(r => {
-            if (r === 'W') return `<span class="w-5 h-5 rounded-md bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold inline-flex items-center justify-center">W</span>`;
-            return `<span class="w-5 h-5 rounded-md bg-red-600/30 text-red-400 border border-red-500/40 text-[10px] font-bold inline-flex items-center justify-center">L</span>`;
+            if (r === 'W') return `<span class="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold inline-flex items-center justify-center">W</span>`;
+            return `<span class="w-5 h-5 rounded-md bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold inline-flex items-center justify-center">L</span>`;
         }).join('');
 
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-gray-800/40 transition";
+        tr.className = "hover:bg-slate-50 transition";
         tr.innerHTML = `
             <td class="py-3 px-4 text-center">${rankBadge}</td>
             <td class="py-3 px-4">
                 <div class="flex items-center gap-3">
-                    <img src="${p.avatar}" class="w-9 h-9 rounded-xl bg-gray-950 border border-gray-700 object-cover" alt="${p.nickname}">
+                    <img src="${p.avatar}" class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 object-cover" alt="${p.nickname}">
                     <div>
-                        <span class="font-bold text-white block">${p.nickname}</span>
-                        <span class="text-xs text-gray-500">@${p.id}</span>
+                        <span class="font-bold text-slate-900 block">${p.nickname}</span>
+                        <span class="text-xs text-slate-400">@${p.id}</span>
                     </div>
                 </div>
             </td>
-            <td class="py-3 px-4 text-center font-extrabold text-cyan-400">
+            <td class="py-3 px-4 text-center font-extrabold text-indigo-600">
                 ${Math.round(p.hidden_elo)}
             </td>
             <td class="py-3 px-4 text-center">
-                <span class="px-2 py-0.5 rounded-lg bg-gray-800 font-bold text-amber-400 border border-gray-700">
+                <span class="px-2.5 py-0.5 rounded-lg bg-slate-100 font-bold text-amber-700 border border-slate-200">
                     ${p.stats_ovr || p.skill}
                 </span>
             </td>
             <td class="py-3 px-4 text-center">
-                <span class="font-bold text-gray-200">
+                <span class="font-bold text-slate-800">
                     ${p.form?.icon || '🌱'} ${p.form?.score || 5.0}
                 </span>
             </td>
-            <td class="py-3 px-4 text-center font-bold ${p.winrate >= 50 ? 'text-emerald-400' : 'text-gray-400'}">
+            <td class="py-3 px-4 text-center font-bold ${p.winrate >= 50 ? 'text-emerald-600' : 'text-slate-500'}">
                 ${p.winrate}%
             </td>
-            <td class="py-3 px-4 text-center text-xs text-gray-400">
-                ${p.matches} (<span class="text-emerald-400">${p.wins}</span> / <span class="text-red-400">${p.losses}</span>)
+            <td class="py-3 px-4 text-center text-xs text-slate-500">
+                ${p.matches} (<span class="text-emerald-600">${p.wins}</span> / <span class="text-rose-600">${p.losses}</span>)
             </td>
             <td class="py-3 px-4 text-center">
                 <div class="flex items-center justify-center gap-1">
-                    ${recentBadges || '<span class="text-gray-600 text-xs">-</span>'}
+                    ${recentBadges || '<span class="text-slate-400 text-xs">-</span>'}
                 </div>
             </td>
         `;
@@ -883,32 +861,36 @@ function loadLeaderboard() {
 async function loadSynergies() {
     const container = document.getElementById('synergies-container');
     if (!container) return;
-    container.innerHTML = '<div class="col-span-3 text-center text-gray-400 py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang tải thống kê cặp đôi...</div>';
+    container.innerHTML = '<div class="col-span-3 text-center text-slate-400 py-8"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Đang tải thống kê cặp đôi...</div>';
 
     try {
         const res = await fetch('/api/synergies');
         const data = await res.json();
         if (data.success && data.synergies) {
             container.innerHTML = '';
+            if (data.synergies.length === 0) {
+                container.innerHTML = '<div class="col-span-3 text-center text-slate-500 py-8">Chưa có dữ liệu cặp đôi nào trong các trận mới. Hãy ghi nhận trận đấu để xem thống kê ăn ý!</div>';
+                return;
+            }
             data.synergies.slice(0, 30).forEach(pair => {
                 const p1 = allPlayers.find(p => p.id === pair.p1) || { nickname: pair.p1, avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${pair.p1}` };
                 const p2 = allPlayers.find(p => p.id === pair.p2) || { nickname: pair.p2, avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${pair.p2}` };
 
                 const card = document.createElement('div');
-                card.className = "bg-gray-900 border border-gray-800 p-4 rounded-2xl flex items-center justify-between";
+                card.className = "bg-white border border-slate-200 p-4 rounded-2xl flex items-center justify-between shadow-xs";
                 card.innerHTML = `
                     <div class="flex items-center gap-2">
-                        <img src="${p1.avatar}" class="w-10 h-10 rounded-xl bg-gray-950 border border-gray-700 object-cover">
-                        <span class="text-gray-500 font-black text-xs">+</span>
-                        <img src="${p2.avatar}" class="w-10 h-10 rounded-xl bg-gray-950 border border-gray-700 object-cover">
+                        <img src="${p1.avatar}" class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 object-cover">
+                        <span class="text-slate-400 font-bold text-xs">+</span>
+                        <img src="${p2.avatar}" class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 object-cover">
                         <div class="ml-2">
-                            <h5 class="font-bold text-xs text-white">${p1.nickname} & ${p2.nickname}</h5>
-                            <span class="text-[10px] text-gray-400">${pair.matches} trận cùng team</span>
+                            <h5 class="font-bold text-xs text-slate-900">${p1.nickname} & ${p2.nickname}</h5>
+                            <span class="text-[10px] text-slate-500">${pair.matches} trận cùng team</span>
                         </div>
                     </div>
                     <div class="text-right">
-                        <span class="text-sm font-black text-amber-400">${pair.winrate}%</span>
-                        <div class="text-[10px] text-gray-500">${pair.wins} thắng</div>
+                        <span class="text-sm font-black text-indigo-600">${pair.winrate}%</span>
+                        <div class="text-[10px] text-slate-400">${pair.wins} thắng</div>
                     </div>
                 `;
                 container.appendChild(card);
@@ -925,17 +907,16 @@ async function loadSynergies() {
 function saveGeminiApiKey() {
     const key = document.getElementById('input-gemini-key').value.trim();
     if (!key) {
-        Swal.fire({ icon: 'info', title: 'Nhập API Key', text: 'Vui lòng dán Gemini API Key.', background: '#111827', color: '#f3f4f6' });
+        Swal.fire({ icon: 'info', title: 'Nhập API Key', text: 'Vui lòng dán Gemini API Key.', ...SWAL_THEME });
         return;
     }
     localStorage.setItem('fbcs_gemini_key', key);
-    Swal.fire({ icon: 'success', title: 'Đã lưu', text: 'Gemini API Key đã được lưu thành công trên trình duyệt.', background: '#111827', color: '#f3f4f6' });
+    Swal.fire({ icon: 'success', title: 'Đã lưu', text: 'Gemini API Key đã được lưu thành công trên trình duyệt.', ...SWAL_THEME });
 }
 
 // ==========================================
 // SCREENSHOT OCR (QUÉT ẢNH PHÒNG ĐẤU AI)
 // ==========================================
-// 1. Khởi tạo lắng nghe sự kiện Paste (Ctrl + V) toàn trang
 window.addEventListener('paste', handleGlobalScreenshotPaste);
 
 function handleGlobalScreenshotPaste(e) {
@@ -947,7 +928,6 @@ function handleGlobalScreenshotPaste(e) {
         if (item.kind === 'file' && item.type.startsWith('image/')) {
             const blob = item.getAsFile();
             if (blob) {
-                // Tự động chuyển về tab Chia Đội nếu đang ở tab khác
                 switchTab('matchmaker');
                 processScreenshotFile(blob);
                 e.preventDefault();
@@ -957,14 +937,13 @@ function handleGlobalScreenshotPaste(e) {
     }
 }
 
-// 2. Kéo thả ảnh vào Dropzone
 const dropzone = document.getElementById('screenshot-dropzone');
 if (dropzone) {
     ['dragenter', 'dragover'].forEach(eventName => {
         dropzone.addEventListener(eventName, (e) => {
             e.preventDefault();
             e.stopPropagation();
-            dropzone.classList.add('border-cyan-400', 'bg-cyan-950/40');
+            dropzone.classList.add('border-indigo-500', 'bg-indigo-50/80');
         }, false);
     });
 
@@ -972,7 +951,7 @@ if (dropzone) {
         dropzone.addEventListener(eventName, (e) => {
             e.preventDefault();
             e.stopPropagation();
-            dropzone.classList.remove('border-cyan-400', 'bg-cyan-950/40');
+            dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/80');
         }, false);
     });
 
@@ -1019,15 +998,13 @@ async function processScreenshotFile(file) {
                 
                 const { value: inputKey } = await Swal.fire({
                     title: '🔑 Nhập Gemini API Key',
-                    text: 'Tính năng AI Vision cần Gemini API Key để nhận diện ảnh chụp màn hình phòng đấu.',
+                    text: 'Tính năng AI Vision cần Gemini API Key để nhận diện ảnh chụp sảnh chờ phòng đấu.',
                     input: 'password',
                     inputPlaceholder: 'Dán Gemini API Key của bạn vào đây...',
                     showCancelButton: true,
                     confirmButtonText: 'Lưu & Quét Lại',
                     cancelButtonText: 'Hủy',
-                    background: '#111827',
-                    color: '#f3f4f6',
-                    confirmButtonColor: '#f59e0b',
+                    ...SWAL_THEME,
                     inputValidator: (val) => {
                         if (!val || !val.trim()) return 'Vui lòng không để trống API Key!';
                     }
@@ -1059,7 +1036,6 @@ async function processScreenshotFile(file) {
             if (spinner) spinner.classList.add('hidden');
 
             if (data.success && data.matched_player_ids && data.matched_player_ids.length > 0) {
-                // Tự động gán 10 người chơi được nhận diện
                 selectedMatchmaker = data.matched_player_ids.slice(0, 10);
                 renderMatchmakerPlayers();
 
@@ -1079,18 +1055,15 @@ async function processScreenshotFile(file) {
                     icon: 'success',
                     title: `🎯 Nhận diện thành công ${selectedMatchmaker.length}/10 tuyển thủ!`,
                     html: `
-                        <div class="text-left text-xs text-gray-300 mt-2 space-y-1">
+                        <div class="text-left text-xs text-slate-700 mt-2 space-y-1">
                             <p><b>Tuyển thủ đã chọn:</b> ${matchedNicknames.join(', ')}</p>
-                            ${data.detected_names?.length ? `<p class="text-[11px] text-gray-500">Tên quét được từ ảnh: ${data.detected_names.join(', ')}</p>` : ''}
+                            ${data.detected_names?.length ? `<p class="text-[11px] text-slate-500">Tên quét được từ ảnh: ${data.detected_names.join(', ')}</p>` : ''}
                         </div>
                     `,
                     confirmButtonText: 'Chia Đội Cân Bằng Ngay',
                     showCancelButton: true,
                     cancelButtonText: 'Kiểm Tra Lại',
-                    background: '#111827',
-                    color: '#f3f4f6',
-                    confirmButtonColor: '#f59e0b',
-                    cancelButtonColor: '#374151'
+                    ...SWAL_THEME
                 }).then((result) => {
                     if (result.isConfirmed) {
                         handleCreateTeams();
@@ -1102,9 +1075,7 @@ async function processScreenshotFile(file) {
                     icon: 'warning',
                     title: 'Chưa tìm thấy tuyển thủ phù hợp',
                     text: data.error || 'AI không nhận diện được tên tuyển thủ nào khớp với danh sách hệ thống trong bức ảnh này. Vui lòng thử ảnh rõ nét hơn.',
-                    background: '#111827',
-                    color: '#f3f4f6',
-                    confirmButtonColor: '#f59e0b'
+                    ...SWAL_THEME
                 });
             }
 
@@ -1115,8 +1086,7 @@ async function processScreenshotFile(file) {
                 icon: 'error',
                 title: 'Lỗi',
                 text: 'Không thể kết nối đến dịch vụ phân tích ảnh.',
-                background: '#111827',
-                color: '#f3f4f6'
+                ...SWAL_THEME
             });
         }
     };

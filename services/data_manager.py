@@ -50,30 +50,28 @@ class DataManager:
     # MATCH DATA CSV OPERATIONS
     # ==========================
     def read_matches_df(self) -> pd.DataFrame:
-        """Đọc file match_data.csv từ GitHub, nếu lỗi hoặc không có token thì đọc file local."""
-        # Thử đọc từ GitHub nếu có cấu hình
-        if self.github_repo:
-            try:
-                file_content = self.github_repo.get_contents(MATCH_FILE_PATH)
-                file_data = file_content.decoded_content.decode('utf-8')
-                df = pd.read_csv(StringIO(file_data))
-                # Sync cache local
-                try:
-                    df.to_csv(LOCAL_MATCH_FILE, index=False)
-                except Exception:
-                    pass
-                return df
-            except Exception as e:
-                print(f"[DataManager] Read GitHub CSV failed: {e}. Falling back to local.")
-
-        # Đọc từ local file
+        """Đọc file match_data.csv cục bộ trước, nếu không có mới đọc từ GitHub."""
+        # 1. Đọc từ local file trước
         if os.path.exists(LOCAL_MATCH_FILE):
             try:
                 return pd.read_csv(LOCAL_MATCH_FILE)
             except Exception as e:
                 print(f"[DataManager] Read local CSV error: {e}")
 
-        # Trường hợp không có file, tạo dataframe rỗng
+        # 2. Thử đọc từ GitHub nếu chưa có local file
+        if self.github_repo:
+            try:
+                file_content = self.github_repo.get_contents(MATCH_FILE_PATH)
+                file_data = file_content.decoded_content.decode('utf-8')
+                df = pd.read_csv(StringIO(file_data))
+                try:
+                    df.to_csv(LOCAL_MATCH_FILE, index=False)
+                except Exception:
+                    pass
+                return df
+            except Exception as e:
+                print(f"[DataManager] Read GitHub CSV failed: {e}. Falling back to empty.")
+
         return pd.DataFrame(columns=['Result'])
 
     def save_matches_df(self, df: pd.DataFrame) -> bool:
@@ -130,14 +128,21 @@ class DataManager:
     # PLAYERS STATS JSON OPERATIONS
     # ==========================
     def read_players_data(self) -> Dict[str, Any]:
-        """Đọc thông tin hồ sơ stats của tất cả người chơi từ JSON."""
-        # Thử đọc từ GitHub nếu có
+        """Đọc thông tin hồ sơ stats của tất cả người chơi từ JSON cục bộ trước."""
+        # 1. Đọc từ local file trước
+        if os.path.exists(LOCAL_PLAYERS_FILE):
+            try:
+                with open(LOCAL_PLAYERS_FILE, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"[DataManager] Read local players.json error: {e}")
+
+        # 2. Thử đọc từ GitHub nếu chưa có local file
         if self.github_repo:
             try:
                 file_content = self.github_repo.get_contents(PLAYERS_FILE_PATH)
                 file_data = file_content.decoded_content.decode('utf-8')
                 data = json.loads(file_data)
-                # Cache local
                 try:
                     with open(LOCAL_PLAYERS_FILE, 'w', encoding='utf-8') as f:
                         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -146,14 +151,6 @@ class DataManager:
                 return data
             except Exception:
                 pass
-
-        # Đọc từ local file
-        if os.path.exists(LOCAL_PLAYERS_FILE):
-            try:
-                with open(LOCAL_PLAYERS_FILE, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except Exception as e:
-                print(f"[DataManager] Read local players.json error: {e}")
 
         return {}
 
