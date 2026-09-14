@@ -256,5 +256,208 @@ BẮT BUỘC TRẢ VỀ ĐÚNG 1 ĐỐI TƯỢNG JSON (không có markdown backt
                 'error': f"Lỗi nhận diện ảnh từ Gemini: {str(e)}"
             }
 
+    def analyze_match_scoreboard(
+        self,
+        image_data: str,
+        mime_type: str,
+        team1_players: List[Dict[str, Any]],
+        team2_players: List[Dict[str, Any]],
+        winner: str = 'team1',
+        custom_key: str = None
+    ) -> Dict[str, Any]:
+        """
+        Phân tích ảnh chụp màn hình bảng điểm sau trận đấu (Scoreboard / End-game screen).
+        AI tự động đọc KDA, sát thương, vàng, danh hiệu MVP/SVP, và tính toán điểm Elo phù hợp cho từng tuyển thủ.
+        """
+        key = custom_key or self.api_key
+        if not key:
+            return {
+                'success': False,
+                'error': 'Chưa cấu hình Gemini API Key. Vui lòng dán API Key vào ô nhập hoặc mục Cài Đặt.'
+            }
+
+        t1_lines = [f"- ID: {p.get('id')}, Tên: {p.get('nickname')}" for p in team1_players]
+        t2_lines = [f"- ID: {p.get('id')}, Tên: {p.get('nickname')}" for p in team2_players]
+
+        winning_team_label = "Đội 1 (Xanh / Team 1)" if winner == 'team1' else "Đội 2 (Đỏ / Team 2)"
+        losing_team_label = "Đội 2 (Đỏ / Team 2)" if winner == 'team1' else "Đội 1 (Xanh / Team 1)"
+
+        prompt = f"""
+Bạn là chuyên gia phân tích eSports (LMHT, Dota 2, Valorant) và chuyên gia toán học xếp hạng Elo.
+Nhiệm vụ: Hãy xem ảnh chụp màn hình bảng thống kê chi tiết kết thúc trận đấu (End-game Scoreboard) đính kèm.
+
+Bối cảnh trận đấu:
+- {winning_team_label} là ĐỘI CHIẾN THẮNG (WINNER).
+- {losing_team_label} là ĐỘI THUA CUỘC (LOSER).
+
+Danh sách 10 tuyển thủ tham gia:
+[ĐỘI 1 (XANH)]:
+{chr(10).join(t1_lines)}
+
+[ĐỘI 2 (ĐỎ)]:
+{chr(10).join(t2_lines)}
+
+HƯỚNG DẪN ĐỌC THÔNG SỐ VÀ TÍNH ĐIỂM ELO:
+1. Đọc thông số của từng tuyển thủ từ bảng điểm trên ảnh:
+   - Tên tuyển thủ và tướng/vị trí tương ứng (khớp với danh sách 10 người chơi trên).
+   - Chỉ số KDA (Hạ gục / Bị hạ / Hỗ trợ, ví dụ "14/2/9").
+   - Chỉ số phụ (nếu thấy): Sát thương (Damage), Vàng (Gold), CS (Lính), MVP, SVP/ACE.
+2. Đánh giá Màn trình diễn (Performance Score 1.0 - 10.0):
+   - Đội Thắng:
+     + MVP / Gánh đội xuất sắc (KDA cực cao, sát thương vượt trội): 9.0 - 10.0 -> Đề xuất Elo: +22 đến +26
+     + Chơi tốt, đóng góp quan trọng (KDA đẹp, có đột biến): 7.5 - 8.9 -> Đề xuất Elo: +18 đến +21
+     + Tròn vai, bình ổn: 6.0 - 7.4 -> Đề xuất Elo: +15 đến +17
+     + Thọt nặng, kda âm sâu hoặc bị đồng đội gánh: 3.0 - 5.9 -> Đề xuất Elo: +8 đến +12
+   - Đội Thua:
+     + SVP / ACE (người hay nhất đội thua, nỗ lực gánh team): 7.0 - 8.5 -> Đề xuất Elo: -6 đến -10 (giảm trừ nhẹ vì chơi quá tốt)
+     + Đánh khá / tròn vai dù thua: 5.5 - 6.9 -> Đề xuất Elo: -12 đến -15
+     + Tròn vai / bình thường: 4.5 - 5.4 -> Đề xuất Elo: -16 đến -18
+     + Feeder / Thọt nặng nhất trận: 1.0 - 4.4 -> Đề xuất Elo: -20 đến -25 (phạt nặng vì phong độ kém)
+
+BẮT BUỘC TRẢ VỀ ĐÚNG 1 ĐỐI TƯỢNG JSON (không có markdown backticks ```json):
+{{
+  "winner": "{winner}",
+  "match_mvp": "Tên tuyển thủ MVP",
+  "match_svp": "Tên tuyển thủ SVP",
+  "ai_summary": "Tóm tắt 2-3 câu bình luận về trận đấu, điểm nhấn chiến thuật và sự tỏa sáng của các tuyển thủ.",
+  "players_analysis": [
+    {{
+      "player_id": "id_chinh_xac_trong_danh_sach",
+      "nickname": "Tên tuyển thủ",
+      "team": 1,
+      "champion": "Tên tướng (nếu nhận diện được)",
+      "kda": "12/2/8",
+      "damage": "24.5k",
+      "performance_score": 9.2,
+      "performance_tag": "MVP",
+      "recommended_delta": 24.0,
+      "comment": "Lý do ngắn gọn 1 câu giải thích mức điểm này"
+    }}
+  ]
+}}
+Lưu ý: Bắt buộc phải có đủ 10 người chơi trong mảng `players_analysis` (5 người team 1 và 5 người team 2) với `player_id` chính xác theo danh sách trên.
+"""
+        clean_base64 = image_data
+        if ',' in image_data:
+            clean_base64 = image_data.split(',', 1)[1]
+
+        payload = {
+            "contents": [{
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": mime_type or "image/jpeg",
+                            "data": clean_base64
+                        }
+                    }
+                ]
+            }],
+            "generationConfig": {
+                "response_mime_type": "application/json"
+            }
+        }
+
+        try:
+            res_data = self._call_gemini_api(payload, custom_key=key, timeout=30)
+            raw_text = res_data['candidates'][0]['content']['parts'][0]['text'].strip()
+
+            if raw_text.startswith('```json'):
+                raw_text = raw_text[7:]
+            if raw_text.startswith('```'):
+                raw_text = raw_text[3:]
+            if raw_text.endswith('```'):
+                raw_text = raw_text[:-3]
+
+            parsed = json.loads(raw_text.strip())
+
+            # Chuẩn hóa lại map người chơi để đảm bảo đủ 10 người và có recommended_delta hợp lệ
+            players_analysis = parsed.get('players_analysis', [])
+            analysis_by_id = {str(item.get('player_id', '')).lower(): item for item in players_analysis}
+            analysis_by_nick = {str(item.get('nickname', '')).lower(): item for item in players_analysis}
+
+            normalized_list = []
+            for p in team1_players:
+                pid = str(p['id']).lower()
+                nick = str(p.get('nickname', '')).lower()
+                found = analysis_by_id.get(pid) or analysis_by_nick.get(nick)
+                default_delta = 16.0 if winner == 'team1' else -16.0
+                if found:
+                    delta = float(found.get('recommended_delta', default_delta))
+                    normalized_list.append({
+                        "player_id": p['id'],
+                        "nickname": p.get('nickname', p['id']),
+                        "team": 1,
+                        "champion": found.get('champion', '-'),
+                        "kda": found.get('kda', '-'),
+                        "damage": found.get('damage', '-'),
+                        "performance_score": float(found.get('performance_score', 6.0)),
+                        "performance_tag": found.get('performance_tag', 'SOLID'),
+                        "recommended_delta": round(delta, 1),
+                        "comment": found.get('comment', 'Thi đấu tròn vai')
+                    })
+                else:
+                    normalized_list.append({
+                        "player_id": p['id'],
+                        "nickname": p.get('nickname', p['id']),
+                        "team": 1,
+                        "champion": '-',
+                        "kda": '-',
+                        "damage": '-',
+                        "performance_score": 6.5 if winner == 'team1' else 5.0,
+                        "performance_tag": 'SOLID',
+                        "recommended_delta": default_delta,
+                        "comment": 'Tròn vai theo diễn biến trận đấu'
+                    })
+
+            for p in team2_players:
+                pid = str(p['id']).lower()
+                nick = str(p.get('nickname', '')).lower()
+                found = analysis_by_id.get(pid) or analysis_by_nick.get(nick)
+                default_delta = 16.0 if winner == 'team2' else -16.0
+                if found:
+                    delta = float(found.get('recommended_delta', default_delta))
+                    normalized_list.append({
+                        "player_id": p['id'],
+                        "nickname": p.get('nickname', p['id']),
+                        "team": 2,
+                        "champion": found.get('champion', '-'),
+                        "kda": found.get('kda', '-'),
+                        "damage": found.get('damage', '-'),
+                        "performance_score": float(found.get('performance_score', 6.0)),
+                        "performance_tag": found.get('performance_tag', 'SOLID'),
+                        "recommended_delta": round(delta, 1),
+                        "comment": found.get('comment', 'Thi đấu tròn vai')
+                    })
+                else:
+                    normalized_list.append({
+                        "player_id": p['id'],
+                        "nickname": p.get('nickname', p['id']),
+                        "team": 2,
+                        "champion": '-',
+                        "kda": '-',
+                        "damage": '-',
+                        "performance_score": 6.5 if winner == 'team2' else 5.0,
+                        "performance_tag": 'SOLID',
+                        "recommended_delta": default_delta,
+                        "comment": 'Tròn vai theo diễn biến trận đấu'
+                    })
+
+            return {
+                "success": True,
+                "winner": winner,
+                "match_mvp": parsed.get('match_mvp', ''),
+                "match_svp": parsed.get('match_svp', ''),
+                "ai_summary": parsed.get('ai_summary', 'Đã phân tích thông số trận đấu thành công.'),
+                "players_analysis": normalized_list
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Lỗi phân tích bảng điểm từ Gemini: {str(e)}"
+            }
+
 
 gemini_service = GeminiService()
+

@@ -10,10 +10,10 @@ class EloService:
         self.base_elo = base_elo
         self.k_factor = k_factor
 
-    def calculate_all_metrics(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def calculate_all_metrics(self, df: pd.DataFrame, match_details: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Duyệt qua toàn bộ lịch sử trận đấu để tính:
-        1. Elo ẩn (Hidden Elo / MMR)
+        1. Elo ẩn (Hidden Elo / MMR, hỗ trợ delta cá nhân hóa do AI phân tích)
         2. Phong độ tự động (Form, Streak, Form Score 1-10)
         3. Thống kê trận (Wins, Losses, Matches, Winrate)
         4. Cặp bài trùng (Pair Synergy)
@@ -66,9 +66,16 @@ class EloService:
             delta_1 = self.k_factor * (actual_1 - expected_1)
             delta_2 = self.k_factor * (actual_2 - expected_2)
 
+            # Kiểm tra xem trận đấu này có lưu delta tùy chỉnh / phân tích cá nhân hóa không
+            meta = None
+            if match_details:
+                meta = match_details.get(str(idx)) or match_details.get(idx)
+            custom_deltas = meta.get('player_deltas', {}) if meta else {}
+
             # Cập nhật Elo cho Team 1
             for p in team1:
-                elo[p] = round(elo[p] + delta_1, 2)
+                p_delta = float(custom_deltas[p]) if (p in custom_deltas and custom_deltas[p] is not None) else delta_1
+                elo[p] = round(elo[p] + p_delta, 2)
                 stats[p]['matches'] += 1
                 if result == 1:
                     stats[p]['wins'] += 1
@@ -79,7 +86,8 @@ class EloService:
 
             # Cập nhật Elo cho Team 2
             for p in team2:
-                elo[p] = round(elo[p] + delta_2, 2)
+                p_delta = float(custom_deltas[p]) if (p in custom_deltas and custom_deltas[p] is not None) else delta_2
+                elo[p] = round(elo[p] + p_delta, 2)
                 stats[p]['matches'] += 1
                 if result == 2:
                     stats[p]['wins'] += 1

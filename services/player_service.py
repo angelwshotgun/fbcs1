@@ -8,9 +8,10 @@ class PlayerService:
         self._cached_metrics = None
 
     def refresh_metrics(self) -> Dict[str, Any]:
-        """Tính toán lại toàn bộ metrics từ match_data.csv."""
+        """Tính toán lại toàn bộ metrics từ match_data.csv và match_details.json."""
         df = data_manager.read_matches_df()
-        self._cached_metrics = elo_service.calculate_all_metrics(df)
+        match_details = data_manager.read_match_details()
+        self._cached_metrics = elo_service.calculate_all_metrics(df, match_details=match_details)
         return self._cached_metrics
 
     def get_metrics(self) -> Dict[str, Any]:

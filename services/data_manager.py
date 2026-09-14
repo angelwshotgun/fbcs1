@@ -14,6 +14,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 LOCAL_MATCH_FILE = os.path.join(DATA_DIR, 'match_data.csv')
 LOCAL_PLAYERS_FILE = os.path.join(DATA_DIR, 'players.json')
+LOCAL_MATCH_DETAILS_FILE = os.path.join(DATA_DIR, 'match_details.json')
 
 # GitHub configurations
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
@@ -336,6 +337,27 @@ class DataManager:
 
         return saved_local
 
+    def read_match_details(self) -> Dict[str, Any]:
+        """Đọc chi tiết các trận đấu (KDA, Elo deltas, AI analysis) từ file JSON cục bộ."""
+        if os.path.exists(LOCAL_MATCH_DETAILS_FILE):
+            try:
+                with open(LOCAL_MATCH_DETAILS_FILE, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"[DataManager] Read match_details.json error: {e}")
+        return {}
+
+    def save_match_details(self, details: Dict[str, Any]) -> bool:
+        """Lưu chi tiết các trận đấu vào file JSON cục bộ."""
+        with self._lock:
+            try:
+                with open(LOCAL_MATCH_DETAILS_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(details, f, ensure_ascii=False, indent=2)
+                return True
+            except Exception as e:
+                print(f"[DataManager] Save match_details.json error: {e}")
+                return False
+
     def append_match(
         self,
         team1: List[str],
@@ -344,12 +366,16 @@ class DataManager:
         team1_power: float = 0.0,
         team2_power: float = 0.0,
         synergies: Optional[Dict[str, Any]] = None,
-        notes: str = ''
+        notes: str = '',
+        player_deltas: Optional[Dict[str, float]] = None,
+        player_performances: Optional[List[Dict[str, Any]]] = None,
+        ai_summary: str = ''
     ) -> pd.DataFrame:
         """
         Ghi nhận trận đấu mới đa chiều:
         1. Ghi nhận vào Supabase (bảng matches + match_participants).
         2. Đồng thời cập nhật ma trận DataFrame cục bộ để duy trì tương thích và sao lưu.
+        3. Lưu chi tiết cá nhân hóa (KDA, delta Elo cá nhân, AI summary) vào match_details.json.
         """
         # 1. Ghi vào Supabase
         if supabase_service.is_configured():
@@ -381,9 +407,30 @@ class DataManager:
 
         new_row['Result'] = 1 if winner == 'team1' else 2
 
+        match_idx = len(df)
         new_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
         self.save_matches_df(new_df)
+
+        # 3. Lưu chi tiết cá nhân hóa vào match_details.json nếu có
+        match_details = self.read_match_details()
+        match_record = {
+            'match_index': match_idx,
+            'timestamp': time.time(),
+            'winner': winner,
+            'team1': team1,
+            'team2': team2,
+            'team1_power': team1_power,
+            'team2_power': team2_power,
+            'player_deltas': player_deltas or {},
+            'player_performances': player_performances or [],
+            'ai_summary': ai_summary or '',
+            'notes': notes or ''
+        }
+        match_details[str(match_idx)] = match_record
+        self.save_match_details(match_details)
+
         return new_df
 
 
 data_manager = DataManager()
+

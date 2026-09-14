@@ -171,6 +171,9 @@ def api_update_match_result():
         team2_power = float(data.get('team2_power', 0.0))
         synergies = data.get('synergies', {})
         notes = data.get('notes', '')
+        player_deltas = data.get('player_deltas')
+        player_performances = data.get('player_performances')
+        ai_summary = data.get('ai_summary', '')
 
         if not team1 or not team2 or winner not in ['team1', 'team2']:
             return jsonify({'success': False, 'error': 'Dữ liệu trận đấu không hợp lệ'}), 400
@@ -189,7 +192,10 @@ def api_update_match_result():
             team1_power=team1_power,
             team2_power=team2_power,
             synergies=synergies,
-            notes=notes
+            notes=notes,
+            player_deltas=player_deltas,
+            player_performances=player_performances,
+            ai_summary=ai_summary
         )
 
         # Tính toán lại toàn bộ metrics ngay lập tức
@@ -197,10 +203,43 @@ def api_update_match_result():
 
         return jsonify({
             'success': True,
-            'message': 'Đã lưu kết quả trận đấu đa chiều! Elo ẩn và Phong độ đã được cập nhật tự động.'
+            'message': 'Đã lưu kết quả trận đấu thành công! Elo ẩn và Phong độ đã được cập nhật tự động.'
         }), 200
     except Exception as e:
         app.logger.error(f"Error in api_update_match_result: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/analyze_match_scoreboard', methods=['POST'])
+def api_analyze_match_scoreboard():
+    """Phân tích ảnh chụp màn hình bảng điểm sau trận đấu bằng Gemini AI để tối ưu hóa Elo từng tuyển thủ."""
+    try:
+        data = request.json or {}
+        image_data = data.get('image', '')
+        mime_type = data.get('mime_type', 'image/jpeg')
+        team1_ids = data.get('team1', [])
+        team2_ids = data.get('team2', [])
+        winner = data.get('winner', 'team1')
+        custom_key = data.get('api_key', '')
+
+        if not image_data:
+            return jsonify({'success': False, 'error': 'Vui lòng cung cấp ảnh chụp bảng điểm trận đấu'}), 400
+
+        all_players_map = {p['id'].lower(): p for p in player_service.get_all_players()}
+        team1_players = [all_players_map.get(str(pid).lower(), {'id': pid, 'nickname': pid}) for pid in team1_ids]
+        team2_players = [all_players_map.get(str(pid).lower(), {'id': pid, 'nickname': pid}) for pid in team2_ids]
+
+        result = gemini_service.analyze_match_scoreboard(
+            image_data=image_data,
+            mime_type=mime_type,
+            team1_players=team1_players,
+            team2_players=team2_players,
+            winner=winner,
+            custom_key=custom_key
+        )
+        return jsonify(result), 200
+    except Exception as e:
+        app.logger.error(f"Error in api_analyze_match_scoreboard: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -239,10 +278,11 @@ def api_supabase_sync():
 # ==========================================
 @app.route('/api/leaderboard', methods=['GET'])
 def api_get_leaderboard():
-    """Lấy bảng xếp hạng tổng quát tất cả người chơi."""
+    """Lấy bảng xếp hạng tổng quát các tuyển thủ đã tham gia thi đấu (matches > 0)."""
     try:
         players = player_service.get_all_players()
-        return jsonify({'success': True, 'leaderboard': players}), 200
+        active_players = [p for p in players if p.get('matches', 0) > 0]
+        return jsonify({'success': True, 'leaderboard': active_players}), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

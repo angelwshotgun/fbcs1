@@ -999,9 +999,29 @@ function renderLeaderboard() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    const sortedList = [...allPlayers].sort((a, b) => b.hidden_elo - a.hidden_elo);
+    // Chỉ hiển thị tuyển thủ đã thi đấu ít nhất 1 trận (loại bỏ người chơi chưa đánh trận nào)
+    const rankedPlayers = allPlayers
+        .filter(p => (p.matches || 0) > 0)
+        .sort((a, b) => b.hidden_elo - a.hidden_elo);
 
-    sortedList.forEach((p, idx) => {
+    if (rankedPlayers.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-12 text-slate-400">
+                    <div class="flex flex-col items-center justify-center gap-2">
+                        <i class="fa-solid fa-trophy text-slate-300 text-3xl"></i>
+                        <span class="font-bold text-slate-600 text-sm">Chưa có tuyển thủ nào đủ điều kiện xếp hạng Elo</span>
+                        <p class="text-xs text-slate-400 max-w-md">
+                            Bảng xếp hạng chỉ hiển thị tuyển thủ đã tham gia ít nhất 1 trận đấu thực tế. Hãy ghi nhận kết quả trận đấu trong tab <b>Mô Phỏng 5vs5</b> để xuất hiện trên BXH!
+                        </p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    rankedPlayers.forEach((p, idx) => {
         const rank = idx + 1;
         let rankBadge = `<span class="font-bold text-slate-500">#${rank}</span>`;
         if (rank === 1) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-400 text-slate-900 font-black flex items-center justify-center mx-auto shadow-xs">1</span>`;
@@ -1276,6 +1296,8 @@ function renderSimulationBoard() {
     updateSimulationLiveStats();
 }
 
+let activeSlotDropdown = null;
+
 function createSimulationSlotCard(team, slotIdx) {
     const isTeam1 = team === 'team1';
     const currentPid = isTeam1 ? simTeam1[slotIdx] : simTeam2[slotIdx];
@@ -1283,7 +1305,7 @@ function createSimulationSlotCard(team, slotIdx) {
     const unmatchedRawName = simUnmatchedSlotInfo[team]?.[slotIdx] || null;
 
     const div = document.createElement('div');
-    div.className = `flex items-center gap-2.5 p-2.5 rounded-2xl bg-white border ${
+    div.className = `relative flex items-center gap-2.5 p-2.5 rounded-2xl bg-white border ${
         isTeam1 ? 'border-blue-200/90 hover:border-blue-300' : 'border-rose-200/90 hover:border-rose-300'
     } shadow-xs transition`;
 
@@ -1291,37 +1313,52 @@ function createSimulationSlotCard(team, slotIdx) {
     const badgeColor = isTeam1 ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800';
     const avatarSrc = playerObj ? playerObj.avatar : (unmatchedRawName ? `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(unmatchedRawName)}` : 'https://api.dicebear.com/7.x/bottts/svg?seed=empty');
 
-    // Build Select HTML
-    let selectOptions = `<option value="">-- Chọn tuyển thủ (Slot ${slotIdx + 1}) --</option>`;
-
-    // If an unmatched raw name exists for this slot, insert it as an option
-    if (unmatchedRawName && !playerObj) {
-        selectOptions += `<option value="__unmatched__:${unmatchedRawName}" selected>⚠️ ${unmatchedRawName} (Chưa có trong data)</option>`;
-    }
-
-    // Sort players alphabetically by nickname
-    const sortedPlayers = [...allPlayers].sort((a, b) => a.nickname.localeCompare(b.nickname));
-    sortedPlayers.forEach(p => {
-        const isSelected = p.id === currentPid;
-        selectOptions += `<option value="${p.id}" ${isSelected ? 'selected' : ''}>${p.nickname} (Elo ${Math.round(p.hidden_elo)})</option>`;
-    });
-
     const escapedRawName = unmatchedRawName ? unmatchedRawName.replace(/'/g, "\\'") : '';
 
+    // Label on combobox trigger
+    let displayLabel = `-- Chọn tuyển thủ (Slot ${slotIdx + 1}) --`;
+    let labelStyle = 'text-slate-400 font-normal';
+    if (playerObj) {
+        displayLabel = `${playerObj.nickname} (Elo ${Math.round(playerObj.hidden_elo)})`;
+        labelStyle = 'text-slate-900 font-bold';
+    } else if (unmatchedRawName) {
+        displayLabel = `⚠️ ${unmatchedRawName} (Chưa có trong data)`;
+        labelStyle = 'text-amber-800 font-bold';
+    }
+
     div.innerHTML = `
-        <span class="w-7 h-7 rounded-xl ${badgeColor} text-xs font-black flex items-center justify-center shadow-2xs">${slotIdx + 1}</span>
+        <span class="w-7 h-7 rounded-xl ${badgeColor} text-xs font-black flex items-center justify-center shadow-2xs flex-shrink-0">${slotIdx + 1}</span>
         <div class="relative flex-shrink-0">
             <img src="${avatarSrc}" class="w-8 h-8 rounded-xl object-cover bg-slate-100 border border-slate-200" alt="Avatar">
             ${playerObj?.form?.icon ? `<span class="absolute -bottom-1 -right-1 text-[9px]">${playerObj.form.icon}</span>` : ''}
         </div>
-        <div class="flex-1 min-w-0">
-            <select onchange="onSimulationSlotChange('${team}', ${slotIdx}, this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500 transition truncate">
-                ${selectOptions}
-            </select>
+
+        <!-- Searchable Combobox Container -->
+        <div class="relative flex-1 min-w-0" id="sim-combobox-${team}-${slotIdx}">
+            <button type="button" onclick="toggleSlotDropdown('${team}', ${slotIdx}, event)" class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs flex items-center justify-between gap-1.5 transition text-left focus:outline-none focus:border-indigo-500">
+                <span class="truncate ${labelStyle}">${displayLabel}</span>
+                <i class="fa-solid fa-chevron-down text-slate-400 text-[10px] flex-shrink-0"></i>
+            </button>
+
+            <!-- Dropdown Menu Panel -->
+            <div id="sim-menu-${team}-${slotIdx}" class="hidden absolute left-0 top-full mt-1.5 w-full min-w-[280px] max-w-[340px] bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2.5 space-y-2">
+                <!-- Search Input with icon -->
+                <div class="relative">
+                    <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-[11px]"></i>
+                    <input type="text" id="sim-search-${team}-${slotIdx}" oninput="filterSlotDropdown('${team}', ${slotIdx}, this.value)" placeholder="Gõ tên tìm tuyển thủ..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition" onclick="event.stopPropagation()">
+                </div>
+
+                <!-- Scrollable Items List -->
+                <div id="sim-list-${team}-${slotIdx}" class="max-h-52 overflow-y-auto custom-scrollbar space-y-1 text-xs">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
         </div>
-        <div class="flex items-center gap-1">
+
+        <!-- Slot Actions -->
+        <div class="flex items-center gap-1 flex-shrink-0">
             ${unmatchedRawName && !playerObj ? `
-                <button type="button" onclick="quickCreatePlayerFromSlot('${team}', ${slotIdx}, '${escapedRawName}')" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shadow-xs transition flex items-center gap-1">
+                <button type="button" onclick="quickCreatePlayerFromSlot('${team}', ${slotIdx}, '${escapedRawName}')" class="px-2 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shadow-xs transition flex items-center gap-1">
                     <i class="fa-solid fa-user-plus text-[10px]"></i>
                     <span>+ Tạo</span>
                 </button>
@@ -1338,6 +1375,152 @@ function createSimulationSlotCard(team, slotIdx) {
 
     return div;
 }
+
+function toggleSlotDropdown(team, slotIdx, event) {
+    if (event) event.stopPropagation();
+
+    if (activeSlotDropdown && activeSlotDropdown.team === team && activeSlotDropdown.slotIdx === slotIdx) {
+        closeAllSlotDropdowns();
+        return;
+    }
+
+    closeAllSlotDropdowns();
+
+    const menu = document.getElementById(`sim-menu-${team}-${slotIdx}`);
+    if (!menu) return;
+
+    menu.classList.remove('hidden');
+    activeSlotDropdown = { team, slotIdx };
+
+    populateSlotDropdownList(team, slotIdx, '');
+
+    const searchInput = document.getElementById(`sim-search-${team}-${slotIdx}`);
+    if (searchInput) {
+        searchInput.value = '';
+        setTimeout(() => searchInput.focus(), 50);
+    }
+}
+
+function closeAllSlotDropdowns() {
+    document.querySelectorAll('[id^="sim-menu-"]').forEach(m => m.classList.add('hidden'));
+    activeSlotDropdown = null;
+}
+
+function filterSlotDropdown(team, slotIdx, query) {
+    populateSlotDropdownList(team, slotIdx, query);
+}
+
+function populateSlotDropdownList(team, slotIdx, query = '') {
+    const listContainer = document.getElementById(`sim-list-${team}-${slotIdx}`);
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+    const q = (query || '').trim().toLowerCase();
+    const currentPid = team === 'team1' ? simTeam1[slotIdx] : simTeam2[slotIdx];
+    const unmatchedRawName = simUnmatchedSlotInfo[team]?.[slotIdx] || null;
+
+    // Option 1: Clear/Deselect Slot
+    if (!q || '--'.includes(q) || 'bỏ chọn'.includes(q) || 'xóa'.includes(q)) {
+        const clearItem = document.createElement('div');
+        clearItem.className = 'flex items-center gap-2 p-1.5 rounded-xl text-slate-500 hover:bg-slate-100 cursor-pointer transition select-none';
+        clearItem.innerHTML = `
+            <i class="fa-solid fa-ban text-slate-400 w-5 text-center text-xs"></i>
+            <span class="font-medium text-xs">-- Để trống slot này --</span>
+        `;
+        clearItem.onclick = (e) => {
+            e.stopPropagation();
+            onSimulationSlotChange(team, slotIdx, '');
+            closeAllSlotDropdowns();
+        };
+        listContainer.appendChild(clearItem);
+    }
+
+    // Option 2: Unmatched raw name from OCR (if any)
+    if (unmatchedRawName && (!q || unmatchedRawName.toLowerCase().includes(q))) {
+        const unmatchedItem = document.createElement('div');
+        unmatchedItem.className = 'flex items-center justify-between p-2 rounded-xl bg-amber-50/80 border border-amber-200/80 hover:bg-amber-100/80 cursor-pointer transition select-none';
+        const escapedName = unmatchedRawName.replace(/'/g, "\\'");
+        unmatchedItem.innerHTML = `
+            <div class="flex items-center gap-2 truncate">
+                <span class="text-amber-600 font-bold">⚠️</span>
+                <span class="font-bold text-amber-900 truncate text-xs">${unmatchedRawName}</span>
+            </div>
+            <button type="button" onclick="event.stopPropagation(); quickCreatePlayerFromSlot('${team}', ${slotIdx}, '${escapedName}'); closeAllSlotDropdowns()" class="px-2 py-0.5 rounded-lg bg-amber-600 text-white font-bold text-[10px] shadow-2xs flex-shrink-0">
+                + Tạo Mới
+            </button>
+        `;
+        unmatchedItem.onclick = (e) => {
+            e.stopPropagation();
+            quickCreatePlayerFromSlot(team, slotIdx, unmatchedRawName);
+            closeAllSlotDropdowns();
+        };
+        listContainer.appendChild(unmatchedItem);
+    }
+
+    // Option 3: Filtered Players List
+    const sorted = [...allPlayers].sort((a, b) => a.nickname.localeCompare(b.nickname));
+    const filtered = sorted.filter(p => {
+        if (!q) return true;
+        return p.nickname.toLowerCase().includes(q) || p.id.toLowerCase().includes(q);
+    });
+
+    filtered.forEach(p => {
+        const isSelected = p.id === currentPid;
+        const item = document.createElement('div');
+        item.className = `flex items-center justify-between p-1.5 rounded-xl cursor-pointer transition select-none ${
+            isSelected ? 'bg-indigo-50 text-indigo-900 font-bold border border-indigo-200' : 'hover:bg-slate-100 text-slate-700'
+        }`;
+
+        item.innerHTML = `
+            <div class="flex items-center gap-2 min-w-0">
+                <img src="${p.avatar}" class="w-6 h-6 rounded-lg object-cover bg-slate-100 border border-slate-200 flex-shrink-0">
+                <span class="truncate font-semibold text-xs text-slate-900">${p.nickname}</span>
+                <span class="text-[10px] text-slate-400">${p.form?.icon || ''}</span>
+            </div>
+            <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                    Elo ${Math.round(p.hidden_elo)}
+                </span>
+                ${isSelected ? '<i class="fa-solid fa-check text-indigo-600 text-xs"></i>' : ''}
+            </div>
+        `;
+
+        item.onclick = (e) => {
+            e.stopPropagation();
+            onSimulationSlotChange(team, slotIdx, p.id);
+            closeAllSlotDropdowns();
+        };
+        listContainer.appendChild(item);
+    });
+
+    // If query typed and no players found
+    if (filtered.length === 0 && (!unmatchedRawName || !unmatchedRawName.toLowerCase().includes(q))) {
+        const emptyNotice = document.createElement('div');
+        emptyNotice.className = 'p-3 text-center text-slate-400 text-xs space-y-2';
+        const escapedQ = query.replace(/'/g, "\\'");
+        emptyNotice.innerHTML = `
+            <p>Không tìm thấy tuyển thủ <b>"${query}"</b></p>
+            <button type="button" onclick="event.stopPropagation(); quickCreatePlayerFromSlot('${team}', ${slotIdx}, '${escapedQ}'); closeAllSlotDropdowns()" class="w-full px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-user-plus text-[11px]"></i>
+                <span>+ Thêm mới "${query}"</span>
+            </button>
+        `;
+        listContainer.appendChild(emptyNotice);
+    }
+}
+
+// Global click & escape listeners to close dropdowns
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('[id^="sim-combobox-"]')) {
+        closeAllSlotDropdowns();
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeAllSlotDropdowns();
+    }
+});
 
 function onSimulationSlotChange(team, slotIdx, selectedVal) {
     if (selectedVal && selectedVal.startsWith('__unmatched__:')) {
@@ -1482,10 +1665,12 @@ function transferOcrToSimulation() {
 }
 
 let isSubmittingSimulationMatch = false;
+let currentMatchModalWinner = 'team1';
+let currentScoreboardImageBase64 = null;
+let currentScoreboardMimeType = 'image/jpeg';
+let currentAiScoreboardAnalysis = null;
 
-async function submitSimulationWinner(winningTeam) {
-    if (isSubmittingSimulationMatch) return;
-
+function submitSimulationWinner(winningTeam) {
     const t1Filled = simTeam1.filter(Boolean);
     const t2Filled = simTeam2.filter(Boolean);
 
@@ -1505,60 +1690,386 @@ async function submitSimulationWinner(winningTeam) {
         Swal.fire({
             icon: 'error',
             title: 'Trùng lặp người chơi',
-            text: 'Có tuyển thủ bị chọn nhiều hơn 1 lần giữa 2 đội. Vui lòng kiểm tra lại.',
+            text: 'Có tuyển thủ bị chọn nhiều hơn 1 lần giữa 2 đội. Vui lòng kiểm tra lại các slot.',
             ...SWAL_THEME
         });
         return;
     }
 
-    const winnerLabel = winningTeam === 'team1' ? 'Đội Xanh (Team 1)' : 'Đội Đỏ (Team 2)';
+    openMatchResultModal(winningTeam);
+}
 
-    const confirm = await Swal.fire({
-        title: `Xác nhận ${winnerLabel} Thắng?`,
-        text: 'Hệ thống sẽ lưu kết quả trận đấu, tự động cập nhật Elo ẩn và tính lại chuỗi Phong độ cho 10 tuyển thủ.',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Đồng Ý Lưu & Cập Nhật Elo',
-        cancelButtonText: 'Hủy',
-        showLoaderOnConfirm: true,
-        preConfirm: async () => {
-            isSubmittingSimulationMatch = true;
-            try {
-                const res = await fetch('/api/update_match_result', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        team1: simTeam1,
-                        team2: simTeam2,
-                        winner: winningTeam
-                    })
-                });
-                const data = await res.json();
-                if (!data.success) {
-                    throw new Error(data.error || 'Lỗi khi lưu kết quả trận đấu');
-                }
-                return data;
-            } catch (err) {
-                Swal.showValidationMessage(err.message || 'Lỗi kết nối khi lưu kết quả');
-            } finally {
-                isSubmittingSimulationMatch = false;
-            }
-        },
-        allowOutsideClick: () => !Swal.isLoading(),
-        ...SWAL_THEME
-    });
+function openMatchResultModal(winningTeam) {
+    currentMatchModalWinner = winningTeam;
+    const modal = document.getElementById('match-result-modal');
+    if (!modal) return;
 
-    if (confirm.isConfirmed && confirm.value) {
+    const isTeam1 = winningTeam === 'team1';
+    const winnerName = isTeam1 ? 'Đội Xanh (Team 1)' : 'Đội Đỏ (Team 2)';
+    const loserName = isTeam1 ? 'Đội Đỏ (Team 2)' : 'Đội Xanh (Team 1)';
+    const colorClass = isTeam1 ? 'text-blue-600' : 'text-rose-600';
+    const bgBadgeClass = isTeam1 ? 'bg-blue-100 text-blue-600' : 'bg-rose-100 text-rose-600';
+
+    const winnerNameElem = document.getElementById('modal-winner-team-name');
+    if (winnerNameElem) {
+        winnerNameElem.innerText = `${winnerName} Thắng`;
+        winnerNameElem.className = `${colorClass} font-extrabold`;
+    }
+
+    const badgeIcon = document.getElementById('modal-winner-badge-icon');
+    if (badgeIcon) {
+        badgeIcon.className = `w-10 h-10 rounded-2xl ${bgBadgeClass} flex items-center justify-center text-lg font-bold shadow-xs`;
+    }
+
+    const stdWinnerName = document.getElementById('modal-std-winner-name');
+    if (stdWinnerName) stdWinnerName.innerText = winnerName;
+    const stdLoserName = document.getElementById('modal-std-loser-name');
+    if (stdLoserName) stdLoserName.innerText = loserName;
+
+    // Reset default view
+    switchMatchResultTab('standard');
+    removeScoreboardImage();
+
+    modal.classList.remove('hidden');
+}
+
+function closeMatchResultModal() {
+    const modal = document.getElementById('match-result-modal');
+    if (modal) modal.classList.add('hidden');
+    removeScoreboardImage();
+}
+
+function switchMatchResultTab(tabName) {
+    const btnStd = document.getElementById('btn-tab-standard');
+    const btnAi = document.getElementById('btn-tab-ai-scoreboard');
+    const contentStd = document.getElementById('match-tab-content-standard');
+    const contentAi = document.getElementById('match-tab-content-ai');
+
+    if (!btnStd || !btnAi || !contentStd || !contentAi) return;
+
+    if (tabName === 'standard') {
+        btnStd.className = "py-2.5 px-3 rounded-xl text-xs font-bold font-heading transition flex items-center justify-center gap-1.5 bg-white text-indigo-700 shadow-xs";
+        btnAi.className = "py-2.5 px-3 rounded-xl text-xs font-bold font-heading transition flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900";
+        contentStd.classList.remove('hidden');
+        contentAi.classList.add('hidden');
+    } else {
+        btnAi.className = "py-2.5 px-3 rounded-xl text-xs font-bold font-heading transition flex items-center justify-center gap-1.5 bg-white text-purple-700 shadow-xs";
+        btnStd.className = "py-2.5 px-3 rounded-xl text-xs font-bold font-heading transition flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900";
+        contentAi.classList.remove('hidden');
+        contentStd.classList.add('hidden');
+    }
+}
+
+async function confirmSaveStandardMatch() {
+    if (isSubmittingSimulationMatch) return;
+    isSubmittingSimulationMatch = true;
+
+    const btn = document.getElementById('btn-confirm-save-standard');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Đang lưu...';
+    }
+
+    try {
+        const res = await fetch('/api/update_match_result', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                team1: simTeam1,
+                team2: simTeam2,
+                winner: currentMatchModalWinner,
+                notes: 'Lưu kết quả chuẩn (không kèm ảnh)'
+            })
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Lỗi khi lưu kết quả trận đấu');
+        }
+
+        closeMatchResultModal();
         Swal.fire({
             icon: 'success',
-            title: 'Đã cập nhật trận đấu!',
-            text: 'Elo ẩn và Phong độ đã được cập nhật thành công.',
+            title: 'Ghi nhận thành công!',
+            text: 'Elo ẩn và Phong độ của 10 tuyển thủ đã được cập nhật.',
             timer: 2000,
             showConfirmButton: false,
             ...SWAL_THEME
         });
+
         await loadAllPlayers();
         await loadStatus();
+    } catch (err) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi lưu trận đấu',
+            text: err.message,
+            ...SWAL_THEME
+        });
+    } finally {
+        isSubmittingSimulationMatch = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> <span>Xác Nhận Lưu Kết Quả Ngay</span>';
+        }
+    }
+}
+
+function handleScoreboardFileSelect(event) {
+    const file = event.target.files?.[0];
+    if (file) {
+        handleScoreboardPastedFile(file);
+    }
+}
+
+function handleScoreboardPastedFile(file) {
+    if (!file.type.startsWith('image/')) {
+        Swal.fire({ icon: 'warning', title: 'Tệp không hợp lệ', text: 'Vui lòng chọn hoặc dán file ảnh.', ...SWAL_THEME });
+        return;
+    }
+
+    currentScoreboardMimeType = file.type;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        currentScoreboardImageBase64 = e.target.result;
+
+        const emptyArea = document.getElementById('scoreboard-dropzone-empty');
+        const previewContainer = document.getElementById('scoreboard-preview-container');
+        const previewImg = document.getElementById('scoreboard-preview-img');
+        const fileName = document.getElementById('scoreboard-file-name');
+
+        if (emptyArea) emptyArea.classList.add('hidden');
+        if (previewContainer) previewContainer.classList.remove('hidden');
+        if (previewImg) previewImg.src = currentScoreboardImageBase64;
+        if (fileName) fileName.innerText = file.name || 'Ảnh bảng điểm vừa dán';
+
+        // Tự động kích hoạt nút phân tích
+        const runBtn = document.getElementById('btn-run-scoreboard-ai');
+        if (runBtn) runBtn.disabled = false;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeScoreboardImage() {
+    currentScoreboardImageBase64 = null;
+    currentAiScoreboardAnalysis = null;
+
+    const fileInput = document.getElementById('scoreboard-file-input');
+    if (fileInput) fileInput.value = '';
+
+    const emptyArea = document.getElementById('scoreboard-dropzone-empty');
+    const previewContainer = document.getElementById('scoreboard-preview-container');
+    const resultsContainer = document.getElementById('scoreboard-ai-results');
+    const loadingElem = document.getElementById('scoreboard-ai-loading');
+    const controlsElem = document.getElementById('scoreboard-ai-controls');
+
+    if (emptyArea) emptyArea.classList.remove('hidden');
+    if (previewContainer) previewContainer.classList.add('hidden');
+    if (resultsContainer) resultsContainer.classList.add('hidden');
+    if (loadingElem) loadingElem.classList.add('hidden');
+    if (controlsElem) controlsElem.classList.remove('hidden');
+}
+
+async function runScoreboardAiAnalysis() {
+    if (!currentScoreboardImageBase64) {
+        Swal.fire({
+            icon: 'info',
+            title: 'Chưa có ảnh',
+            text: 'Vui lòng dán ảnh (Ctrl + V) hoặc bấm tải lên ảnh bảng điểm kết thúc trận đấu trước khi phân tích.',
+            ...SWAL_THEME
+        });
+        return;
+    }
+
+    const loadingElem = document.getElementById('scoreboard-ai-loading');
+    const controlsElem = document.getElementById('scoreboard-ai-controls');
+    const resultsContainer = document.getElementById('scoreboard-ai-results');
+
+    if (loadingElem) loadingElem.classList.remove('hidden');
+    if (controlsElem) controlsElem.classList.add('hidden');
+    if (resultsContainer) resultsContainer.classList.add('hidden');
+
+    try {
+        const apiKey = localStorage.getItem('fbcs_gemini_api_key') || '';
+        const res = await fetch('/api/analyze_match_scoreboard', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                image: currentScoreboardImageBase64,
+                mime_type: currentScoreboardMimeType,
+                team1: simTeam1,
+                team2: simTeam2,
+                winner: currentMatchModalWinner,
+                api_key: apiKey
+            })
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Không thể phân tích ảnh bảng điểm.');
+        }
+
+        currentAiScoreboardAnalysis = data;
+        renderScoreboardAiResults(data);
+
+    } catch (err) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi phân tích AI',
+            text: err.message,
+            ...SWAL_THEME
+        });
+        if (controlsElem) controlsElem.classList.remove('hidden');
+    } finally {
+        if (loadingElem) loadingElem.classList.add('hidden');
+    }
+}
+
+function renderScoreboardAiResults(data) {
+    const resultsContainer = document.getElementById('scoreboard-ai-results');
+    const controlsElem = document.getElementById('scoreboard-ai-controls');
+    const summaryElem = document.getElementById('ai-match-summary-text');
+    const mvpBadge = document.getElementById('ai-mvp-badge');
+    const svpBadge = document.getElementById('ai-svp-badge');
+    const tbody = document.getElementById('scoreboard-players-table-body');
+
+    if (!resultsContainer || !tbody) return;
+
+    if (summaryElem) summaryElem.innerText = data.ai_summary || 'Đã phân tích thông số 10 tuyển thủ.';
+    if (mvpBadge) mvpBadge.innerText = `👑 MVP: ${data.match_mvp || '-'}`;
+    if (svpBadge) svpBadge.innerText = `⭐ SVP: ${data.match_svp || '-'}`;
+
+    tbody.innerHTML = '';
+
+    const list = data.players_analysis || [];
+    list.forEach(p => {
+        const playerObj = allPlayers.find(item => item.id === p.player_id) || {};
+        const isTeam1 = p.team === 1;
+        const isWinner = (isTeam1 && currentMatchModalWinner === 'team1') || (!isTeam1 && currentMatchModalWinner === 'team2');
+
+        let tagBadge = `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px]">Tròn vai</span>`;
+        if (p.performance_tag === 'MVP') {
+            tagBadge = `<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-black border border-amber-300 text-[10px]">👑 MVP</span>`;
+        } else if (p.performance_tag === 'SVP') {
+            tagBadge = `<span class="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 font-black border border-indigo-300 text-[10px]">⭐ SVP</span>`;
+        } else if (p.performance_tag === 'GREAT') {
+            tagBadge = `<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 text-[10px]">🔥 Tốt</span>`;
+        } else if (p.performance_tag === 'UNDERPERFORMING') {
+            tagBadge = `<span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-medium border border-amber-200 text-[10px]">⚠️ Dưới sức</span>`;
+        } else if (p.performance_tag === 'FEEDER') {
+            tagBadge = `<span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-300 text-[10px]">💀 Thọt</span>`;
+        }
+
+        const deltaVal = p.recommended_delta || (isWinner ? 16 : -16);
+        const deltaFormatted = deltaVal > 0 ? `+${deltaVal}` : `${deltaVal}`;
+        const inputColor = deltaVal >= 0 ? 'text-emerald-700 bg-emerald-50/60 border-emerald-300' : 'text-rose-700 bg-rose-50/60 border-rose-300';
+
+        const tr = document.createElement('tr');
+        tr.className = `hover:bg-slate-50 transition ${isTeam1 ? 'bg-blue-50/20' : 'bg-rose-50/20'}`;
+        tr.innerHTML = `
+            <td class="py-2 px-3">
+                <div class="flex items-center gap-2">
+                    <span class="w-4 h-4 rounded-full ${isTeam1 ? 'bg-blue-600' : 'bg-rose-600'} text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                        ${isTeam1 ? '1' : '2'}
+                    </span>
+                    <img src="${playerObj.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.player_id}`}" class="w-6 h-6 rounded-lg object-cover bg-slate-100 border border-slate-200 flex-shrink-0">
+                    <div class="truncate">
+                        <span class="font-bold text-slate-900 block truncate">${p.nickname}</span>
+                        <span class="text-[10px] text-slate-400 truncate block">${p.comment || ''}</span>
+                    </div>
+                </div>
+            </td>
+            <td class="py-2 px-2 text-center font-medium text-slate-700">
+                ${p.champion && p.champion !== '-' ? `<span class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200">${p.champion}</span>` : '<span class="text-slate-400">-</span>'}
+            </td>
+            <td class="py-2 px-2 text-center font-bold text-slate-800 whitespace-nowrap">
+                ${p.kda || '-'}
+            </td>
+            <td class="py-2 px-2 text-center whitespace-nowrap">
+                ${tagBadge}
+            </td>
+            <td class="py-2 px-3 text-center">
+                <div class="flex items-center justify-center">
+                    <input type="number" step="0.5" id="ai-delta-${p.player_id}" value="${deltaVal}" class="w-18 text-center font-black py-1 px-1.5 rounded-xl border text-xs shadow-2xs focus:outline-none focus:ring-1 focus:ring-indigo-500 ${inputColor}">
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    resultsContainer.classList.remove('hidden');
+    if (controlsElem) controlsElem.classList.remove('hidden');
+}
+
+async function confirmSaveAiCustomMatch() {
+    if (!currentAiScoreboardAnalysis) return;
+    if (isSubmittingSimulationMatch) return;
+    isSubmittingSimulationMatch = true;
+
+    const btn = document.getElementById('btn-confirm-save-ai');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Đang lưu kết quả...';
+    }
+
+    try {
+        // Thu thập các delta tùy chỉnh từ bảng
+        const customDeltas = {};
+        const playersList = currentAiScoreboardAnalysis.players_analysis || [];
+        playersList.forEach(p => {
+            const inputElem = document.getElementById(`ai-delta-${p.player_id}`);
+            if (inputElem) {
+                const val = parseFloat(inputElem.value);
+                customDeltas[p.player_id] = isNaN(val) ? p.recommended_delta : val;
+            } else {
+                customDeltas[p.player_id] = p.recommended_delta;
+            }
+        });
+
+        const res = await fetch('/api/update_match_result', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                team1: simTeam1,
+                team2: simTeam2,
+                winner: currentMatchModalWinner,
+                player_deltas: customDeltas,
+                player_performances: playersList,
+                ai_summary: currentAiScoreboardAnalysis.ai_summary,
+                notes: `AI Scoreboard: MVP ${currentAiScoreboardAnalysis.match_mvp || '-'}, SVP ${currentAiScoreboardAnalysis.match_svp || '-'}`
+            })
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Lỗi khi lưu kết quả trận đấu');
+        }
+
+        closeMatchResultModal();
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã tối ưu hóa điểm Elo!',
+            text: 'Điểm Elo cá nhân hóa theo KDA và Phong độ đã được cập nhật thành công.',
+            timer: 2500,
+            showConfirmButton: false,
+            ...SWAL_THEME
+        });
+
+        await loadAllPlayers();
+        await loadStatus();
+    } catch (err) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi lưu trận đấu',
+            text: err.message,
+            ...SWAL_THEME
+        });
+    } finally {
+        isSubmittingSimulationMatch = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>Xác Nhận & Áp Dụng Elo Phân Tích</span>';
+        }
     }
 }
 
@@ -1575,11 +2086,19 @@ function handleGlobalScreenshotPaste(e) {
         const item = items[i];
         if (item.kind === 'file' && item.type.startsWith('image/')) {
             const blob = item.getAsFile();
-            if (blob) {
-                processScreenshotFile(blob);
-                e.preventDefault();
-                break;
+            if (!blob) continue;
+
+            // Nếu modal kết quả trận đấu đang mở -> nạp vào bảng điểm modal
+            const matchModal = document.getElementById('match-result-modal');
+            if (matchModal && !matchModal.classList.contains('hidden')) {
+                switchMatchResultTab('ai_scoreboard');
+                handleScoreboardPastedFile(blob);
+                return;
             }
+
+            // Ngược lại -> nạp vào OCR sảnh chờ thông thường
+            processScreenshotFile(blob);
+            break;
         }
     }
 }
