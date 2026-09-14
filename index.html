@@ -3,21 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FBCS AI 3.0 - Hệ Thống Chia Đội & Quản Lý Tuyển Thủ</title>
+    <title>FBCS AI 3.0 - Hệ Thống Chia Đội & Chỉ Số Tuyển Thủ</title>
+    <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+                        heading: ['"Outfit"', '"Plus Jakarta Sans"', 'sans-serif']
+                    },
                     colors: {
-                        primary: '#4f46e5',
-                        primaryHover: '#4338ca',
-                        surface: '#ffffff',
-                        canvas: '#f8fafc',
-                        borderLight: '#e2e8f0',
-                        textMain: '#0f172a',
-                        textMuted: '#64748b'
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
                     }
                 }
             }
@@ -29,9 +39,14 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         body {
-            background-color: #f8fafc;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 50%), #f8fafc;
             color: #0f172a;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+            letter-spacing: -0.02em;
         }
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
@@ -42,57 +57,61 @@
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
             background: #cbd5e1;
-            border-radius: 4px;
+            border-radius: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased">
 
-    <!-- Top Navigation Header (Light Theme) -->
-    <header class="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-xs">
+    <!-- Top Navigation Header -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50 shadow-xs">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <!-- Logo & Brand -->
                 <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('matchmaker')">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 flex items-center justify-center text-white font-black text-xl shadow-md">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-500 flex items-center justify-center text-white font-extrabold text-xl shadow-md shadow-indigo-500/20">
                         <i class="fa-solid fa-gamepad"></i>
                     </div>
                     <div>
                         <div class="flex items-center space-x-2">
-                            <span class="text-xl font-black tracking-tight text-slate-900">FBCS AI</span>
-                            <span class="bg-indigo-50 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-indigo-200">v3.0 Smart</span>
+                            <span class="text-xl font-black font-heading tracking-tight text-slate-900">FBCS AI</span>
+                            <span class="bg-indigo-50 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-indigo-200/70">v3.0 Pro</span>
                         </div>
-                        <p class="text-xs text-slate-500 hidden sm:block">Hệ Thống Chia Đội & Chỉ Số Tuyển Thủ</p>
+                        <p class="text-xs text-slate-500 font-medium hidden sm:block">Hệ Thống Chia Đội & Chỉ Số Tuyển Thủ</p>
                     </div>
                 </div>
 
                 <!-- Navigation Tabs -->
                 <nav class="flex space-x-1 sm:space-x-1.5 overflow-x-auto py-2">
-                    <button onclick="switchTab('matchmaker')" id="tab-btn-matchmaker" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 bg-indigo-600 text-white shadow-sm">
+                    <button onclick="switchTab('matchmaker')" id="tab-btn-matchmaker" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-bold font-heading transition-all flex items-center space-x-2 bg-indigo-600 text-white shadow-sm">
                         <i class="fa-solid fa-shield-halved"></i>
                         <span>Chia Đội</span>
                     </button>
-                    <button onclick="switchTab('captains')" id="tab-btn-captains" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                        <i class="fa-solid fa-crown"></i>
+                    <button onclick="switchTab('captains')" id="tab-btn-captains" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-bold font-heading transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                        <i class="fa-solid fa-crown text-amber-500"></i>
                         <span>Đội Trưởng</span>
                     </button>
-                    <button onclick="switchTab('players')" id="tab-btn-players" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                        <i class="fa-solid fa-users-gear"></i>
+                    <button onclick="switchTab('players')" id="tab-btn-players" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-bold font-heading transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                        <i class="fa-solid fa-users-gear text-indigo-500"></i>
                         <span>Quản Trị</span>
                     </button>
-                    <button onclick="switchTab('leaderboard')" id="tab-btn-leaderboard" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                        <i class="fa-solid fa-trophy"></i>
+                    <button onclick="switchTab('leaderboard')" id="tab-btn-leaderboard" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-bold font-heading transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                        <i class="fa-solid fa-trophy text-amber-500"></i>
                         <span>BXH Elo</span>
                     </button>
-                    <button onclick="switchTab('synergies')" id="tab-btn-synergies" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                        <i class="fa-solid fa-handshake"></i>
+                    <button onclick="switchTab('synergies')" id="tab-btn-synergies" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-bold font-heading transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                        <i class="fa-solid fa-handshake text-emerald-500"></i>
                         <span>Cặp Ăn Ý</span>
                     </button>
-                    <button onclick="switchTab('settings')" id="tab-btn-settings" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
-                        <i class="fa-solid fa-gear"></i>
+                    <button onclick="switchTab('settings')" id="tab-btn-settings" class="nav-tab px-3.5 py-2 rounded-xl text-sm font-bold font-heading transition-all flex items-center space-x-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+                        <i class="fa-solid fa-gear text-slate-400"></i>
                         <span class="hidden md:inline">Cài Đặt</span>
                     </button>
                 </nav>
@@ -101,154 +120,154 @@
     </header>
 
     <!-- Main Content Container -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7">
 
         <!-- ============================================== -->
         <!-- TAB 1: CHIA ĐỘI THÔNG MINH (MATCHMAKER) -->
         <!-- ============================================== -->
         <section id="tab-content-matchmaker" class="tab-pane space-y-6">
             <!-- Header bar with player counter -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-5">
                 <div>
-                    <h2 class="text-2xl font-black text-slate-900 flex items-center gap-3">
-                        <span>⚔️ Chia Đội Tối Ưu</span>
-                        <span id="selected-counter-badge" class="text-sm px-3 py-1 rounded-full bg-slate-100 text-indigo-700 border border-slate-200 font-bold">
+                    <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
+                        <span>⚔️ Chia Đội Cân Bằng</span>
+                        <span id="selected-counter-badge" class="text-xs px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-bold">
                             Đã chọn: <b id="selected-count-text">0</b> / 10
                         </span>
                     </h2>
                     <p class="text-sm text-slate-500 mt-1">
-                        Chọn 10 tuyển thủ (hoặc dán ảnh sảnh chờ). Thuật toán sẽ cân bằng 2 đội dựa trên Elo ẩn, Stats (1-10), Phong độ 🔥 và cặp ăn ý.
+                        Chọn đủ 10 tuyển thủ (hoặc bấm <kbd class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 font-mono text-[11px] text-slate-700 font-bold">Ctrl + V</kbd> dán ảnh sảnh chờ). Thuật toán AI sẽ cân bằng 2 đội tối ưu nhất.
                     </p>
                 </div>
                 <div class="flex items-center gap-3 w-full md:w-auto">
-                    <button onclick="clearSelectedPlayers()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold transition">
-                        <i class="fa-solid fa-rotate-left mr-1.5"></i> Bỏ chọn
+                    <button onclick="clearSelectedPlayers()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold transition shadow-xs">
+                        <i class="fa-solid fa-rotate-left mr-1.5 text-slate-400"></i> Bỏ chọn
                     </button>
-                    <button onclick="handleCreateTeams()" id="btn-create-teams" class="flex-1 md:flex-initial px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md hover:shadow-indigo-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fa-solid fa-bolt mr-1.5"></i> Chia Đội Cân Bằng
+                    <button onclick="handleCreateTeams()" id="btn-create-teams" class="flex-1 md:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold font-heading text-sm shadow-md shadow-indigo-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-bolt mr-1.5"></i> Chia Đội Tối Ưu
                     </button>
                 </div>
             </div>
 
             <!-- Screenshot Quick Scanner Dropzone (Ctrl+V / Drag & Drop / File Select) -->
-            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-300 transition duration-200">
-                <div id="screenshot-dropzone" onclick="document.getElementById('screenshot-file-input').click()" class="border-2 border-dashed border-indigo-200 hover:border-indigo-500 bg-indigo-50/30 hover:bg-indigo-50/70 rounded-2xl p-5 text-center cursor-pointer transition-all duration-200 group relative">
+            <div class="bg-gradient-to-br from-indigo-50/50 via-white to-blue-50/30 p-5 rounded-3xl border border-indigo-200/80 shadow-xs hover:border-indigo-400 transition-all duration-200">
+                <div id="screenshot-dropzone" onclick="document.getElementById('screenshot-file-input').click()" class="border-2 border-dashed border-indigo-200 hover:border-indigo-500 bg-white/80 hover:bg-indigo-50/50 rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 group relative">
                     <input type="file" id="screenshot-file-input" accept="image/*" class="hidden" onchange="handleScreenshotFileSelect(event)">
                     
                     <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
+                        <div class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center text-2xl group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-xs">
                             <i class="fa-solid fa-camera"></i>
                         </div>
                         <div class="text-center sm:text-left">
-                            <h4 class="text-sm font-bold text-slate-900 flex items-center justify-center sm:justify-start gap-2">
-                                <span>📸 Quét Ảnh Màn Hình Phòng Đấu (Tự Động Chọn 10 Người)</span>
-                                <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold border border-indigo-200">AI Vision</span>
-                            </h4>
+                            <div class="flex items-center justify-center sm:justify-start gap-2">
+                                <h4 class="text-base font-bold font-heading text-slate-900">Quét Ảnh Sảnh Chờ Phòng Đấu (AI Vision)</h4>
+                                <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold">Auto 10 Players</span>
+                            </div>
                             <p class="text-xs text-slate-500 mt-1">
-                                Chụp sảnh chờ LMHT / Discord (<kbd class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono font-bold text-[11px]">Win + Shift + S</kbd>), rồi bấm <kbd class="px-1.5 py-0.5 rounded bg-indigo-100 border border-indigo-300 text-indigo-700 font-mono font-bold text-[11px]">Ctrl + V</kbd> dán trực tiếp vào trang này!
+                                Chụp màn hình sảnh chờ LMHT hoặc Discord (<kbd class="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-800 font-mono font-bold text-[11px]">Win + Shift + S</kbd>), rồi chỉ cần bấm <kbd class="px-2 py-0.5 rounded bg-indigo-600 text-white font-mono font-bold text-[11px] shadow-xs">Ctrl + V</kbd> dán trực tiếp tại đây!
                             </p>
                         </div>
                     </div>
 
                     <!-- OCR Scanning Loader (Hidden by default) -->
-                    <div id="ocr-loading-spinner" class="hidden mt-3 pt-3 border-t border-indigo-100 flex items-center justify-center gap-2 text-xs font-semibold text-indigo-600">
-                        <i class="fa-solid fa-spinner fa-spin"></i>
-                        <span>AI đang nhận diện và đối chiếu 10 tuyển thủ từ ảnh sảnh chờ...</span>
+                    <div id="ocr-loading-spinner" class="hidden mt-4 pt-3 border-t border-indigo-100 flex items-center justify-center gap-2.5 text-xs font-bold text-indigo-600 animate-pulse">
+                        <i class="fa-solid fa-spinner fa-spin text-base"></i>
+                        <span>AI đang phân tích ảnh và đối chiếu 10 tuyển thủ trong phòng đấu...</span>
                     </div>
                 </div>
 
                 <!-- Last Detected Summary (Hidden by default) -->
-                <div id="ocr-result-summary" class="hidden mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs flex flex-wrap items-center justify-between gap-2">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
-                        <span class="text-slate-700">Đã nhận diện: <b id="ocr-detected-names" class="text-slate-900 font-bold"></b></span>
+                <div id="ocr-result-summary" class="hidden mt-3 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs flex flex-wrap items-center justify-between gap-3 shadow-xs">
+                    <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+                        <span class="text-slate-700 font-medium">Đã tìm thấy: <b id="ocr-detected-names" class="text-slate-900 font-bold"></b></span>
                     </div>
-                    <button onclick="handleCreateTeams()" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition">
+                    <button onclick="handleCreateTeams()" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold font-heading text-xs shadow-xs transition">
                         Chia Đội Ngay
                     </button>
                 </div>
             </div>
 
             <!-- Player Selection Grid -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="flex flex-col sm:flex-row items-center justify-between mb-4 gap-3">
-                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-list-check text-indigo-600"></i>
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
+                <div class="flex flex-col sm:flex-row items-center justify-between mb-5 gap-3">
+                    <h3 class="text-base font-bold font-heading text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-users text-indigo-600"></i>
                         <span>Danh Sách Tuyển Thủ</span>
                     </h3>
                     <div class="relative w-full sm:w-64">
-                        <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
-                        <input type="text" id="matchmaker-search" oninput="filterMatchmakerPlayers()" placeholder="Tìm tên tuyển thủ..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
+                        <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                        <input type="text" id="matchmaker-search" oninput="filterMatchmakerPlayers()" placeholder="Tìm tên tuyển thủ..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
                     </div>
                 </div>
 
                 <!-- Grid cards of players -->
-                <div id="matchmaker-players-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 custom-scrollbar max-h-[480px] overflow-y-auto p-1">
+                <div id="matchmaker-players-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 custom-scrollbar max-h-[500px] overflow-y-auto p-1">
                     <!-- Dynamic rendering via JS -->
                 </div>
             </div>
 
             <!-- Matchmaking Result View (Hidden until teams are created) -->
             <div id="teams-result-section" class="hidden space-y-6">
-                <div class="bg-white p-6 rounded-3xl border border-indigo-200 shadow-xl">
+                <div class="bg-white p-7 rounded-3xl border border-indigo-200/80 shadow-lg">
                     <div class="text-center mb-6">
-                        <span class="px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold uppercase tracking-wider">
+                        <span class="px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-xs font-bold font-heading uppercase tracking-wider">
                             ✨ KẾT QUẢ PHÂN CHIA ĐỘI HÌNH TỐI ƯU
                         </span>
-                        <div class="flex items-center justify-center gap-6 mt-3 text-sm text-slate-600">
-                            <span>Chênh lệch sức mạnh: <b id="res-power-diff" class="text-slate-900 text-base font-bold">0.0</b></span>
+                        <div class="flex items-center justify-center gap-6 mt-3 text-sm text-slate-600 font-medium">
+                            <span>Chênh lệch sức mạnh: <b id="res-power-diff" class="text-slate-900 text-base font-bold font-heading">0.0</b></span>
                             <span>•</span>
-                            <span class="text-indigo-600 font-semibold">Tỷ lệ dự đoán: <span id="res-win-prob-label" class="font-bold">50% - 50%</span></span>
+                            <span class="text-indigo-600 font-bold">Tỷ lệ dự đoán: <span id="res-win-prob-label">50% - 50%</span></span>
                         </div>
                     </div>
 
                     <!-- Teams Side-by-Side Comparison -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Team 1 (Blue / Cyan) -->
-                        <div class="bg-blue-50/60 border border-blue-200 rounded-2xl p-5 relative overflow-hidden">
-                            <div class="flex items-center justify-between mb-4 border-b border-blue-200/80 pb-3">
+                        <!-- Team 1 (Blue) -->
+                        <div class="bg-gradient-to-br from-blue-50/80 to-indigo-50/20 border border-blue-200/90 rounded-3xl p-6 relative overflow-hidden shadow-xs">
+                            <div class="flex items-center justify-between mb-4 border-b border-blue-200/60 pb-3">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-xs">1</div>
+                                    <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white text-base shadow-xs">1</div>
                                     <div>
-                                        <h3 class="font-black text-blue-900 text-lg">ĐỘI XANH (TEAM 1)</h3>
-                                        <p class="text-xs text-slate-500">Sức mạnh tổng: <b id="team1-power-text" class="text-blue-700 font-bold">0</b></p>
+                                        <h3 class="font-black font-heading text-blue-900 text-lg">ĐỘI XANH (TEAM 1)</h3>
+                                        <p class="text-xs text-slate-500 font-medium">Sức mạnh tổng: <b id="team1-power-text" class="text-blue-700 font-bold">0</b></p>
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <span id="team1-prob-badge" class="px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-sm border border-blue-200">50% Win</span>
+                                    <span id="team1-prob-badge" class="px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-xs border border-blue-200">50% Win</span>
                                 </div>
                             </div>
-                            <div id="team1-players-list" class="space-y-2">
+                            <div id="team1-players-list" class="space-y-2.5">
                                 <!-- Rendered via JS -->
                             </div>
-                            <div class="mt-5 pt-3 border-t border-blue-200 flex items-center justify-between">
-                                <span class="text-xs text-slate-500">Xác nhận kết quả trận:</span>
-                                <button onclick="submitMatchWinner('team1')" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow transition">
+                            <div class="mt-5 pt-3.5 border-t border-blue-200/60 flex items-center justify-between">
+                                <span class="text-xs text-slate-500 font-medium">Xác nhận kết quả:</span>
+                                <button onclick="submitMatchWinner('team1')" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold font-heading text-xs shadow-sm transition">
                                     🏆 Đội Xanh Thắng
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Team 2 (Red / Amber) -->
-                        <div class="bg-rose-50/60 border border-rose-200 rounded-2xl p-5 relative overflow-hidden">
-                            <div class="flex items-center justify-between mb-4 border-b border-rose-200/80 pb-3">
+                        <!-- Team 2 (Red) -->
+                        <div class="bg-gradient-to-br from-rose-50/80 to-orange-50/20 border border-rose-200/90 rounded-3xl p-6 relative overflow-hidden shadow-xs">
+                            <div class="flex items-center justify-between mb-4 border-b border-rose-200/60 pb-3">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-lg bg-rose-600 flex items-center justify-center font-bold text-white shadow-xs">2</div>
+                                    <div class="w-9 h-9 rounded-xl bg-rose-600 flex items-center justify-center font-bold text-white text-base shadow-xs">2</div>
                                     <div>
-                                        <h3 class="font-black text-rose-900 text-lg">ĐỘI ĐỎ (TEAM 2)</h3>
-                                        <p class="text-xs text-slate-500">Sức mạnh tổng: <b id="team2-power-text" class="text-rose-700 font-bold">0</b></p>
+                                        <h3 class="font-black font-heading text-rose-900 text-lg">ĐỘI ĐỎ (TEAM 2)</h3>
+                                        <p class="text-xs text-slate-500 font-medium">Sức mạnh tổng: <b id="team2-power-text" class="text-rose-700 font-bold">0</b></p>
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <span id="team2-prob-badge" class="px-3 py-1 rounded-full bg-rose-100 text-rose-800 font-bold text-sm border border-rose-200">50% Win</span>
+                                    <span id="team2-prob-badge" class="px-3 py-1 rounded-full bg-rose-100 text-rose-800 font-bold text-xs border border-rose-200">50% Win</span>
                                 </div>
                             </div>
-                            <div id="team2-players-list" class="space-y-2">
+                            <div id="team2-players-list" class="space-y-2.5">
                                 <!-- Rendered via JS -->
                             </div>
-                            <div class="mt-5 pt-3 border-t border-rose-200 flex items-center justify-between">
-                                <span class="text-xs text-slate-500">Xác nhận kết quả trận:</span>
-                                <button onclick="submitMatchWinner('team2')" class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow transition">
+                            <div class="mt-5 pt-3.5 border-t border-rose-200/60 flex items-center justify-between">
+                                <span class="text-xs text-slate-500 font-medium">Xác nhận kết quả:</span>
+                                <button onclick="submitMatchWinner('team2')" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold font-heading text-xs shadow-sm transition">
                                     🏆 Đội Đỏ Thắng
                                 </button>
                             </div>
@@ -256,17 +275,17 @@
                     </div>
 
                     <!-- Gemini AI Tactical Commentary Box -->
-                    <div class="mt-6 pt-6 border-t border-slate-200">
+                    <div class="mt-6 pt-6 border-t border-slate-200/80">
                         <div class="flex items-center justify-between mb-3">
-                            <h4 class="text-sm font-bold text-indigo-700 flex items-center gap-2">
+                            <h4 class="text-sm font-bold font-heading text-indigo-700 flex items-center gap-2">
                                 <i class="fa-solid fa-wand-magic-sparkles text-indigo-600"></i>
                                 <span>Bình Luận Viên & Phân Tích Kèo AI</span>
                             </h4>
-                            <button onclick="requestAiAnalysis()" id="btn-run-ai" class="text-xs px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 font-semibold transition">
+                            <button onclick="requestAiAnalysis()" id="btn-run-ai" class="text-xs px-3.5 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 font-bold transition">
                                 <i class="fa-solid fa-brain mr-1"></i> Phân Tích Lại Bằng AI
                             </button>
                         </div>
-                        <div id="ai-analysis-content" class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed custom-scrollbar max-h-48 overflow-y-auto">
+                        <div id="ai-analysis-content" class="bg-slate-50 p-4.5 rounded-2xl border border-slate-200 text-xs text-slate-700 leading-relaxed custom-scrollbar max-h-48 overflow-y-auto">
                             Nhấn nút phía trên để kích hoạt AI phân tích kèo đấu chi tiết!
                         </div>
                     </div>
@@ -278,23 +297,23 @@
         <!-- TAB 2: CHIA ĐỘI VỚI ĐỘI TRƯỞNG (CAPTAINS) -->
         <!-- ============================================== -->
         <section id="tab-content-captains" class="tab-pane hidden space-y-6">
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-5">
                 <div>
-                    <h2 class="text-2xl font-black text-slate-900 flex items-center gap-3">
+                    <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
                         <span>👑 Chia Đội Với 2 Đội Trưởng</span>
-                        <span id="captain-badge" class="text-sm px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold">
+                        <span id="captain-badge" class="text-xs px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-bold">
                             Cần: 2 Captains + 8 Tuyển Thủ
                         </span>
                     </h2>
                     <p class="text-sm text-slate-500 mt-1">
-                        Click chọn 2 người làm Đội trưởng (đánh dấu vương miện), sau đó chọn thêm 8 tuyển thủ còn lại.
+                        Chọn 2 tuyển thủ làm Đội trưởng (đánh dấu vương miện), sau đó chọn thêm 8 tuyển thủ còn lại để xếp đội.
                     </p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <button onclick="clearCaptainSelection()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold transition">
-                        <i class="fa-solid fa-rotate-left mr-1"></i> Đặt lại
+                    <button onclick="clearCaptainSelection()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold transition">
+                        <i class="fa-solid fa-rotate-left mr-1 text-slate-400"></i> Đặt lại
                     </button>
-                    <button onclick="handleCreateTeamsWithCaptains()" class="px-6 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow transition">
+                    <button onclick="handleCreateTeamsWithCaptains()" class="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold font-heading text-sm shadow transition">
                         <i class="fa-solid fa-crown mr-1"></i> Xếp Đội Cân Bằng
                     </button>
                 </div>
@@ -302,33 +321,33 @@
 
             <!-- Captains Status Overview -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="p-4 rounded-xl border border-amber-200 bg-amber-50/60 flex items-center gap-4 shadow-xs">
-                    <div class="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center text-xl font-bold shadow-xs">
+                <div class="p-5 rounded-2xl border border-amber-200 bg-amber-50/50 flex items-center gap-4 shadow-xs">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl font-bold font-heading shadow-xs">
                         1
                     </div>
                     <div>
                         <span class="text-xs uppercase tracking-wider text-amber-700 font-bold">Đội Trưởng 1</span>
-                        <h4 id="cap1-display-name" class="font-black text-slate-900 text-base">Chưa chọn</h4>
+                        <h4 id="cap1-display-name" class="font-black font-heading text-slate-900 text-base">Chưa chọn</h4>
                     </div>
                 </div>
-                <div class="p-4 rounded-xl border border-amber-200 bg-amber-50/60 flex items-center gap-4 shadow-xs">
-                    <div class="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center text-xl font-bold shadow-xs">
+                <div class="p-5 rounded-2xl border border-amber-200 bg-amber-50/50 flex items-center gap-4 shadow-xs">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl font-bold font-heading shadow-xs">
                         2
                     </div>
                     <div>
                         <span class="text-xs uppercase tracking-wider text-amber-700 font-bold">Đội Trưởng 2</span>
-                        <h4 id="cap2-display-name" class="font-black text-slate-900 text-base">Chưa chọn</h4>
+                        <h4 id="cap2-display-name" class="font-black font-heading text-slate-900 text-base">Chưa chọn</h4>
                     </div>
                 </div>
             </div>
 
             <!-- Captains Player Selection Grid -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-bold text-slate-800">Chọn 2 Đội Trưởng & 8 Tuyển Thủ</h3>
+                    <h3 class="text-sm font-bold font-heading text-slate-900">Chọn 2 Đội Trưởng & 8 Tuyển Thủ</h3>
                     <span id="captain-selection-text" class="text-xs text-amber-700 font-bold">Đã chọn: 0/10</span>
                 </div>
-                <div id="captains-players-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 custom-scrollbar max-h-[480px] overflow-y-auto p-1">
+                <div id="captains-players-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 custom-scrollbar max-h-[500px] overflow-y-auto p-1">
                     <!-- Rendered via JS -->
                 </div>
             </div>
@@ -338,18 +357,18 @@
         <!-- TAB 3: QUẢN TRỊ NGƯỜI CHƠI (PLAYER ADMIN) -->
         <!-- ============================================== -->
         <section id="tab-content-players" class="tab-pane hidden space-y-6">
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-5">
                 <div>
-                    <h2 class="text-2xl font-black text-slate-900 flex items-center gap-3">
+                    <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
                         <span>👥 Quản Trị Tuyển Thủ</span>
-                        <span id="total-players-badge" class="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">36 Tuyển Thủ</span>
+                        <span id="total-players-badge" class="text-xs px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-bold">36 Tuyển Thủ</span>
                     </h2>
                     <p class="text-sm text-slate-500 mt-1">
                         Chỉnh sửa Nickname, Avatar và các chỉ số (thang điểm 1 - 10). Phong độ và Elo ẩn được bảo vệ và tự động cập nhật.
                     </p>
                 </div>
                 <div>
-                    <button onclick="openPlayerModal('add')" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md transition flex items-center gap-2">
+                    <button onclick="openPlayerModal('add')" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold font-heading text-sm shadow-md shadow-indigo-500/20 transition flex items-center gap-2">
                         <i class="fa-solid fa-user-plus"></i>
                         <span>Thêm Tuyển Thủ Mới</span>
                     </button>
@@ -357,21 +376,21 @@
             </div>
 
             <!-- Filter & Search Controls -->
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
                 <div class="flex items-center gap-3 w-full md:w-auto">
                     <div class="relative flex-1 sm:w-64">
-                        <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
-                        <input type="text" id="admin-player-search" oninput="filterAdminPlayers()" placeholder="Tìm theo tên hoặc nickname..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
+                        <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                        <input type="text" id="admin-player-search" oninput="filterAdminPlayers()" placeholder="Tìm theo tên hoặc nickname..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
                     </div>
-                    <select id="admin-sort-by" onchange="filterAdminPlayers()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:border-indigo-500">
-                        <option value="skill">Sắp xếp: Kỹ năng cá nhân cao nhất</option>
+                    <select id="admin-sort-by" onchange="filterAdminPlayers()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-bold focus:outline-none focus:border-indigo-500">
+                        <option value="skill">Sắp xếp: Kỹ năng cá nhân</option>
                         <option value="elo">Sắp xếp: Elo Ẩn cao nhất</option>
                         <option value="form">Sắp xếp: Phong độ cao nhất</option>
                         <option value="winrate">Sắp xếp: Tỷ lệ thắng %</option>
                         <option value="name">Sắp xếp: Tên A-Z</option>
                     </select>
                 </div>
-                <div class="text-xs text-slate-500 flex items-center gap-4">
+                <div class="text-xs text-slate-500 font-medium flex items-center gap-4">
                     <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 🔥 On fire</span>
                     <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> ⚡ Phong độ tốt</span>
                     <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block"></span> 🌱 Tân binh</span>
@@ -388,34 +407,34 @@
         <!-- TAB 4: BẢNG XẾP HẠNG CHUNG (LEADERBOARD) -->
         <!-- ============================================== -->
         <section id="tab-content-leaderboard" class="tab-pane hidden space-y-6">
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
                 <div>
-                    <h2 class="text-2xl font-black text-slate-900 flex items-center gap-3">
+                    <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
                         <span>🏆 Bảng Xếp Hạng Tuyển Thủ</span>
                     </h2>
                     <p class="text-sm text-slate-500 mt-1">
                         Xếp hạng toàn bộ tuyển thủ theo Elo ẩn thực chiến, Phong độ tự động và các chỉ số Stats (thang 1 - 10).
                     </p>
                 </div>
-                <button onclick="loadLeaderboard()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition">
-                    <i class="fa-solid fa-arrows-rotate mr-1.5"></i> Làm mới
+                <button onclick="loadLeaderboard()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold font-heading transition shadow-xs">
+                    <i class="fa-solid fa-arrows-rotate mr-1.5 text-slate-400"></i> Làm mới
                 </button>
             </div>
 
             <!-- Leaderboard Table -->
-            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div class="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
                 <div class="overflow-x-auto custom-scrollbar">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="border-b border-slate-200 bg-slate-50 text-xs text-slate-500 uppercase tracking-wider font-bold">
-                                <th class="py-3.5 px-4 text-center w-16">Hạng</th>
-                                <th class="py-3.5 px-4">Tuyển Thủ</th>
-                                <th class="py-3.5 px-4 text-center">Elo Ẩn</th>
-                                <th class="py-3.5 px-4 text-center">Stats OVR</th>
-                                <th class="py-3.5 px-4 text-center">Phong Độ (1-10)</th>
-                                <th class="py-3.5 px-4 text-center">Tỷ Lệ Thắng</th>
-                                <th class="py-3.5 px-4 text-center">Trận (W / L)</th>
-                                <th class="py-3.5 px-4 text-center">Gần Nhất</th>
+                            <tr class="border-b border-slate-200/80 bg-slate-50/80 text-xs text-slate-500 uppercase tracking-wider font-bold font-heading">
+                                <th class="py-4 px-4 text-center w-16">Hạng</th>
+                                <th class="py-4 px-4">Tuyển Thủ</th>
+                                <th class="py-4 px-4 text-center">Elo Ẩn</th>
+                                <th class="py-4 px-4 text-center">Stats OVR</th>
+                                <th class="py-4 px-4 text-center">Phong Độ (1-10)</th>
+                                <th class="py-4 px-4 text-center">Tỷ Lệ Thắng</th>
+                                <th class="py-4 px-4 text-center">Trận (W / L)</th>
+                                <th class="py-4 px-4 text-center">Gần Nhất</th>
                             </tr>
                         </thead>
                         <tbody id="leaderboard-table-body" class="divide-y divide-slate-100 text-sm">
@@ -430,8 +449,8 @@
         <!-- TAB 5: CẶP BÀI TRÙNG & ĂN Ý (SYNERGIES) -->
         <!-- ============================================== -->
         <section id="tab-content-synergies" class="tab-pane hidden space-y-6">
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <h2 class="text-2xl font-black text-slate-900 flex items-center gap-3">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
+                <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
                     <span>🤝 Cặp Bài Trùng Ăn Ý Nhất</span>
                 </h2>
                 <p class="text-sm text-slate-500 mt-1">
@@ -448,49 +467,43 @@
         <!-- TAB 6: CÀI ĐẶT & KẾT NỐI (SETTINGS) -->
         <!-- ============================================== -->
         <section id="tab-content-settings" class="tab-pane hidden space-y-6">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-3xl mx-auto space-y-6">
+            <div class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs max-w-3xl mx-auto space-y-6">
                 <div>
-                    <h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+                    <h2 class="text-xl font-black font-heading text-slate-900 flex items-center gap-2">
                         <i class="fa-solid fa-gear text-indigo-600"></i>
-                        <span>Cài Đặt Hệ Thống & Tích Hợp API</span>
+                        <span>Trạng Thái Hệ Thống & Tích Hợp API</span>
                     </h2>
-                    <p class="text-sm text-slate-500 mt-1">Quản lý cấu hình API Key, kết nối lưu trữ và trạng thái vận hành.</p>
+                    <p class="text-sm text-slate-500 mt-1">Các thông số cấu hình và môi trường kết nối cơ sở dữ liệu.</p>
                 </div>
 
                 <!-- Storage Info Card -->
-                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Trạng Thái Dữ Liệu</h4>
+                <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                    <h4 class="text-xs font-bold font-heading text-slate-500 uppercase tracking-wider">Trạng Thái Dữ Liệu</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                        <div class="p-3 rounded-lg bg-white border border-slate-200 shadow-xs">
-                            <span class="text-xs text-slate-400">Chế độ lưu trữ:</span>
-                            <p id="storage-mode-text" class="font-bold text-indigo-600 mt-0.5">Local / GitHub</p>
+                        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
+                            <span class="text-xs text-slate-400 font-medium">Chế độ lưu trữ:</span>
+                            <p id="storage-mode-text" class="font-bold text-indigo-600 mt-0.5">LOCAL / GITHUB</p>
                         </div>
-                        <div class="p-3 rounded-lg bg-white border border-slate-200 shadow-xs">
-                            <span class="text-xs text-slate-400">Số trận mới ghi nhận:</span>
+                        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
+                            <span class="text-xs text-slate-400 font-medium">Số trận đã ghi:</span>
                             <p id="storage-matches-text" class="font-bold text-slate-900 mt-0.5">0 trận</p>
                         </div>
-                        <div class="p-3 rounded-lg bg-white border border-slate-200 shadow-xs">
-                            <span class="text-xs text-slate-400">Tổng tuyển thủ:</span>
+                        <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
+                            <span class="text-xs text-slate-400 font-medium">Tổng tuyển thủ:</span>
                             <p id="storage-players-text" class="font-bold text-indigo-600 mt-0.5">36 tuyển thủ</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Gemini API Key Input -->
-                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                        <span>Tích Hợp Gemini AI (Quét Ảnh & Phân Tích Kèo)</span>
-                        <span id="gemini-status-badge" class="text-xs px-2 py-0.5 rounded bg-slate-200 text-slate-600 font-semibold">Chưa kích hoạt</span>
+                <!-- Gemini API Key Status -->
+                <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <h4 class="text-xs font-bold font-heading text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                        <span>Gemini AI (Vision & Phân Tích Kèo)</span>
+                        <span id="gemini-status-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Đã nạp qua file .env</span>
                     </h4>
-                    <p class="text-xs text-slate-500">
-                        Nhập Gemini API Key để kích hoạt tính năng quét ảnh chụp sảnh chờ phòng đấu bằng AI và bình luận chiến thuật.
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Hệ thống đã nhận diện khóa <b>GEMINI_API_KEY</b> từ tệp cấu hình hệ thống. Tính năng Quét ảnh sảnh chờ (AI Vision) và Phân tích chiến thuật hoạt động tự động 100%.
                     </p>
-                    <div class="flex gap-2">
-                        <input type="password" id="input-gemini-key" placeholder="Dán Gemini API Key tại đây..." class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500">
-                        <button onclick="saveGeminiApiKey()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition">
-                            Lưu Key
-                        </button>
-                    </div>
                 </div>
             </div>
         </section>
@@ -498,17 +511,17 @@
     </main>
 
     <!-- ============================================== -->
-    <!-- MODAL: THÊM / SỬA TUYỂN THỦ (LIGHT THEME) -->
+    <!-- MODAL: THÊM / SỬA TUYỂN THỦ -->
     <!-- ============================================== -->
     <div id="player-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden flex items-center justify-center p-4">
         <div class="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 custom-scrollbar max-h-[90vh] overflow-y-auto">
             <!-- Modal Header -->
             <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-                <h3 id="modal-player-title" class="text-lg font-black text-slate-900 flex items-center gap-2">
+                <h3 id="modal-player-title" class="text-lg font-black font-heading text-slate-900 flex items-center gap-2">
                     <i class="fa-solid fa-user-pen text-indigo-600"></i>
                     <span>Chỉnh Sửa Tuyển Thủ</span>
                 </h3>
-                <button onclick="closePlayerModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition">
+                <button onclick="closePlayerModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
@@ -518,33 +531,33 @@
                 <input type="hidden" id="form-mode" value="edit">
 
                 <!-- Basic Info: ID & Nickname -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">ID Định Danh (Username)</label>
-                        <input type="text" id="form-id" required placeholder="vd: wanlee" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
+                        <label class="block font-bold text-slate-700 mb-1 font-heading">ID Định Danh (Username)</label>
+                        <input type="text" id="form-id" required placeholder="vd: wanlee" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
                         <span class="text-[10px] text-slate-400">Không dấu, viết liền.</span>
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Tên Hiển Thị (Nickname)</label>
-                        <input type="text" id="form-nickname" required placeholder="vd: Wanlee Gánh Team" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
+                        <label class="block font-bold text-slate-700 mb-1 font-heading">Tên Hiển Thị (Nickname)</label>
+                        <input type="text" id="form-nickname" required placeholder="vd: Wanlee Gánh Team" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
                     </div>
                 </div>
 
                 <!-- Avatar URL & Quick Selector -->
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Ảnh Đại Diện (Avatar URL)</label>
+                    <label class="block font-bold text-slate-700 mb-1 font-heading">Ảnh Đại Diện (Avatar URL)</label>
                     <div class="flex items-center gap-3">
-                        <img id="form-avatar-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=preview" class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 object-cover" alt="Preview">
-                        <input type="text" id="form-avatar" oninput="updateAvatarPreview(this.value)" placeholder="Dán link ảnh hoặc để mặc định bottts..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
-                        <button type="button" onclick="randomizeAvatar()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl transition text-xs font-semibold">
-                            <i class="fa-solid fa-dice"></i>
+                        <img id="form-avatar-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=preview" class="w-11 h-11 rounded-2xl bg-slate-100 border border-slate-200 object-cover shadow-xs" alt="Preview">
+                        <input type="text" id="form-avatar" oninput="updateAvatarPreview(this.value)" placeholder="Dán link ảnh hoặc để mặc định bottts..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
+                        <button type="button" onclick="randomizeAvatar()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl transition text-xs font-bold">
+                            <i class="fa-solid fa-dice text-sm"></i>
                         </button>
                     </div>
                 </div>
 
                 <!-- STATS SLIDERS (THANG ĐIỂM 1 - 10) -->
-                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3.5">
-                    <h4 class="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center justify-between">
+                <div class="p-4.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3.5">
+                    <h4 class="font-bold font-heading text-slate-800 uppercase tracking-wider text-[11px] flex items-center justify-between">
                         <span>Chỉ Số Đánh Giá (Thang Điểm 1 - 10)</span>
                         <span class="text-slate-400 font-normal">Kéo thanh trượt để điều chỉnh</span>
                     </h4>
@@ -593,7 +606,7 @@
                             <i class="fa-solid fa-lock text-[10px]"></i>
                             <span>Phong Độ & Elo Ẩn: TỰ ĐỘNG CẬP NHẬT</span>
                         </span>
-                        <span id="form-display-badge" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-200">
+                        <span id="form-display-badge" class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-200">
                             🌱 Tân Binh (Read-only)
                         </span>
                     </div>
@@ -604,10 +617,10 @@
 
                 <!-- Modal Actions -->
                 <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                    <button type="button" onclick="closePlayerModal()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold transition">
+                    <button type="button" onclick="closePlayerModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold transition">
                         Hủy
                     </button>
-                    <button type="submit" class="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow transition">
+                    <button type="submit" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold font-heading shadow transition">
                         Lưu Thông Tin
                     </button>
                 </div>

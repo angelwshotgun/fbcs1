@@ -129,7 +129,7 @@ function renderMatchmakerPlayers() {
                 <img src="${p.avatar}" alt="${p.nickname}" class="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-200">
                 <span class="absolute -bottom-1 -right-1 text-xs" title="${p.form?.label || ''}">${formIcon}</span>
             </div>
-            <h4 class="font-bold text-xs text-slate-900 truncate max-w-[95px]">${p.nickname}</h4>
+            <h4 class="font-bold font-heading text-xs text-slate-900 truncate max-w-[100px]">${p.nickname}</h4>
             <div class="flex items-center gap-1.5 mt-1.5">
                 <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
                     Elo ${Math.round(p.hidden_elo)}
@@ -264,7 +264,7 @@ function createTeamPlayerCard(p, teamColor) {
                 <span class="absolute -bottom-1 -right-1 text-[10px]">${p.form?.icon || '🌱'}</span>
             </div>
             <div>
-                <h5 class="font-bold text-xs text-slate-900">${p.nickname}</h5>
+                <h5 class="font-bold font-heading text-xs text-slate-900">${p.nickname}</h5>
                 <span class="text-[10px] text-slate-500">Elo: <b class="text-slate-700">${Math.round(p.hidden_elo)}</b> • Kỹ năng: <b class="text-amber-600">${p.skill}/10</b></span>
             </div>
         </div>
@@ -402,7 +402,7 @@ function renderCaptainPlayers() {
                 </span>
             ` : ''}
             <img src="${p.avatar}" class="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 object-cover mb-1.5">
-            <h4 class="font-bold text-xs text-slate-900 truncate max-w-[95px]">${p.nickname}</h4>
+            <h4 class="font-bold font-heading text-xs text-slate-900 truncate max-w-[100px]">${p.nickname}</h4>
             <span class="text-[10px] text-slate-500 mt-0.5">Elo: ${Math.round(p.hidden_elo)}</span>
         `;
         grid.appendChild(card);
@@ -544,7 +544,7 @@ function renderAdminPlayers() {
                     <div class="flex items-center gap-3">
                         <img src="${p.avatar}" class="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-200" alt="${p.nickname}">
                         <div>
-                            <h4 class="font-bold text-sm text-slate-900">${p.nickname}</h4>
+                            <h4 class="font-bold font-heading text-sm text-slate-900">${p.nickname}</h4>
                             <span class="text-xs text-slate-400">@${p.id}</span>
                         </div>
                     </div>
