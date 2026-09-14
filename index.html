@@ -250,6 +250,10 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <button onclick="transferMatchmakerResultToSimulation()" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold font-heading shadow-xs transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-gamepad text-sm"></i>
+                                <span>Đưa Sang Mô Phỏng 5vs5</span>
+                            </button>
                             <button onclick="rerollTeams()" id="btn-reroll-teams" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold font-heading shadow-xs transition flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-dice text-sm"></i>
                                 <span>Xếp Lại (RNG)</span>
@@ -561,52 +565,108 @@
         </section>
 
         <!-- ============================================== -->
-        <!-- TAB 3: QUẢN TRỊ NGƯỜI CHƠI (PLAYER ADMIN) -->
+        <!-- TAB 3: QUẢN TRỊ HỆ THỐNG (TUYỂN THỦ & LỊCH SỬ ĐẤU) -->
         <!-- ============================================== -->
         <section id="tab-content-players" class="tab-pane hidden space-y-6">
-            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-5">
-                <div>
-                    <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
-                        <span>👥 Quản Trị Tuyển Thủ</span>
-                        <span id="total-players-badge" class="text-xs px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-bold">36 Tuyển Thủ</span>
-                    </h2>
-                    <p class="text-sm text-slate-500 mt-1">
-                        Chỉnh sửa Nickname, Avatar và các chỉ số (thang điểm 1 - 10). Phong độ và Elo ẩn được bảo vệ và tự động cập nhật.
-                    </p>
+            <!-- Sub-Navigation: Players vs Matches -->
+            <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl w-fit">
+                <button type="button" id="admin-subtab-btn-players" onclick="switchAdminSubTab('players')" class="py-2 px-4 rounded-xl text-xs font-bold font-heading transition flex items-center gap-2 bg-white text-indigo-700 shadow-xs">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Danh Sách Tuyển Thủ</span>
+                </button>
+                <button type="button" id="admin-subtab-btn-matches" onclick="switchAdminSubTab('matches')" class="py-2 px-4 rounded-xl text-xs font-bold font-heading transition flex items-center gap-2 text-slate-600 hover:text-slate-900">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Lịch Sử Đấu & Chỉnh Sửa Trận</span>
+                    <span id="admin-matches-count-badge" class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold">5</span>
+                </button>
+            </div>
+
+            <!-- VIEW 1: Danh Sách Tuyển Thủ -->
+            <div id="admin-subtab-players-view" class="space-y-6">
+                <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-5">
+                    <div>
+                        <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
+                            <span>👥 Quản Trị Tuyển Thủ</span>
+                            <span id="total-players-badge" class="text-xs px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-bold">36 Tuyển Thủ</span>
+                        </h2>
+                        <p class="text-sm text-slate-500 mt-1">
+                            Chỉnh sửa Nickname, Avatar và các chỉ số (thang điểm 1 - 10). Phong độ và Elo ẩn được bảo vệ và tự động cập nhật.
+                        </p>
+                    </div>
+                    <div>
+                        <button onclick="openPlayerModal('add')" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold font-heading text-sm shadow-md shadow-indigo-500/20 transition flex items-center gap-2">
+                            <i class="fa-solid fa-user-plus"></i>
+                            <span>Thêm Tuyển Thủ Mới</span>
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <button onclick="openPlayerModal('add')" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold font-heading text-sm shadow-md shadow-indigo-500/20 transition flex items-center gap-2">
-                        <i class="fa-solid fa-user-plus"></i>
-                        <span>Thêm Tuyển Thủ Mới</span>
+
+                <!-- Filter & Search Controls -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <div class="relative flex-1 sm:w-64">
+                            <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                            <input type="text" id="admin-player-search" oninput="filterAdminPlayers()" placeholder="Tìm theo tên hoặc nickname..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
+                        </div>
+                        <select id="admin-sort-by" onchange="filterAdminPlayers()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-bold focus:outline-none focus:border-indigo-500">
+                            <option value="skill">Sắp xếp: Kỹ năng cá nhân</option>
+                            <option value="elo">Sắp xếp: Elo Ẩn cao nhất</option>
+                            <option value="form">Sắp xếp: Phong độ cao nhất</option>
+                            <option value="winrate">Sắp xếp: Tỷ lệ thắng %</option>
+                            <option value="name">Sắp xếp: Tên A-Z</option>
+                        </select>
+                    </div>
+                    <div class="text-xs text-slate-500 font-medium flex items-center gap-4">
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 🔥 On fire</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> ⚡ Phong độ tốt</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block"></span> 🌱 Tân binh</span>
+                    </div>
+                </div>
+
+                <!-- Players Cards Grid -->
+                <div id="admin-players-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <!-- Dynamically rendered via JS -->
+                </div>
+            </div>
+
+            <!-- VIEW 2: Lịch Sử Đấu & Chỉnh Sửa Trận -->
+            <div id="admin-subtab-matches-view" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
+                            <span>📜 Lịch Sử Đấu & Quản Trị Trận</span>
+                            <span id="admin-total-matches-badge" class="text-xs px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-bold">5 Trận Đấu</span>
+                        </h2>
+                        <p class="text-sm text-slate-500 mt-1">
+                            Xem tất cả các trận đấu trong hệ thống. Bạn có thể sửa người chơi hoặc kết quả trận đấu, hệ thống sẽ tự động tính toán lại toàn bộ Elo và phong độ.
+                        </p>
+                    </div>
+                    <button onclick="loadAdminMatches()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold font-heading transition shadow-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-arrows-rotate text-slate-400"></i> Làm Mới Lịch Sử
                     </button>
                 </div>
-            </div>
 
-            <!-- Filter & Search Controls -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
-                <div class="flex items-center gap-3 w-full md:w-auto">
-                    <div class="relative flex-1 sm:w-64">
-                        <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
-                        <input type="text" id="admin-player-search" oninput="filterAdminPlayers()" placeholder="Tìm theo tên hoặc nickname..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
+                <!-- Matches Table -->
+                <div class="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200/80 bg-slate-50/80 text-xs text-slate-500 uppercase tracking-wider font-bold font-heading">
+                                    <th class="py-3.5 px-4 text-center w-16">ID</th>
+                                    <th class="py-3.5 px-4">Thời Gian</th>
+                                    <th class="py-3.5 px-4">Đội 1 (Xanh)</th>
+                                    <th class="py-3.5 px-4">Đội 2 (Đỏ)</th>
+                                    <th class="py-3.5 px-4 text-center">Kết Quả</th>
+                                    <th class="py-3.5 px-4">Ghi Chú / AI Phân Tích</th>
+                                    <th class="py-3.5 px-4 text-center w-28">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-matches-table-body" class="divide-y divide-slate-100 text-xs">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
                     </div>
-                    <select id="admin-sort-by" onchange="filterAdminPlayers()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-bold focus:outline-none focus:border-indigo-500">
-                        <option value="skill">Sắp xếp: Kỹ năng cá nhân</option>
-                        <option value="elo">Sắp xếp: Elo Ẩn cao nhất</option>
-                        <option value="form">Sắp xếp: Phong độ cao nhất</option>
-                        <option value="winrate">Sắp xếp: Tỷ lệ thắng %</option>
-                        <option value="name">Sắp xếp: Tên A-Z</option>
-                    </select>
                 </div>
-                <div class="text-xs text-slate-500 font-medium flex items-center gap-4">
-                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 🔥 On fire</span>
-                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> ⚡ Phong độ tốt</span>
-                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block"></span> 🌱 Tân binh</span>
-                </div>
-            </div>
-
-            <!-- Players Cards Grid -->
-            <div id="admin-players-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <!-- Dynamically rendered via JS -->
             </div>
         </section>
 
@@ -640,6 +700,7 @@
                                 <th class="py-4 px-4 text-center">Stats OVR</th>
                                 <th class="py-4 px-4 text-center">Phong Độ (1-10)</th>
                                 <th class="py-4 px-4 text-center">Tỷ Lệ Thắng</th>
+                                <th class="py-4 px-4 text-center">Vai Trò</th>
                                 <th class="py-4 px-4 text-center">Trận (W / L)</th>
                                 <th class="py-4 px-4 text-center">Gần Nhất</th>
                             </tr>
@@ -918,9 +979,15 @@
                         <p class="text-xs text-slate-500">Chọn lưu chuẩn nhanh hoặc gửi ảnh thông số để AI cá nhân hóa Elo</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeMatchResultModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+                <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                        <button type="button" id="modal-toggle-t1" onclick="setMatchModalWinner('team1')" class="px-2.5 py-1 rounded-lg text-xs font-bold font-heading bg-blue-600 text-white shadow-xs transition">Đội Xanh</button>
+                        <button type="button" id="modal-toggle-t2" onclick="setMatchModalWinner('team2')" class="px-2.5 py-1 rounded-lg text-xs font-bold font-heading text-slate-600 hover:text-slate-900 transition">Đội Đỏ</button>
+                    </div>
+                    <button type="button" onclick="closeMatchResultModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Mode Selector Tabs (2 Options) -->
@@ -1074,6 +1141,108 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CHỈNH SỬA TRẬN ĐẤU (EDIT MATCH MODAL) -->
+    <div id="edit-match-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-5 sm:p-7 space-y-5 my-8">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg font-bold shadow-xs">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black font-heading text-slate-900 flex items-center gap-2">
+                            <span>Sửa Trận Đấu #<span id="edit-match-id-badge">0</span></span>
+                            <span id="edit-match-code-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 font-mono font-normal">M-000</span>
+                        </h3>
+                        <p class="text-xs text-slate-500">Chỉnh sửa đội hình 2 bên và kết quả thắng/thua. Hệ thống sẽ tự động tính lại toàn bộ Elo.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeEditMatchModal()" class="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Form -->
+            <form id="edit-match-form" onsubmit="event.preventDefault(); handleSaveEditMatch();" class="space-y-4">
+                <input type="hidden" id="edit-match-id" value="">
+
+                <!-- 2 Teams Selection -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Team 1 (Blue) -->
+                    <div class="p-4 rounded-2xl bg-blue-50/50 border border-blue-200 space-y-2.5">
+                        <div class="flex items-center justify-between pb-1.5 border-b border-blue-200/60">
+                            <span class="font-extrabold font-heading text-blue-900 text-xs flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Đội 1 (Xanh) - 5 Tuyển Thủ
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            <select id="edit-t1-slot-0" class="w-full bg-white border border-blue-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500"></select>
+                            <select id="edit-t1-slot-1" class="w-full bg-white border border-blue-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500"></select>
+                            <select id="edit-t1-slot-2" class="w-full bg-white border border-blue-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500"></select>
+                            <select id="edit-t1-slot-3" class="w-full bg-white border border-blue-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500"></select>
+                            <select id="edit-t1-slot-4" class="w-full bg-white border border-blue-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500"></select>
+                        </div>
+                    </div>
+
+                    <!-- Team 2 (Red) -->
+                    <div class="p-4 rounded-2xl bg-rose-50/50 border border-rose-200 space-y-2.5">
+                        <div class="flex items-center justify-between pb-1.5 border-b border-rose-200/60">
+                            <span class="font-extrabold font-heading text-rose-900 text-xs flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-rose-600"></span> Đội 2 (Đỏ) - 5 Tuyển Thủ
+                            </span>
+                        </div>
+                        <div class="space-y-2">
+                            <select id="edit-t2-slot-0" class="w-full bg-white border border-rose-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500"></select>
+                            <select id="edit-t2-slot-1" class="w-full bg-white border border-rose-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500"></select>
+                            <select id="edit-t2-slot-2" class="w-full bg-white border border-rose-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500"></select>
+                            <select id="edit-t2-slot-3" class="w-full bg-white border border-rose-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500"></select>
+                            <select id="edit-t2-slot-4" class="w-full bg-white border border-rose-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold focus:outline-none focus:border-indigo-500"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Winner Selection -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-700">Đội Giành Chiến Thắng:</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="p-3 rounded-2xl border border-blue-200 bg-blue-50/50 flex items-center gap-2.5 cursor-pointer hover:bg-blue-100/50 transition">
+                            <input type="radio" name="edit_match_winner_radio" id="edit-winner-t1" value="team1" class="text-blue-600 focus:ring-blue-500">
+                            <div>
+                                <span class="font-bold text-xs text-blue-900 block font-heading">Đội 1 (Xanh) Thắng</span>
+                                <span class="text-[10px] text-blue-700">Cộng Elo cho Đội 1</span>
+                            </div>
+                        </label>
+                        <label class="p-3 rounded-2xl border border-rose-200 bg-rose-50/50 flex items-center gap-2.5 cursor-pointer hover:bg-rose-100/50 transition">
+                            <input type="radio" name="edit_match_winner_radio" id="edit-winner-t2" value="team2" class="text-rose-600 focus:ring-rose-500">
+                            <div>
+                                <span class="font-bold text-xs text-rose-900 block font-heading">Đội 2 (Đỏ) Thắng</span>
+                                <span class="text-[10px] text-rose-700">Cộng Elo cho Đội 2</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Notes / AI info -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-700">Ghi Chú / Thông Tin Trận Đấu:</label>
+                    <input type="text" id="edit-match-notes" placeholder="VD: AI Scoreboard: MVP ..., SVP ..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeEditMatchModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition">
+                        Hủy
+                    </button>
+                    <button type="submit" id="btn-save-edit-match" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold font-heading text-xs shadow-md shadow-indigo-500/20 transition flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Lưu Thay Đổi & Tính Lại Elo</span>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

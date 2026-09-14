@@ -210,6 +210,82 @@ def api_update_match_result():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/matches', methods=['GET'])
+def api_get_matches():
+    """Lấy danh sách toàn bộ lịch sử các trận đấu đã ghi nhận."""
+    try:
+        matches = data_manager.get_matches_history()
+        return jsonify({'success': True, 'matches': matches, 'count': len(matches)}), 200
+    except Exception as e:
+        app.logger.error(f"Error in api_get_matches: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/matches/<int:match_id>', methods=['PUT'])
+def api_update_match(match_id: int):
+    """Cập nhật thông tin trận đấu (đội hình 2 bên, đội thắng, ghi chú) và tính lại Elo."""
+    try:
+        data = request.json or {}
+        team1 = data.get('team1', [])
+        team2 = data.get('team2', [])
+        winner = data.get('winner', 'team1')
+        notes = data.get('notes', '')
+        player_deltas = data.get('player_deltas')
+
+        if len(team1) != 5 or len(team2) != 5:
+            return jsonify({'success': False, 'error': 'Mỗi đội phải có chính xác 5 tuyển thủ'}), 400
+
+        all_players = set(team1 + team2)
+        if len(all_players) != 10:
+            return jsonify({'success': False, 'error': 'Trùng lặp tuyển thủ giữa 2 đội'}), 400
+
+        if winner not in ['team1', 'team2']:
+            return jsonify({'success': False, 'error': 'Đội thắng không hợp lệ (phải là team1 hoặc team2)'}), 400
+
+        ok, msg = data_manager.update_match(
+            match_id=match_id,
+            team1=team1,
+            team2=team2,
+            winner=winner,
+            notes=notes,
+            player_deltas=player_deltas
+        )
+
+        if not ok:
+            return jsonify({'success': False, 'error': msg}), 400
+
+        # Tính toán lại toàn bộ metrics ngay lập tức
+        player_service.refresh_metrics()
+
+        return jsonify({
+            'success': True,
+            'message': 'Đã cập nhật trận đấu thành công! Toàn bộ Elo và phong độ đã được tính toán lại.'
+        }), 200
+    except Exception as e:
+        app.logger.error(f"Error in api_update_match: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/matches/<int:match_id>', methods=['DELETE'])
+def api_delete_match(match_id: int):
+    """Xóa một trận đấu khỏi hệ thống và tính toán lại Elo."""
+    try:
+        ok, msg = data_manager.delete_match(match_id)
+        if not ok:
+            return jsonify({'success': False, 'error': msg}), 400
+
+        # Tính toán lại toàn bộ metrics ngay lập tức
+        player_service.refresh_metrics()
+
+        return jsonify({
+            'success': True,
+            'message': 'Đã xóa trận đấu thành công! Toàn bộ Elo và phong độ đã được tính toán lại.'
+        }), 200
+    except Exception as e:
+        app.logger.error(f"Error in api_delete_match: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/analyze_match_scoreboard', methods=['POST'])
 def api_analyze_match_scoreboard():
     """Phân tích ảnh chụp màn hình bảng điểm sau trận đấu bằng Gemini AI để tối ưu hóa Elo từng tuyển thủ."""

@@ -51,7 +51,13 @@ function switchTab(tabId) {
     // Tab-specific refreshes
     if (tabId === 'leaderboard') renderLeaderboard();
     if (tabId === 'synergies') loadSynergies();
-    if (tabId === 'players') renderAdminPlayers();
+    if (tabId === 'players') {
+        if (typeof currentAdminSubTab !== 'undefined' && currentAdminSubTab === 'matches') {
+            loadAdminMatches();
+        } else {
+            renderAdminPlayers();
+        }
+    }
     if (tabId === 'captains') renderCaptainPlayers();
     if (tabId === 'matchmaker') renderMatchmakerPlayers();
     if (tabId === 'simulation') renderSimulationBoard();
@@ -416,66 +422,42 @@ function createTeamPlayerCard(p, teamColor, isPureElo = false) {
 
 let isSubmittingMatch = false;
 
-async function submitMatchWinner(winningTeam) {
-    if (!currentTeamsResult || isSubmittingMatch) return;
-
-    const winnerLabel = winningTeam === 'team1' ? 'Đội Xanh' : 'Đội Đỏ';
-
-    const confirm = await Swal.fire({
-        title: `Xác nhận ${winnerLabel} Thắng?`,
-        text: 'Hệ thống sẽ lưu kết quả trận đấu, tự động cập nhật Elo ẩn và tính lại chuỗi Phong độ cho 10 tuyển thủ.',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Đồng Ý Lưu',
-        cancelButtonText: 'Hủy',
-        showLoaderOnConfirm: true,
-        preConfirm: async () => {
-            isSubmittingMatch = true;
-            try {
-                const res = await fetch('/api/update_match_result', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        team1: currentTeamsResult.team1_names,
-                        team2: currentTeamsResult.team2_names,
-                        winner: winningTeam,
-                        team1_power: currentTeamsResult.team1_power || 0,
-                        team2_power: currentTeamsResult.team2_power || 0,
-                        synergies: {
-                            team1: currentTeamsResult.team1_synergies || [],
-                            team2: currentTeamsResult.team2_synergies || []
-                        }
-                    })
-                });
-                const data = await res.json();
-                if (!data.success) {
-                    throw new Error(data.error || 'Lỗi khi lưu kết quả trận đấu');
-                }
-                return data;
-            } catch (err) {
-                Swal.showValidationMessage(err.message || 'Lỗi kết nối khi lưu kết quả');
-            } finally {
-                isSubmittingMatch = false;
-            }
-        },
-        allowOutsideClick: () => !Swal.isLoading(),
-        ...SWAL_THEME
-    });
-
-    if (confirm.isConfirmed && confirm.value) {
+function transferMatchmakerResultToSimulation() {
+    if (!currentTeamsResult || !currentTeamsResult.team1 || !currentTeamsResult.team2) {
         Swal.fire({
-            icon: 'success',
-            title: 'Đã cập nhật trận đấu!',
-            text: 'Elo ẩn và Phong độ đã được cập nhật thành công.',
-            timer: 2000,
-            showConfirmButton: false,
+            icon: 'warning',
+            title: 'Chưa có kết quả chia đội',
+            text: 'Vui lòng chọn 10 tuyển thủ và bấm Chia Đội trước khi chuyển sang mô phỏng.',
             ...SWAL_THEME
         });
-        await loadAllPlayers();
-        await loadStatus();
-        clearSelectedPlayers();
+        return;
     }
+
+    simTeam1 = currentTeamsResult.team1.map(p => p.id);
+    simTeam2 = currentTeamsResult.team2.map(p => p.id);
+    simUnmatchedSlotInfo = { team1: {}, team2: {} };
+
+    switchTab('simulation');
+    renderSimulationBoard();
+    updateSimulationLiveStats();
+
+    Swal.fire({
+        icon: 'success',
+        title: 'Đã chuyển sang Mô Phỏng 5vs5!',
+        text: '10 tuyển thủ từ kết quả chia đội đã được xếp đủ vào 2 đội hình.',
+        timer: 1500,
+        showConfirmButton: false,
+        ...SWAL_THEME
+    });
 }
+
+function submitMatchWinner(winningTeam) {
+    if (!currentTeamsResult || !currentTeamsResult.team1 || !currentTeamsResult.team2) return;
+    simTeam1 = currentTeamsResult.team1.map(p => p.id);
+    simTeam2 = currentTeamsResult.team2.map(p => p.id);
+    openMatchResultModal(winningTeam);
+}
+
 
 async function requestAiAnalysis() {
     if (!currentTeamsResult) return;
@@ -1061,6 +1043,12 @@ function renderLeaderboard() {
             </td>
             <td class="py-3 px-4 text-center font-bold ${p.winrate >= 50 ? 'text-emerald-600' : 'text-slate-500'}">
                 ${p.winrate}%
+            </td>
+            <td class="py-3 px-4 text-center whitespace-nowrap">
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${p.impact_role?.badge || 'bg-slate-100 text-slate-700 border-slate-200'}" title="${p.impact_role?.desc || ''}">
+                    <span>${p.impact_role?.icon || '⚖️'}</span>
+                    <span>${p.impact_role?.label || 'Tròn vai'}</span>
+                </span>
             </td>
             <td class="py-3 px-4 text-center text-xs text-slate-500">
                 ${p.matches} (<span class="text-emerald-600">${p.wins}</span> / <span class="text-rose-600">${p.losses}</span>)
@@ -1700,9 +1688,19 @@ function submitSimulationWinner(winningTeam) {
 }
 
 function openMatchResultModal(winningTeam) {
-    currentMatchModalWinner = winningTeam;
+    setMatchModalWinner(winningTeam);
     const modal = document.getElementById('match-result-modal');
     if (!modal) return;
+
+    // Reset default view
+    switchMatchResultTab('standard');
+    removeScoreboardImage();
+
+    modal.classList.remove('hidden');
+}
+
+function setMatchModalWinner(winningTeam) {
+    currentMatchModalWinner = winningTeam;
 
     const isTeam1 = winningTeam === 'team1';
     const winnerName = isTeam1 ? 'Đội Xanh (Team 1)' : 'Đội Đỏ (Team 2)';
@@ -1726,12 +1724,19 @@ function openMatchResultModal(winningTeam) {
     const stdLoserName = document.getElementById('modal-std-loser-name');
     if (stdLoserName) stdLoserName.innerText = loserName;
 
-    // Reset default view
-    switchMatchResultTab('standard');
-    removeScoreboardImage();
-
-    modal.classList.remove('hidden');
+    const t1Btn = document.getElementById('modal-toggle-t1');
+    const t2Btn = document.getElementById('modal-toggle-t2');
+    if (t1Btn && t2Btn) {
+        if (isTeam1) {
+            t1Btn.className = "px-2.5 py-1 rounded-lg text-xs font-bold font-heading bg-blue-600 text-white shadow-xs transition";
+            t2Btn.className = "px-2.5 py-1 rounded-lg text-xs font-bold font-heading text-slate-600 hover:text-slate-900 transition";
+        } else {
+            t2Btn.className = "px-2.5 py-1 rounded-lg text-xs font-bold font-heading bg-rose-600 text-white shadow-xs transition";
+            t1Btn.className = "px-2.5 py-1 rounded-lg text-xs font-bold font-heading text-slate-600 hover:text-slate-900 transition";
+        }
+    }
 }
+
 
 function closeMatchResultModal() {
     const modal = document.getElementById('match-result-modal');
@@ -1956,6 +1961,8 @@ function renderScoreboardAiResults(data) {
             tagBadge = `<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 text-[10px]">🔥 Tốt</span>`;
         } else if (p.performance_tag === 'UNDERPERFORMING') {
             tagBadge = `<span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-medium border border-amber-200 text-[10px]">⚠️ Dưới sức</span>`;
+        } else if (p.performance_tag === 'PASSENGER' || p.performance_tag === 'CARRIED') {
+            tagBadge = `<span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-black border border-purple-300 text-[10px]" title="Hưởng ké chiến thắng từ đồng đội, đóng góp hạn chế">🎒 Hưởng ké</span>`;
         } else if (p.performance_tag === 'FEEDER') {
             tagBadge = `<span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-300 text-[10px]">💀 Thọt</span>`;
         }
@@ -2301,3 +2308,316 @@ async function processScreenshotFile(file) {
     };
     reader.readAsDataURL(file);
 }
+
+// ==========================================
+// ADMIN SUB-NAVIGATION & MATCH HISTORY MANAGEMENT
+// ==========================================
+let allAdminMatches = [];
+let currentAdminSubTab = 'players';
+
+function switchAdminSubTab(subTab) {
+    currentAdminSubTab = subTab;
+    const btnPlayers = document.getElementById('admin-subtab-btn-players');
+    const btnMatches = document.getElementById('admin-subtab-btn-matches');
+    const viewPlayers = document.getElementById('admin-subtab-players-view');
+    const viewMatches = document.getElementById('admin-subtab-matches-view');
+
+    if (!btnPlayers || !btnMatches || !viewPlayers || !viewMatches) return;
+
+    if (subTab === 'players') {
+        btnPlayers.className = "py-2 px-4 rounded-xl text-xs font-bold font-heading transition flex items-center gap-2 bg-white text-indigo-700 shadow-xs";
+        btnMatches.className = "py-2 px-4 rounded-xl text-xs font-bold font-heading transition flex items-center gap-2 text-slate-600 hover:text-slate-900";
+        viewPlayers.classList.remove('hidden');
+        viewMatches.classList.add('hidden');
+        renderAdminPlayers();
+    } else {
+        btnMatches.className = "py-2 px-4 rounded-xl text-xs font-bold font-heading transition flex items-center gap-2 bg-white text-purple-700 shadow-xs";
+        btnPlayers.className = "py-2 px-4 rounded-xl text-xs font-bold font-heading transition flex items-center gap-2 text-slate-600 hover:text-slate-900";
+        viewMatches.classList.remove('hidden');
+        viewPlayers.classList.add('hidden');
+        loadAdminMatches();
+    }
+}
+
+async function loadAdminMatches() {
+    const tbody = document.getElementById('admin-matches-table-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="7" class="py-8 text-center text-slate-400">
+                <i class="fa-solid fa-spinner fa-spin text-xl mb-2 text-indigo-600"></i>
+                <p>Đang tải danh sách lịch sử trận đấu...</p>
+            </td>
+        </tr>
+    `;
+
+    try {
+        const res = await fetch('/api/matches');
+        const data = await res.json();
+        if (data.success) {
+            allAdminMatches = data.matches || [];
+            renderAdminMatchesTable(allAdminMatches);
+            const countBadge = document.getElementById('admin-matches-count-badge');
+            if (countBadge) countBadge.innerText = allAdminMatches.length;
+            const totalBadge = document.getElementById('admin-total-matches-badge');
+            if (totalBadge) totalBadge.innerText = `${allAdminMatches.length} Trận Đấu`;
+        } else {
+            tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-rose-500 font-bold">${data.error || 'Lỗi tải lịch sử trận đấu'}</td></tr>`;
+        }
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-rose-500 font-bold">${err.message}</td></tr>`;
+    }
+}
+
+function renderAdminMatchesTable(matches) {
+    const tbody = document.getElementById('admin-matches-table-body');
+    if (!tbody) return;
+
+    if (!matches || matches.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="py-12 text-center text-slate-400">
+                    <i class="fa-solid fa-gamepad text-3xl mb-2 text-slate-300"></i>
+                    <p class="font-bold">Chưa có trận đấu nào được ghi nhận</p>
+                    <p class="text-xs">Hãy vào mục "Chia Đội" hoặc "Mô Phỏng 5vs5" để bắt đầu ghi nhận kết quả!</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = '';
+    matches.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/80 transition';
+
+        const isT1Win = m.winner === 'team1';
+        const winnerBadge = isT1Win
+            ? '<span class="px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-[11px] border border-blue-200">Đội Xanh Thắng</span>'
+            : '<span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 font-bold text-[11px] border border-rose-200">Đội Đỏ Thắng</span>';
+
+        // Render Team 1 mini avatars
+        const t1PlayersHtml = (m.team1 || []).map(p => `
+            <div class="flex items-center gap-1.5 py-0.5" title="${p.nickname}">
+                <img src="${p.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.id}`}" class="w-5 h-5 rounded-md object-cover bg-slate-100 border border-slate-200 flex-shrink-0">
+                <span class="font-bold text-slate-800 text-[11px] truncate max-w-[100px]">${p.nickname}</span>
+            </div>
+        `).join('');
+
+        // Render Team 2 mini avatars
+        const t2PlayersHtml = (m.team2 || []).map(p => `
+            <div class="flex items-center gap-1.5 py-0.5" title="${p.nickname}">
+                <img src="${p.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.id}`}" class="w-5 h-5 rounded-md object-cover bg-slate-100 border border-slate-200 flex-shrink-0">
+                <span class="font-bold text-slate-800 text-[11px] truncate max-w-[100px]">${p.nickname}</span>
+            </div>
+        `).join('');
+
+        // Format date
+        let dateStr = '-';
+        if (m.created_at) {
+            try {
+                const d = new Date(m.created_at);
+                dateStr = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                dateStr = m.created_at;
+            }
+        }
+
+        const noteText = m.notes || m.ai_summary || '-';
+
+        tr.innerHTML = `
+            <td class="py-3.5 px-4 text-center font-mono font-bold text-slate-600">#${m.id}</td>
+            <td class="py-3.5 px-4 whitespace-nowrap text-slate-500 font-medium">${dateStr}</td>
+            <td class="py-3.5 px-4"><div class="space-y-0.5">${t1PlayersHtml}</div></td>
+            <td class="py-3.5 px-4"><div class="space-y-0.5">${t2PlayersHtml}</div></td>
+            <td class="py-3.5 px-4 text-center whitespace-nowrap">${winnerBadge}</td>
+            <td class="py-3.5 px-4 text-slate-600 max-w-[220px]">
+                <div class="truncate text-[11px]" title="${noteText}">${noteText}</div>
+            </td>
+            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                <div class="flex items-center justify-center gap-1.5">
+                    <button onclick="openEditMatchModal(${m.id})" class="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold transition flex items-center gap-1">
+                        <i class="fa-solid fa-pen-to-square"></i> Sửa
+                    </button>
+                    <button onclick="handleDeleteMatch(${m.id})" class="px-2 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold transition">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function openEditMatchModal(matchId) {
+    const match = allAdminMatches.find(m => m.id === matchId);
+    if (!match) return;
+
+    document.getElementById('edit-match-id').value = match.id;
+    document.getElementById('edit-match-id-badge').innerText = match.id;
+    document.getElementById('edit-match-code-badge').innerText = match.match_code || `M-${match.id}`;
+    document.getElementById('edit-match-notes').value = match.notes || '';
+
+    // Set winner radio
+    if (match.winner === 'team1') {
+        document.getElementById('edit-winner-t1').checked = true;
+    } else {
+        document.getElementById('edit-winner-t2').checked = true;
+    }
+
+    // Populate the 10 slots
+    const t1Pids = match.team1_players || [];
+    const t2Pids = match.team2_players || [];
+
+    for (let i = 0; i < 5; i++) {
+        populatePlayerDropdown(`edit-t1-slot-${i}`, t1Pids[i] || '');
+        populatePlayerDropdown(`edit-t2-slot-${i}`, t2Pids[i] || '');
+    }
+
+    document.getElementById('edit-match-modal').classList.remove('hidden');
+}
+
+function populatePlayerDropdown(selectId, selectedPid) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    sel.innerHTML = '';
+
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.innerText = '-- Chọn tuyển thủ --';
+    sel.appendChild(emptyOpt);
+
+    allPlayers.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.innerText = `${p.nickname} (Elo ${Math.round(p.hidden_elo)})`;
+        if (String(p.id).toLowerCase() === String(selectedPid || '').toLowerCase()) {
+            opt.selected = true;
+        }
+        sel.appendChild(opt);
+    });
+}
+
+function closeEditMatchModal() {
+    const modal = document.getElementById('edit-match-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function handleSaveEditMatch() {
+    const matchId = document.getElementById('edit-match-id').value;
+    if (!matchId) return;
+
+    const team1 = [];
+    const team2 = [];
+    for (let i = 0; i < 5; i++) {
+        const val1 = document.getElementById(`edit-t1-slot-${i}`)?.value;
+        const val2 = document.getElementById(`edit-t2-slot-${i}`)?.value;
+        if (val1) team1.push(val1);
+        if (val2) team2.push(val2);
+    }
+
+    if (team1.length !== 5 || team2.length !== 5) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Chưa đủ 10 người',
+            text: 'Vui lòng chọn đủ 5 tuyển thủ cho Đội 1 và 5 tuyển thủ cho Đội 2.',
+            ...SWAL_THEME
+        });
+        return;
+    }
+
+    const allChosen = [...team1, ...team2];
+    if (new Set(allChosen).size !== 10) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Trùng lặp tuyển thủ',
+            text: 'Có người chơi bị chọn nhiều lần giữa 2 đội. Vui lòng kiểm tra lại.',
+            ...SWAL_THEME
+        });
+        return;
+    }
+
+    const winner = document.getElementById('edit-winner-t1')?.checked ? 'team1' : 'team2';
+    const notes = document.getElementById('edit-match-notes')?.value || '';
+
+    const btn = document.getElementById('btn-save-edit-match');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang cập nhật...';
+    }
+
+    try {
+        const res = await fetch(`/api/matches/${matchId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ team1, team2, winner, notes })
+        });
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Lỗi cập nhật trận đấu');
+        }
+
+        closeEditMatchModal();
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã cập nhật trận đấu!',
+            text: 'Hệ thống đã tính toán lại toàn bộ Elo, phong độ và tỷ lệ thắng.',
+            timer: 2000,
+            showConfirmButton: false,
+            ...SWAL_THEME
+        });
+
+        await loadAdminMatches();
+        await loadAllPlayers();
+        await loadLeaderboard();
+        await loadStatus();
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message, ...SWAL_THEME });
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span>Lưu Thay Đổi & Tính Lại Elo</span>';
+        }
+    }
+}
+
+async function handleDeleteMatch(matchId) {
+    const confirm = await Swal.fire({
+        title: `Xác nhận xóa Trận #${matchId}?`,
+        text: 'Trận đấu này sẽ bị xóa vĩnh viễn khỏi CSDL. Hệ thống sẽ tự động tính toán lại toàn bộ điểm Elo và phong độ từ trước tới nay!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Đồng Ý Xóa',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: '#e11d48',
+        ...SWAL_THEME
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+        const res = await fetch(`/api/matches/${matchId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Lỗi khi xóa trận đấu');
+        }
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã xóa trận đấu!',
+            text: 'Toàn bộ điểm Elo và phong độ đã được tính toán lại thành công.',
+            timer: 2000,
+            showConfirmButton: false,
+            ...SWAL_THEME
+        });
+
+        await loadAdminMatches();
+        await loadAllPlayers();
+        await loadLeaderboard();
+        await loadStatus();
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi xóa trận', text: err.message, ...SWAL_THEME });
+    }
+}
+

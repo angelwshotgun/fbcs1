@@ -302,17 +302,21 @@ HƯỚNG DẪN ĐỌC THÔNG SỐ VÀ TÍNH ĐIỂM ELO:
    - Tên tuyển thủ và tướng/vị trí tương ứng (khớp với danh sách 10 người chơi trên).
    - Chỉ số KDA (Hạ gục / Bị hạ / Hỗ trợ, ví dụ "14/2/9").
    - Chỉ số phụ (nếu thấy): Sát thương (Damage), Vàng (Gold), CS (Lính), MVP, SVP/ACE.
-2. Đánh giá Màn trình diễn (Performance Score 1.0 - 10.0):
-   - Đội Thắng:
-     + MVP / Gánh đội xuất sắc (KDA cực cao, sát thương vượt trội): 9.0 - 10.0 -> Đề xuất Elo: +22 đến +26
-     + Chơi tốt, đóng góp quan trọng (KDA đẹp, có đột biến): 7.5 - 8.9 -> Đề xuất Elo: +18 đến +21
-     + Tròn vai, bình ổn: 6.0 - 7.4 -> Đề xuất Elo: +15 đến +17
-     + Thọt nặng, kda âm sâu hoặc bị đồng đội gánh: 3.0 - 5.9 -> Đề xuất Elo: +8 đến +12
-   - Đội Thua:
-     + SVP / ACE (người hay nhất đội thua, nỗ lực gánh team): 7.0 - 8.5 -> Đề xuất Elo: -6 đến -10 (giảm trừ nhẹ vì chơi quá tốt)
-     + Đánh khá / tròn vai dù thua: 5.5 - 6.9 -> Đề xuất Elo: -12 đến -15
-     + Tròn vai / bình thường: 4.5 - 5.4 -> Đề xuất Elo: -16 đến -18
-     + Feeder / Thọt nặng nhất trận: 1.0 - 4.4 -> Đề xuất Elo: -20 đến -25 (phạt nặng vì phong độ kém)
+2. ĐẶC BIỆT CHÚ Ý PHÂN BIỆT "NGƯỜI DẪN DẮT (CARRY)" VÀ "KẺ HƯỞNG KÉ / ĐƯỢC GÁNH (PASSENGER)":
+   - Rất nhiều người chơi trong đội thắng nhưng thực tế KHÔNG HỀ DẪN DẮT hay đóng góp gì, thậm chí là gánh nặng (feed, chết liên tục, sát thương đáy bảng) và chỉ "HƯỞNG KÉ CHIẾN THẮNG" do đồng đội quá xuất sắc gánh.
+   - Những người "hưởng ké" này TUYỆT ĐỐI KHÔNG ĐƯỢC NHẬN ĐIỂM ELO CAO, điểm Elo của họ chỉ được tăng tượng trưng từ +2 đến +7 Elo (thay vì mức +16 của cả đội)!
+   - Ngược lại, những tuyển thủ thực sự là đầu tàu dẫn dắt (MVP/Carry) phải nhận điểm Elo vượt trội xứng đáng (+24 đến +28 Elo).
+
+PHÂN LOẠI & ĐỀ XUẤT ĐIỂM ELO CHI TIẾT:
+   - ĐỘI THẮNG (WINNER):
+     + [MVP / CARRY] - Người Dẫn Dắt / Gánh Đội Xuất Sắc: KDA áp đảo, sát thương top đầu, mở giao tranh then chốt. Điểm: 9.0 - 10.0 -> Đề xuất Elo: +24 đến +28. Tag: "MVP"
+     + [GREAT] - Đóng Góp Lớn / Trụ Cột: KDA đẹp, phối hợp chặt chẽ, tạo đột biến. Điểm: 7.5 - 8.9 -> Đề xuất Elo: +18 đến +22. Tag: "GREAT"
+     + [SOLID] - Tròn Vai / Bình Ổn: Hoàn thành nhiệm vụ ở đường, KDA cân bằng. Điểm: 6.0 - 7.4 -> Đề xuất Elo: +14 đến +16. Tag: "SOLID"
+     + [PASSENGER] - HƯỞNG KÉ / ĐƯỢC GÁNH: KDA âm sâu (ví dụ 1/7/2, 0/5/3, 2/9/4), sát thương thấp nhất đội, chết nhiều ở giai đoạn đi đường, gần như không có tác động tới chiến thắng mà chỉ hưởng ké thành quả của đồng đội. Điểm: 2.5 - 4.9 -> Đề xuất Elo: CHỈ +3 ĐẾN +7 ELO. Tag: "PASSENGER"
+   - ĐỘI THUA (LOSER):
+     + [SVP] - Nỗ Lực Gánh Đội Thua / Điểm Sáng Đơn Độc: KDA tốt, sát thương cao, chơi kiên cường nhưng đồng đội quá đuối. Điểm: 7.5 - 8.9 -> Đề xuất Elo: CHỈ TRỪ NHẸ -5 ĐẾN -9 ELO (để bảo vệ tuyển thủ chơi tốt). Tag: "SVP"
+     + [SOLID] - Khá / Tròn Vai: Cố gắng thi đấu nhưng không lật được kèo. Điểm: 5.0 - 6.9 -> Đề xuất Elo: -12 đến -15. Tag: "SOLID"
+     + [FEEDER] - Phá Game / Thọt Nặng / Tạ Của Đội: Feed mạng liên tục, mất kiểm soát, kéo cả đội xuống. Điểm: 1.0 - 4.4 -> Đề xuất Elo: TRỪ NẶNG -20 ĐẾN -26 ELO. Tag: "FEEDER"
 
 BẮT BUỘC TRẢ VỀ ĐÚNG 1 ĐỐI TƯỢNG JSON (không có markdown backticks ```json):
 {{

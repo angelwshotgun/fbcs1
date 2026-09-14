@@ -338,14 +338,67 @@ class DataManager:
         return saved_local
 
     def read_match_details(self) -> Dict[str, Any]:
-        """Đọc chi tiết các trận đấu (KDA, Elo deltas, AI analysis) từ file JSON cục bộ."""
+        """
+        Đọc chi tiết các trận đấu (KDA, Elo deltas cá nhân hóa, AI analysis).
+        1. Ưu tiên đọc trực tiếp từ bảng matches trên Supabase (cột synergies_applied -> metadata).
+        2. Fallback đọc từ file JSON cục bộ data/match_details.json.
+        """
+        details: Dict[str, Any] = {}
+
+        # 1. Thử lấy từ Supabase
+        if supabase_service.is_configured():
+            try:
+                raw_matches = supabase_service.get_all_matches_raw(order='created_at.asc')
+                if raw_matches:
+                    for idx, m in enumerate(raw_matches):
+                        mid = m.get('id')
+                        syn = m.get('synergies_applied') or {}
+                        meta = syn.get('metadata') if isinstance(syn, dict) else {}
+                        if not meta and isinstance(syn, dict) and 'player_deltas' in syn:
+                            meta = syn
+
+                        p_deltas = meta.get('player_deltas', {}) if meta else {}
+                        p_perfs = meta.get('player_performances', []) if meta else {}
+                        ai_sum = meta.get('ai_summary', '') if meta else ''
+
+                        record = {
+                            'id': mid,
+                            'match_index': idx,
+                            'match_code': m.get('match_code', f"M-{mid}"),
+                            'created_at': m.get('created_at', ''),
+                            'winner': m.get('winner', 'team1'),
+                            'team1': m.get('team1_players', []),
+                            'team2': m.get('team2_players', []),
+                            'team1_power': float(m.get('team1_power', 0.0)),
+                            'team2_power': float(m.get('team2_power', 0.0)),
+                            'player_deltas': p_deltas,
+                            'player_performances': p_perfs,
+                            'ai_summary': ai_sum,
+                            'notes': m.get('notes', '')
+                        }
+                        # Đánh dấu theo cả số thứ tự dòng (cho EloService) và theo ID trận
+                        details[str(idx)] = record
+                        if mid:
+                            details[str(mid)] = record
+
+                    # Đồng bộ cache cục bộ
+                    try:
+                        with open(LOCAL_MATCH_DETAILS_FILE, 'w', encoding='utf-8') as f:
+                            json.dump(details, f, ensure_ascii=False, indent=2)
+                    except Exception:
+                        pass
+                    return details
+            except Exception as e:
+                print(f"[DataManager] Supabase read match details notice: {e}")
+
+        # 2. Đọc từ file JSON cục bộ
         if os.path.exists(LOCAL_MATCH_DETAILS_FILE):
             try:
                 with open(LOCAL_MATCH_DETAILS_FILE, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
                 print(f"[DataManager] Read match_details.json error: {e}")
-        return {}
+        return details
 
     def save_match_details(self, details: Dict[str, Any]) -> bool:
         """Lưu chi tiết các trận đấu vào file JSON cục bộ."""
@@ -373,7 +426,7 @@ class DataManager:
     ) -> pd.DataFrame:
         """
         Ghi nhận trận đấu mới đa chiều:
-        1. Ghi nhận vào Supabase (bảng matches + match_participants).
+        1. Ghi nhận vào Supabase (bảng matches + match_participants kèm siêu dữ liệu AI).
         2. Đồng thời cập nhật ma trận DataFrame cục bộ để duy trì tương thích và sao lưu.
         3. Lưu chi tiết cá nhân hóa (KDA, delta Elo cá nhân, AI summary) vào match_details.json.
         """
@@ -387,13 +440,19 @@ class DataManager:
                     team1_power=team1_power,
                     team2_power=team2_power,
                     synergies=synergies,
-                    notes=notes
+                    notes=notes,
+                    player_deltas=player_deltas,
+                    player_performances=player_performances,
+                    ai_summary=ai_summary
                 )
+                with self._lock:
+                    self._matches_df_cache = None
+                    self._matches_cache_time = 0
             except Exception as e:
                 print(f"[DataManager] Supabase insert match notice: {e}")
 
         # 2. Cập nhật local DataFrame
-        df = self.read_matches_df()
+        df = self.read_matches_df(force_refresh=True)
         all_players_in_match = set(team1 + team2)
         for player in all_players_in_match:
             if player not in df.columns:
@@ -411,7 +470,7 @@ class DataManager:
         new_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
         self.save_matches_df(new_df)
 
-        # 3. Lưu chi tiết cá nhân hóa vào match_details.json nếu có
+        # 3. Lưu chi tiết cá nhân hóa vào match_details.json
         match_details = self.read_match_details()
         match_record = {
             'match_index': match_idx,
@@ -431,6 +490,178 @@ class DataManager:
 
         return new_df
 
+    def get_matches_history(self) -> List[Dict[str, Any]]:
+        """
+        Lấy danh sách toàn bộ lịch sử trận đấu kèm thông tin phong phú của tuyển thủ.
+        Sắp xếp theo thời gian mới nhất lên đầu.
+        """
+        players_map = self.read_players_data()
+        history: List[Dict[str, Any]] = []
+
+        if supabase_service.is_configured():
+            raw_matches = supabase_service.get_all_matches_raw(order='created_at.desc')
+            for m in raw_matches:
+                mid = m.get('id')
+                syn = m.get('synergies_applied') or {}
+                meta = syn.get('metadata') if isinstance(syn, dict) else {}
+                if not meta and isinstance(syn, dict) and 'player_deltas' in syn:
+                    meta = syn
+
+                t1_pids = m.get('team1_players', [])
+                t2_pids = m.get('team2_players', [])
+
+                t1_objs = [
+                    players_map.get(str(p).lower(), {
+                        'id': p,
+                        'nickname': str(p).capitalize(),
+                        'avatar': f"https://api.dicebear.com/7.x/bottts/svg?seed={p}",
+                        'hidden_elo': 1200.0
+                    }) for p in t1_pids
+                ]
+                t2_objs = [
+                    players_map.get(str(p).lower(), {
+                        'id': p,
+                        'nickname': str(p).capitalize(),
+                        'avatar': f"https://api.dicebear.com/7.x/bottts/svg?seed={p}",
+                        'hidden_elo': 1200.0
+                    }) for p in t2_pids
+                ]
+
+                history.append({
+                    'id': mid,
+                    'match_code': m.get('match_code', f"M-{mid}"),
+                    'created_at': m.get('created_at', ''),
+                    'winner': m.get('winner', 'team1'),
+                    'result_code': m.get('result_code', 1 if m.get('winner') == 'team1' else 2),
+                    'team1': t1_objs,
+                    'team2': t2_objs,
+                    'team1_players': t1_pids,
+                    'team2_players': t2_pids,
+                    'team1_power': m.get('team1_power', 0.0),
+                    'team2_power': m.get('team2_power', 0.0),
+                    'notes': m.get('notes', ''),
+                    'ai_summary': meta.get('ai_summary', '') if meta else '',
+                    'player_deltas': meta.get('player_deltas', {}) if meta else {},
+                    'player_performances': meta.get('player_performances', []) if meta else []
+                })
+            return history
+
+        # Fallback local
+        df = self.read_matches_df()
+        details = self.read_match_details()
+        player_cols = [c for c in df.columns if c != 'Result']
+
+        for idx, row in df.iterrows():
+            result = row['Result']
+            t1_pids = [p for p in player_cols if row[p] == 1]
+            t2_pids = [p for p in player_cols if row[p] == 2]
+            meta = details.get(str(idx), {})
+
+            t1_objs = [
+                players_map.get(p.lower(), {'id': p, 'nickname': p.capitalize()}) for p in t1_pids
+            ]
+            t2_objs = [
+                players_map.get(p.lower(), {'id': p, 'nickname': p.capitalize()}) for p in t2_pids
+            ]
+
+            history.append({
+                'id': idx + 1,
+                'match_code': meta.get('match_code', f"M-LOCAL-{idx + 1}"),
+                'created_at': meta.get('created_at', ''),
+                'winner': 'team1' if result == 1 else 'team2',
+                'result_code': int(result),
+                'team1': t1_objs,
+                'team2': t2_objs,
+                'team1_players': t1_pids,
+                'team2_players': t2_pids,
+                'team1_power': meta.get('team1_power', 0.0),
+                'team2_power': meta.get('team2_power', 0.0),
+                'notes': meta.get('notes', ''),
+                'ai_summary': meta.get('ai_summary', ''),
+                'player_deltas': meta.get('player_deltas', {}),
+                'player_performances': meta.get('player_performances', [])
+            })
+
+        history.reverse()
+        return history
+
+    def update_match(
+        self,
+        match_id: int,
+        team1: List[str],
+        team2: List[str],
+        winner: str,
+        notes: str = '',
+        player_deltas: Optional[Dict[str, float]] = None
+    ) -> Tuple[bool, str]:
+        """Cập nhật kết quả hoặc người chơi trong một trận đấu (Supabase + Local)."""
+        all_players_map = self.read_players_data()
+        t1_power = round(sum(all_players_map.get(str(p).lower(), {}).get('hidden_elo', 1200.0) for p in team1), 1)
+        t2_power = round(sum(all_players_map.get(str(p).lower(), {}).get('hidden_elo', 1200.0) for p in team2), 1)
+
+        # 1. Cập nhật Supabase
+        if supabase_service.is_configured():
+            try:
+                # Đọc siêu dữ liệu cũ để giữ lại nếu có
+                cur_details = self.read_match_details()
+                old_record = cur_details.get(str(match_id), {})
+                syn_payload = {}
+                meta_payload = {
+                    'player_deltas': player_deltas if player_deltas is not None else old_record.get('player_deltas', {}),
+                    'player_performances': old_record.get('player_performances', []),
+                    'ai_summary': old_record.get('ai_summary', '')
+                }
+                syn_payload['metadata'] = meta_payload
+
+                update_data = {
+                    'team1': team1,
+                    'team2': team2,
+                    'winner': winner,
+                    'team1_power': t1_power,
+                    'team2_power': t2_power,
+                    'notes': notes,
+                    'synergies_applied': syn_payload
+                }
+                ok, msg = supabase_service.update_match(match_id, update_data)
+                if not ok:
+                    return False, msg
+
+                with self._lock:
+                    self._matches_df_cache = None
+                    self._matches_cache_time = 0
+            except Exception as e:
+                return False, f"Lỗi cập nhật Supabase: {str(e)}"
+
+        # 2. Xóa cache và nạp lại để đồng bộ hóa hoàn toàn
+        self.read_match_details()
+        self.read_matches_df(force_refresh=True)
+
+        return True, "Cập nhật trận đấu thành công"
+
+    def delete_match(self, match_id: int) -> Tuple[bool, str]:
+        """Xóa một trận đấu khỏi hệ thống (Supabase + Local)."""
+        if supabase_service.is_configured():
+            try:
+                ok, msg = supabase_service.delete_match(match_id)
+                if not ok:
+                    return False, msg
+
+                with self._lock:
+                    self._matches_df_cache = None
+                    self._matches_cache_time = 0
+            except Exception as e:
+                return False, f"Lỗi xóa Supabase: {str(e)}"
+
+        # Xóa trong match_details.json nếu có
+        details = self.read_match_details()
+        if str(match_id) in details:
+            del details[str(match_id)]
+            self.save_match_details(details)
+
+        self.read_matches_df(force_refresh=True)
+        return True, "Đã xóa trận đấu thành công"
+
 
 data_manager = DataManager()
+
 

@@ -10,10 +10,15 @@ class EloService:
         self.base_elo = base_elo
         self.k_factor = k_factor
 
-    def calculate_all_metrics(self, df: pd.DataFrame, match_details: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def calculate_all_metrics(
+        self,
+        df: pd.DataFrame,
+        match_details: Optional[Dict[str, Any]] = None,
+        players_profiles: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Duyệt qua toàn bộ lịch sử trận đấu để tính:
-        1. Elo ẩn (Hidden Elo / MMR, hỗ trợ delta cá nhân hóa do AI phân tích)
+        1. Elo ẩn (Hidden Elo / MMR, hỗ trợ delta cá nhân hóa AI và điều chỉnh tỷ lệ đóng góp carry vs hưởng ké)
         2. Phong độ tự động (Form, Streak, Form Score 1-10)
         3. Thống kê trận (Wins, Losses, Matches, Winrate)
         4. Cặp bài trùng (Pair Synergy)
@@ -72,9 +77,34 @@ class EloService:
                 meta = match_details.get(str(idx)) or match_details.get(idx)
             custom_deltas = meta.get('player_deltas', {}) if meta else {}
 
+            # Ước tính sức mạnh tương quan để điều chỉnh Elo cho trường hợp hưởng ké (không có ảnh AI)
+            def calc_contrib_power(pid: str) -> float:
+                p_elo = elo.get(pid, self.base_elo)
+                prof = players_profiles.get(pid.lower(), {}) if players_profiles else {}
+                p_ovr = float(prof.get('stats_ovr', prof.get('skill', 5.0)))
+                return 0.6 * (p_elo / self.base_elo) + 0.4 * (p_ovr / 5.5)
+
+            t1_powers = {p: calc_contrib_power(p) for p in team1}
+            t2_powers = {p: calc_contrib_power(p) for p in team2}
+            avg_power_1 = sum(t1_powers.values()) / max(1, len(team1))
+            avg_power_2 = sum(t2_powers.values()) / max(1, len(team2))
+
             # Cập nhật Elo cho Team 1
             for p in team1:
-                p_delta = float(custom_deltas[p]) if (p in custom_deltas and custom_deltas[p] is not None) else delta_1
+                if p in custom_deltas and custom_deltas[p] is not None:
+                    p_delta = float(custom_deltas[p])
+                else:
+                    ratio = t1_powers[p] / max(0.1, avg_power_1)
+                    if result == 1:
+                        # Thắng: Tuyển thủ có power thấp hơn nhiều đồng đội (hưởng ké) bị giảm điểm thưởng
+                        # Tuyển thủ dẫn dắt (power cao) được thưởng thêm
+                        contrib_mult = max(0.40, min(1.40, ratio ** 0.85))
+                        p_delta = delta_1 * contrib_mult
+                    else:
+                        # Thua: Tuyển thủ gánh đội được giảm trừ, tuyển thủ kéo đội xuống bị trừ đủ/nhiều hơn
+                        loss_mult = max(0.65, min(1.35, (1.0 / max(0.1, ratio)) ** 0.5))
+                        p_delta = delta_1 * loss_mult
+
                 elo[p] = round(elo[p] + p_delta, 2)
                 stats[p]['matches'] += 1
                 if result == 1:
@@ -86,7 +116,17 @@ class EloService:
 
             # Cập nhật Elo cho Team 2
             for p in team2:
-                p_delta = float(custom_deltas[p]) if (p in custom_deltas and custom_deltas[p] is not None) else delta_2
+                if p in custom_deltas and custom_deltas[p] is not None:
+                    p_delta = float(custom_deltas[p])
+                else:
+                    ratio = t2_powers[p] / max(0.1, avg_power_2)
+                    if result == 2:
+                        contrib_mult = max(0.40, min(1.40, ratio ** 0.85))
+                        p_delta = delta_2 * contrib_mult
+                    else:
+                        loss_mult = max(0.65, min(1.35, (1.0 / max(0.1, ratio)) ** 0.5))
+                        p_delta = delta_2 * loss_mult
+
                 elo[p] = round(elo[p] + p_delta, 2)
                 stats[p]['matches'] += 1
                 if result == 2:

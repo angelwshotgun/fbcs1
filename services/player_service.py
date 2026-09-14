@@ -11,7 +11,12 @@ class PlayerService:
         """Tính toán lại toàn bộ metrics từ match_data.csv và match_details.json."""
         df = data_manager.read_matches_df()
         match_details = data_manager.read_match_details()
-        self._cached_metrics = elo_service.calculate_all_metrics(df, match_details=match_details)
+        profiles = data_manager.read_players_data()
+        self._cached_metrics = elo_service.calculate_all_metrics(
+            df,
+            match_details=match_details,
+            players_profiles=profiles
+        )
         return self._cached_metrics
 
     def get_metrics(self) -> Dict[str, Any]:
@@ -32,6 +37,7 @@ class PlayerService:
         stats_map = metrics.get('stats', {})
 
         profiles = data_manager.read_players_data()
+        match_details = data_manager.read_match_details()
 
         # Chuẩn hóa toàn bộ map về key chữ thường để tránh trùng lặp do lệch hoa/thường
         profiles_lower = {k.lower(): v for k, v in profiles.items()}
@@ -87,6 +93,63 @@ class PlayerService:
 
             effective_power = round(combined_power * form_info.get('multiplier', 1.0), 2)
 
+            # Tính toán vai trò thực chiến: Phân biệt người dẫn dắt (Carry) vs Hưởng ké (Passenger)
+            m_count = p_stats.get('matches', 0)
+            wr_val = p_stats.get('winrate', 0.0)
+            passenger_tags_count = 0
+            carry_tags_count = 0
+            if match_details:
+                for m_rec in match_details.values():
+                    perfs = m_rec.get('player_performances', [])
+                    for pf in perfs:
+                        if str(pf.get('player_id', '')).lower() == pid:
+                            tag = str(pf.get('performance_tag', '')).upper()
+                            if tag in ['PASSENGER', 'CARRIED']:
+                                passenger_tags_count += 1
+                            elif tag in ['MVP', 'CARRY']:
+                                carry_tags_count += 1
+
+            if m_count < 2:
+                role_key = 'newbie'
+                role_label = 'Tân binh'
+                role_icon = '🌱'
+                role_badge = 'bg-slate-100 text-slate-600 border-slate-200'
+                role_desc = 'Chưa đủ số trận để đánh giá vai trò'
+            elif passenger_tags_count >= 2 or (wr_val >= 60.0 and stats_ovr < 4.8) or (passenger_tags_count >= 1 and stats_ovr < 5.0):
+                role_key = 'passenger'
+                role_label = 'Hưởng ké'
+                role_icon = '🎒'
+                role_badge = 'bg-amber-100 text-amber-800 border-amber-300'
+                role_desc = 'Thắng nhiều nhờ được đồng đội gánh, đóng góp cá nhân hạn chế'
+            elif carry_tags_count >= 2 or (wr_val >= 60.0 and stats_ovr >= 6.5) or (carry_tags_count >= 1 and stats_ovr >= 7.0):
+                role_key = 'carry'
+                role_label = 'Chủ lực'
+                role_icon = '👑'
+                role_badge = 'bg-amber-100 text-amber-800 border-amber-300'
+                role_desc = 'Người dẫn dắt lối chơi, đóng góp trực tiếp vào chiến thắng'
+            elif wr_val <= 35.0 and stats_ovr >= 6.8:
+                role_key = 'unlucky'
+                role_label = 'Gánh tạ'
+                role_icon = '🛡️'
+                role_badge = 'bg-rose-100 text-rose-800 border-rose-300'
+                role_desc = 'Kỹ năng cao nhưng thường xuyên gánh đồng đội yếu thế'
+            else:
+                role_key = 'core'
+                role_label = 'Trụ cột'
+                role_icon = '⚖️'
+                role_badge = 'bg-slate-100 text-slate-700 border-slate-200'
+                role_desc = 'Đóng góp ổn định, tròn vai trong các trận đấu'
+
+            impact_role = {
+                'key': role_key,
+                'label': role_label,
+                'icon': role_icon,
+                'badge': role_badge,
+                'desc': role_desc,
+                'passenger_count': passenger_tags_count,
+                'carry_count': carry_tags_count
+            }
+
             player_obj = {
                 'id': pid,
                 'nickname': profile.get('nickname', pid.capitalize()),
@@ -104,6 +167,7 @@ class PlayerService:
                 'combined_power': combined_power,
                 'effective_power': effective_power,
                 'form': form_info,
+                'impact_role': impact_role,
                 'matches': p_stats.get('matches', 0),
                 'wins': p_stats.get('wins', 0),
                 'losses': p_stats.get('losses', 0),

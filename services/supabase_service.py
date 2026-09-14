@@ -283,11 +283,14 @@ class SupabaseService:
         team1_power: float = 0.0,
         team2_power: float = 0.0,
         synergies: Optional[Dict[str, Any]] = None,
-        notes: str = ''
+        notes: str = '',
+        player_deltas: Optional[Dict[str, float]] = None,
+        player_performances: Optional[List[Dict[str, Any]]] = None,
+        ai_summary: str = ''
     ) -> Tuple[bool, Any]:
         """
         Ghi nhận trận đấu đa chiều vào Supabase:
-        1. Tạo bản ghi trong bảng `matches`
+        1. Tạo bản ghi trong bảng `matches` kèm siêu dữ liệu AI phân tích (KDA, Elo cá nhân hóa)
         2. Tạo 10 bản ghi chi tiết trong `match_participants`
         """
         if not self.is_configured():
@@ -295,6 +298,14 @@ class SupabaseService:
 
         result_code = 1 if winner == 'team1' else 2
         match_code = f"M-{pd.Timestamp.now().strftime('%Y%m%d%H%M%S')}"
+
+        syn_payload = dict(synergies or {})
+        if player_deltas or player_performances or ai_summary:
+            syn_payload['metadata'] = {
+                'player_deltas': player_deltas or {},
+                'player_performances': player_performances or [],
+                'ai_summary': ai_summary or ''
+            }
 
         match_row = {
             'match_code': match_code,
@@ -304,7 +315,7 @@ class SupabaseService:
             'team2_power': float(team2_power),
             'winner': winner,
             'result_code': result_code,
-            'synergies_applied': synergies or {},
+            'synergies_applied': syn_payload,
             'notes': notes
         }
 
@@ -326,19 +337,26 @@ class SupabaseService:
         # 2. Ghi chi tiết 10 tuyển thủ vào bảng match_participants nếu có match_id
         if match_id:
             participants = []
+            perf_map = {str(p.get('player_id', '')).lower(): p for p in (player_performances or [])}
             for p in team1:
+                p_perf = perf_map.get(str(p).lower(), {})
                 participants.append({
                     'match_id': match_id,
                     'player_id': p,
                     'team': 1,
-                    'is_winner': (winner == 'team1')
+                    'is_winner': (winner == 'team1'),
+                    'champion': p_perf.get('champion') if p_perf.get('champion') and p_perf.get('champion') != '-' else None,
+                    'role': p_perf.get('performance_tag')
                 })
             for p in team2:
+                p_perf = perf_map.get(str(p).lower(), {})
                 participants.append({
                     'match_id': match_id,
                     'player_id': p,
                     'team': 2,
-                    'is_winner': (winner == 'team2')
+                    'is_winner': (winner == 'team2'),
+                    'champion': p_perf.get('champion') if p_perf.get('champion') and p_perf.get('champion') != '-' else None,
+                    'role': p_perf.get('performance_tag')
                 })
 
             self._request(
@@ -349,6 +367,82 @@ class SupabaseService:
             )
 
         return True, match_id
+
+    def get_all_matches_raw(self, order: str = 'created_at.desc') -> List[Dict[str, Any]]:
+        """Lấy danh sách các trận đấu nguyên bản từ Supabase."""
+        if not self.is_configured():
+            return []
+        ok, res = self._request('matches', method='GET', params={'select': '*', 'order': order})
+        if ok and isinstance(res, list):
+            return res
+        return []
+
+    def update_match(self, match_id: int, data: Dict[str, Any]) -> Tuple[bool, str]:
+        """Cập nhật trận đấu và danh sách tuyển thủ tham gia trong match_participants."""
+        if not self.is_configured():
+            return False, "Chưa cấu hình Supabase"
+
+        team1 = data.get('team1', [])
+        team2 = data.get('team2', [])
+        winner = data.get('winner', 'team1')
+        result_code = 1 if winner == 'team1' else 2
+
+        match_update: Dict[str, Any] = {
+            'team1_players': team1,
+            'team2_players': team2,
+            'winner': winner,
+            'result_code': result_code
+        }
+        if 'notes' in data:
+            match_update['notes'] = data['notes']
+        if 'team1_power' in data:
+            match_update['team1_power'] = float(data['team1_power'])
+        if 'team2_power' in data:
+            match_update['team2_power'] = float(data['team2_power'])
+        if 'synergies_applied' in data:
+            match_update['synergies_applied'] = data['synergies_applied']
+
+        ok, res = self._request(
+            f"matches?id=eq.{match_id}",
+            method='PATCH',
+            data=match_update,
+            prefer='return=representation'
+        )
+        if not ok:
+            return False, f"Lỗi cập nhật bảng matches: {res}"
+
+        # Cập nhật match_participants: xóa cũ và tạo mới
+        self._request(f"match_participants?match_id=eq.{match_id}", method='DELETE')
+
+        participants = []
+        for p in team1:
+            participants.append({
+                'match_id': match_id,
+                'player_id': p,
+                'team': 1,
+                'is_winner': (winner == 'team1')
+            })
+        for p in team2:
+            participants.append({
+                'match_id': match_id,
+                'player_id': p,
+                'team': 2,
+                'is_winner': (winner == 'team2')
+            })
+
+        self._request('match_participants', method='POST', data=participants, prefer='return=minimal')
+        return True, "Đã cập nhật trận đấu thành công"
+
+    def delete_match(self, match_id: int) -> Tuple[bool, str]:
+        """Xóa một trận đấu khỏi Supabase."""
+        if not self.is_configured():
+            return False, "Chưa cấu hình Supabase"
+
+        self._request(f"match_participants?match_id=eq.{match_id}", method='DELETE')
+        ok, res = self._request(f"matches?id=eq.{match_id}", method='DELETE')
+        if ok:
+            return True, "Đã xóa trận đấu thành công"
+        return False, f"Lỗi xóa trận đấu: {res}"
 
 
 supabase_service = SupabaseService()

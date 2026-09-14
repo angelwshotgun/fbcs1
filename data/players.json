@@ -310,6 +310,21 @@
     "form_score": 5.0,
     "form_status": "neutral"
   },
+  "namonade": {
+    "id": "namonade",
+    "nickname": "Namonade",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=namonade",
+    "skill": 6.5,
+    "champion_pool": 7.5,
+    "flex_lane": 7.5,
+    "consistency": 7.0,
+    "stats_ovr": 6.9,
+    "primary_role": "MID",
+    "favorite_champions": [],
+    "hidden_elo": 1200.0,
+    "form_score": 5.0,
+    "form_status": "neutral"
+  },
   "nas": {
     "id": "nas",
     "nickname": "Nas",
