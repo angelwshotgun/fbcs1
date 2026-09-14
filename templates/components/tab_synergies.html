@@ -1,0 +1,33 @@
+<!-- ============================================== -->
+<!-- TAB 5: CẶP BÀI TRÙNG & BỘ BA ĂN Ý (SYNERGIES) -->
+<!-- ============================================== -->
+<section id="tab-content-synergies" class="tab-pane hidden space-y-6">
+    <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
+                <span>🤝 Thống Kê Ăn Ý & Tam Tấu</span>
+            </h2>
+            <p class="text-sm text-slate-500 mt-1">
+                Thống kê tỷ lệ thắng khi 2 hoặc 3 tuyển thủ cùng chung chiến tuyến trong các trận đấu đã ghi nhận.
+            </p>
+        </div>
+        <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold font-heading">
+            <button id="btn-synergy-duo" onclick="switchSynergyView('duo')" class="px-3.5 py-1.5 rounded-xl bg-white text-indigo-700 shadow-xs transition">
+                🤝 Cặp Đôi (Duo)
+            </button>
+            <button id="btn-synergy-trio" onclick="switchSynergyView('trio')" class="px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition">
+                🌟 Bộ Ba (Trio)
+            </button>
+        </div>
+    </div>
+
+    <!-- Duo Grid (Default) -->
+    <div id="synergies-duo-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <!-- Dynamically rendered via JS -->
+    </div>
+
+    <!-- Trio Grid (Hidden initially) -->
+    <div id="synergies-trio-container" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <!-- Dynamically rendered via JS -->
+    </div>
+</section>

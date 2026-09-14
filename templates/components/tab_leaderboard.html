@@ -1,0 +1,42 @@
+<!-- ============================================== -->
+<!-- TAB 4: BẢNG XẾP HẠNG CHUNG (LEADERBOARD) -->
+<!-- ============================================== -->
+<section id="tab-content-leaderboard" class="tab-pane hidden space-y-6">
+    <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
+                <span>🏆 Bảng Xếp Hạng Tuyển Thủ</span>
+            </h2>
+            <p class="text-sm text-slate-500 mt-1">
+                Xếp hạng các tuyển thủ đã thi đấu theo Elo ẩn thực chiến, Phong độ tự động và các chỉ số Stats (thang 1 - 10).
+            </p>
+        </div>
+        <button onclick="loadLeaderboard()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold font-heading transition shadow-xs">
+            <i class="fa-solid fa-arrows-rotate mr-1.5 text-slate-400"></i> Làm mới
+        </button>
+    </div>
+
+    <!-- Leaderboard Table -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200/80 bg-slate-50/80 text-xs text-slate-500 uppercase tracking-wider font-bold font-heading">
+                        <th class="py-4 px-4 text-center w-16">Hạng</th>
+                        <th class="py-4 px-4">Tuyển Thủ</th>
+                        <th class="py-4 px-4 text-center">Elo Ẩn</th>
+                        <th class="py-4 px-4 text-center">Stats OVR</th>
+                        <th class="py-4 px-4 text-center">Phong Độ (1-10)</th>
+                        <th class="py-4 px-4 text-center">Tỷ Lệ Thắng</th>
+                        <th class="py-4 px-4 text-center">Vai Trò</th>
+                        <th class="py-4 px-4 text-center">Trận (W / L)</th>
+                        <th class="py-4 px-4 text-center">Gần Nhất</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-table-body" class="divide-y divide-slate-100 text-sm">
+                    <!-- Rendered dynamically via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>

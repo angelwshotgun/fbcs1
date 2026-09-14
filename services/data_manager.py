@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import json
 import os
 import threading
 import time
 from io import StringIO
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 from dotenv import load_dotenv
 from services.supabase_service import supabase_service

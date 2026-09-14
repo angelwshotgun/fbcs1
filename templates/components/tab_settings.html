@@ -1,0 +1,94 @@
+<!-- ============================================== -->
+<!-- TAB 6: CÀI ĐẶT & KẾT NỐI (SETTINGS) -->
+<!-- ============================================== -->
+<section id="tab-content-settings" class="tab-pane hidden space-y-6">
+    <div class="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-xs max-w-3xl mx-auto space-y-6">
+        <div>
+            <h2 class="text-xl font-black font-heading text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-gear text-indigo-600"></i>
+                <span>Trạng Thái Hệ Thống & Tích Hợp API</span>
+            </h2>
+            <p class="text-sm text-slate-500 mt-1">Các thông số cấu hình và môi trường kết nối cơ sở dữ liệu.</p>
+        </div>
+
+        <!-- Supabase PostgreSQL Integration Card -->
+        <div class="p-6 rounded-2xl bg-gradient-to-br from-indigo-50/60 via-white to-emerald-50/40 border border-indigo-200 shadow-xs space-y-4">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-indigo-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg font-bold shadow-xs">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold font-heading text-slate-900 flex items-center gap-2">
+                            <span>Supabase PostgreSQL (Cơ Sở Dữ Liệu Đa Chiều)</span>
+                        </h4>
+                        <p class="text-xs text-slate-500">Lưu trữ quan hệ: tuyển thủ, trận đấu, đội hình và thống kê nâng cao.</p>
+                    </div>
+                </div>
+                <span id="supabase-status-badge" class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold font-heading flex items-center gap-1.5">
+                    <i class="fa-solid fa-spinner fa-spin"></i> <span>Đang kiểm tra...</span>
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div class="p-3 rounded-xl bg-white border border-slate-200">
+                    <span class="text-slate-400 font-medium">Bảng Tuyển Thủ (players):</span>
+                    <p id="supabase-players-count" class="font-bold text-slate-900 text-sm mt-0.5">-</p>
+                </div>
+                <div class="p-3 rounded-xl bg-white border border-slate-200">
+                    <span class="text-slate-400 font-medium">Bảng Trận Đấu (matches):</span>
+                    <p id="supabase-matches-count" class="font-bold text-slate-900 text-sm mt-0.5">-</p>
+                </div>
+                <div class="p-3 rounded-xl bg-white border border-slate-200">
+                    <span class="text-slate-400 font-medium">Chế độ hoạt động:</span>
+                    <p id="supabase-mode-text" class="font-bold text-indigo-600 text-sm mt-0.5">SUPABASE PRIMARY</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <span class="text-[11px] text-slate-500 font-medium">
+                    <i class="fa-solid fa-shield-halved text-emerald-600 mr-1"></i> Tự động đồng bộ song song với bộ đệm cục bộ (Dual-Cache).
+                </span>
+                <div class="flex items-center gap-2">
+                    <button onclick="checkSupabaseStatus()" class="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold font-heading transition">
+                        <i class="fa-solid fa-arrows-rotate mr-1 text-slate-400"></i> Kiểm Tra
+                    </button>
+                    <button onclick="handleSyncToSupabase()" id="btn-sync-supabase" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold font-heading shadow-xs transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Đồng Bộ Tuyển Thủ Lên Supabase</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage Info Card -->
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+            <h4 class="text-xs font-bold font-heading text-slate-500 uppercase tracking-wider">Trạng Thái Bộ Nhớ Cục Bộ</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
+                    <span class="text-xs text-slate-400 font-medium">Chế độ lưu trữ:</span>
+                    <p id="storage-mode-text" class="font-bold text-indigo-600 mt-0.5">SUPABASE / LOCAL</p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
+                    <span class="text-xs text-slate-400 font-medium">Số trận đã ghi:</span>
+                    <p id="storage-matches-text" class="font-bold text-slate-900 mt-0.5">0 trận</p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-white border border-slate-200 shadow-xs">
+                    <span class="text-xs text-slate-400 font-medium">Tổng tuyển thủ:</span>
+                    <p id="storage-players-text" class="font-bold text-indigo-600 mt-0.5">36 tuyển thủ</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gemini API Key Status -->
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <h4 class="text-xs font-bold font-heading text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                <span>Gemini AI (Vision & Phân Tích Kèo)</span>
+                <span id="gemini-status-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Đã nạp qua file .env</span>
+            </h4>
+            <p class="text-xs text-slate-500 leading-relaxed">
+                Hệ thống đã nhận diện khóa <b>GEMINI_API_KEY</b> từ tệp cấu hình hệ thống. Tính năng Quét ảnh sảnh chờ (AI Vision) và Phân tích chiến thuật hoạt động tự động 100%.
+            </p>
+        </div>
+    </div>
+</section>

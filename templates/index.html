@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FBCS AI 3.0 - Hệ Thống Chia Đội & Chỉ Số Tuyển Thủ</title>
+    <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+                        heading: ['"Outfit"', '"Plus Jakarta Sans"', 'sans-serif']
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 50%), #f8fafc;
+            color: #0f172a;
+            -webkit-font-smoothing: antialiased;
+        }
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+            letter-spacing: -0.02em;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased">
+
+    {% include 'components/navbar.html' %}
+
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {% include 'components/tab_matchmaker.html' %}
+        {% include 'components/tab_captains.html' %}
+        {% include 'components/tab_simulation.html' %}
+        {% include 'components/tab_admin.html' %}
+        {% include 'components/tab_leaderboard.html' %}
+        {% include 'components/tab_synergies.html' %}
+        {% include 'components/tab_settings.html' %}
+    </main>
+
+    {% include 'components/modal_player.html' %}
+    {% include 'components/modal_match_result.html' %}
+    {% include 'components/modal_edit_match.html' %}
+
+    <!-- Application Core Script Modules -->
+    <script src="/static/js/modules/state.js"></script>
+    <script src="/static/js/modules/navigation.js"></script>
+    <script src="/static/js/modules/matchmaker.js"></script>
+    <script src="/static/js/modules/captains.js"></script>
+    <script src="/static/js/modules/simulation.js"></script>
+    <script src="/static/js/modules/match_modal.js"></script>
+    <script src="/static/js/modules/leaderboard.js"></script>
+    <script src="/static/js/modules/admin.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
