@@ -4,11 +4,18 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
+from dotenv import load_dotenv
 import pandas as pd
+
+load_dotenv()
 
 
 class SupabaseService:
     def __init__(self):
+        self._reload_config()
+
+    def _reload_config(self):
+        load_dotenv()
         self.url = (os.getenv('SUPABASE_URL') or os.getenv('NEXT_PUBLIC_SUPABASE_URL') or '').strip().rstrip('/')
         self.key = (
             os.getenv('SUPABASE_SERVICE_ROLE_KEY')
@@ -19,9 +26,13 @@ class SupabaseService:
         ).strip()
 
     def is_configured(self) -> bool:
+        if not (self.url and self.key):
+            self._reload_config()
         return bool(self.url and self.key)
 
     def _get_headers(self, prefer: Optional[str] = None) -> Dict[str, str]:
+        if not self.key:
+            self._reload_config()
         headers = {
             'apikey': self.key,
             'Authorization': f'Bearer {self.key}',

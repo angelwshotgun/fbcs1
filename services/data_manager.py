@@ -1,5 +1,7 @@
 import json
 import os
+import threading
+import time
 from io import StringIO
 from typing import Any, Dict, List, Optional
 import pandas as pd
@@ -23,6 +25,11 @@ PLAYERS_FILE_PATH = 'players.json'
 class DataManager:
     def __init__(self):
         os.makedirs(DATA_DIR, exist_ok=True)
+        self._lock = threading.Lock()
+        self._players_cache: Optional[Dict[str, Any]] = None
+        self._players_cache_time: float = 0.0
+        self._matches_df_cache: Optional[pd.DataFrame] = None
+        self._matches_cache_time: float = 0.0
         self.github_repo = None
         self._init_github()
         self._check_and_seed_supabase()
@@ -60,6 +67,35 @@ class DataManager:
     # ==========================================
     # PLAYERS STATS OPERATIONS (SUPABASE + LOCAL)
     # ==========================================
+    def _backup_players_github(self, players_data: Dict[str, Any]):
+        if not self.github_repo:
+            return
+        try:
+            json_content = json.dumps(players_data, ensure_ascii=False, indent=2)
+            try:
+                file_item = self.github_repo.get_contents(PLAYERS_FILE_PATH)
+                self.github_repo.update_file(PLAYERS_FILE_PATH, "Update players.json", json_content, file_item.sha)
+            except Exception:
+                self.github_repo.create_file(PLAYERS_FILE_PATH, "Create players.json", json_content)
+        except Exception as e:
+            print(f"[DataManager] Save GitHub players.json background error: {e}")
+
+    def _backup_matches_github(self, df: pd.DataFrame):
+        if not self.github_repo:
+            return
+        try:
+            csv_content = df.to_csv(index=False)
+            try:
+                file_item = self.github_repo.get_contents(MATCH_FILE_PATH)
+                self.github_repo.update_file(MATCH_FILE_PATH, "Update match_data.csv", csv_content, file_item.sha)
+            except Exception:
+                self.github_repo.create_file(MATCH_FILE_PATH, "Create match_data.csv", csv_content)
+        except Exception as e:
+            print(f"[DataManager] Save GitHub CSV background error: {e}")
+
+    # ==========================================
+    # PLAYERS STATS OPERATIONS (SUPABASE + LOCAL)
+    # ==========================================
     def read_local_players_data(self) -> Dict[str, Any]:
         """Đọc hồ sơ tuyển thủ từ file JSON cục bộ."""
         if os.path.exists(LOCAL_PLAYERS_FILE):
@@ -70,23 +106,30 @@ class DataManager:
                 print(f"[DataManager] Read local players.json error: {e}")
         return {}
 
-    def read_players_data(self) -> Dict[str, Any]:
+    def read_players_data(self, force_refresh: bool = False) -> Dict[str, Any]:
         """
         Đọc hồ sơ tuyển thủ:
-        1. Ưu tiên đọc từ Supabase PostgreSQL nếu khả dụng.
-        2. Tự động lưu bản sao xuống local JSON để cache.
-        3. Nếu Supabase lỗi hoặc chưa kết nối, fallback về local file hoặc GitHub.
+        1. Sử dụng in-memory cache nếu còn hạn (TTL = 30s) và không ép buộc refresh.
+        2. Thử đọc từ Supabase PostgreSQL nếu khả dụng.
+        3. Fallback đọc từ local file hoặc GitHub.
         """
+        now = time.time()
+        if not force_refresh and self._players_cache and (now - self._players_cache_time < 30):
+            return self._players_cache
+
         # 1. Thử đọc từ Supabase trước
         if supabase_service.is_configured():
             try:
                 sb_players = supabase_service.get_all_players()
                 if sb_players is not None and len(sb_players) > 0:
-                    try:
-                        with open(LOCAL_PLAYERS_FILE, 'w', encoding='utf-8') as f:
-                            json.dump(sb_players, f, ensure_ascii=False, indent=2)
-                    except Exception:
-                        pass
+                    with self._lock:
+                        self._players_cache = sb_players
+                        self._players_cache_time = now
+                        try:
+                            with open(LOCAL_PLAYERS_FILE, 'w', encoding='utf-8') as f:
+                                json.dump(sb_players, f, ensure_ascii=False, indent=2)
+                        except Exception:
+                            pass
                     return sb_players
             except Exception as e:
                 print(f"[DataManager] Supabase read players error: {e}")
@@ -94,6 +137,9 @@ class DataManager:
         # 2. Fallback đọc từ local file
         local_data = self.read_local_players_data()
         if local_data:
+            with self._lock:
+                self._players_cache = local_data
+                self._players_cache_time = now
             return local_data
 
         # 3. Fallback đọc từ GitHub
@@ -102,11 +148,14 @@ class DataManager:
                 file_content = self.github_repo.get_contents(PLAYERS_FILE_PATH)
                 file_data = file_content.decoded_content.decode('utf-8')
                 data = json.loads(file_data)
-                try:
-                    with open(LOCAL_PLAYERS_FILE, 'w', encoding='utf-8') as f:
-                        json.dump(data, f, ensure_ascii=False, indent=2)
-                except Exception:
-                    pass
+                with self._lock:
+                    self._players_cache = data
+                    self._players_cache_time = now
+                    try:
+                        with open(LOCAL_PLAYERS_FILE, 'w', encoding='utf-8') as f:
+                            json.dump(data, f, ensure_ascii=False, indent=2)
+                    except Exception:
+                        pass
                 return data
             except Exception:
                 pass
@@ -117,32 +166,26 @@ class DataManager:
         """Lưu thông tin tuyển thủ đồng thời vào Supabase và file cục bộ."""
         saved_local = False
 
-        # 1. Lưu local cache
-        try:
-            with open(LOCAL_PLAYERS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(players_data, f, ensure_ascii=False, indent=2)
-            saved_local = True
-        except Exception as e:
-            print(f"[DataManager] Save local players.json error: {e}")
+        with self._lock:
+            try:
+                with open(LOCAL_PLAYERS_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(players_data, f, ensure_ascii=False, indent=2)
+                saved_local = True
+                self._players_cache = players_data
+                self._players_cache_time = time.time()
+            except Exception as e:
+                print(f"[DataManager] Save local players.json error: {e}")
 
-        # 2. Đồng bộ lên Supabase nếu có
+        # Đồng bộ lên Supabase nếu có
         if supabase_service.is_configured():
             try:
                 supabase_service.sync_players_from_local(players_data)
             except Exception as e:
                 print(f"[DataManager] Supabase sync error: {e}")
 
-        # 3. Đồng bộ lên GitHub nếu có
+        # Đồng bộ lên GitHub non-blocking
         if self.github_repo:
-            try:
-                json_content = json.dumps(players_data, ensure_ascii=False, indent=2)
-                try:
-                    file_item = self.github_repo.get_contents(PLAYERS_FILE_PATH)
-                    self.github_repo.update_file(PLAYERS_FILE_PATH, "Update players.json", json_content, file_item.sha)
-                except Exception:
-                    self.github_repo.create_file(PLAYERS_FILE_PATH, "Create players.json", json_content)
-            except Exception as e:
-                print(f"[DataManager] Save GitHub players.json error: {e}")
+            threading.Thread(target=self._backup_players_github, args=(players_data,), daemon=True).start()
 
         return saved_local
 
@@ -151,56 +194,83 @@ class DataManager:
         pid = player_obj.get('id', '').strip().lower()
         if not pid:
             return False
+        player_obj['id'] = pid
 
-        # 1. Cập nhật Supabase
+        with self._lock:
+            # 1. Cập nhật local JSON (xóa triệt để các key trùng lệch hoa/thường)
+            players_data = self.read_local_players_data()
+            for k in list(players_data.keys()):
+                if k.lower() == pid:
+                    del players_data[k]
+            players_data[pid] = player_obj
+            try:
+                with open(LOCAL_PLAYERS_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(players_data, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                print(f"[DataManager] Save single player local error: {e}")
+
+            # Cập nhật cache tức thì
+            self._players_cache = players_data
+            self._players_cache_time = time.time()
+
+        # 2. Cập nhật Supabase (chỉ upsert đúng 1 tuyển thủ)
         if supabase_service.is_configured():
             try:
                 supabase_service.upsert_player(player_obj)
             except Exception as e:
                 print(f"[DataManager] Supabase upsert player error: {e}")
 
-        # 2. Cập nhật local JSON
-        players_data = self.read_local_players_data()
-        players_data[pid] = player_obj
-        try:
-            with open(LOCAL_PLAYERS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(players_data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            print(f"[DataManager] Save single player local error: {e}")
+        # 3. GitHub backup non-blocking
+        if self.github_repo:
+            threading.Thread(target=self._backup_players_github, args=(players_data,), daemon=True).start()
 
         return True
 
     def delete_single_player(self, player_id: str) -> bool:
         """Xóa 1 tuyển thủ (Supabase + Local)."""
         pid = player_id.strip().lower()
-        # 1. Xóa trên Supabase
-        if supabase_service.is_configured():
-            try:
-                supabase_service.delete_player(pid)
-            except Exception as e:
-                print(f"[DataManager] Supabase delete player error: {e}")
+        keys_to_delete = []
 
-        # 2. Xóa trong local JSON
-        players_data = self.read_local_players_data()
-        if pid in players_data:
-            del players_data[pid]
+        with self._lock:
+            players_data = self.read_local_players_data()
+            keys_to_delete = [k for k in players_data.keys() if k.lower() == pid]
+            for k in keys_to_delete:
+                del players_data[k]
             try:
                 with open(LOCAL_PLAYERS_FILE, 'w', encoding='utf-8') as f:
                     json.dump(players_data, f, ensure_ascii=False, indent=2)
             except Exception as e:
                 print(f"[DataManager] Delete single player local error: {e}")
 
+            self._players_cache = players_data
+            self._players_cache_time = time.time()
+
+        # Xóa trên Supabase
+        if supabase_service.is_configured():
+            try:
+                supabase_service.delete_player(pid)
+                for k in keys_to_delete:
+                    if k != pid:
+                        supabase_service.delete_player(k)
+            except Exception as e:
+                print(f"[DataManager] Supabase delete player error: {e}")
+
         return True
 
     # ==========================================
     # MATCHES OPERATIONS (SUPABASE + LOCAL)
     # ==========================================
-    def read_matches_df(self) -> pd.DataFrame:
+    def read_matches_df(self, force_refresh: bool = False) -> pd.DataFrame:
         """
         Đọc danh sách trận đấu:
-        1. Thử lấy từ Supabase (truy vấn bảng matches đa chiều và chuyển đổi thành ma trận Elo).
-        2. Nếu Supabase chưa có hoặc lỗi, đọc từ local file match_data.csv.
+        1. Sử dụng in-memory cache nếu có.
+        2. Thử lấy từ Supabase (truy vấn bảng matches đa chiều và chuyển đổi thành ma trận Elo).
+        3. Nếu Supabase chưa có hoặc lỗi, đọc từ local file match_data.csv.
         """
+        now = time.time()
+        if not force_refresh and self._matches_df_cache is not None and (now - self._matches_cache_time < 30):
+            return self._matches_df_cache.copy()
+
         # 1. Thử đọc từ Supabase
         if supabase_service.is_configured():
             try:
@@ -208,18 +278,25 @@ class DataManager:
                 all_pids = list(players_map.keys())
                 df = supabase_service.get_matches_df(all_pids)
                 if df is not None and not df.empty:
-                    try:
-                        df.to_csv(LOCAL_MATCH_FILE, index=False)
-                    except Exception:
-                        pass
-                    return df
+                    with self._lock:
+                        self._matches_df_cache = df
+                        self._matches_cache_time = now
+                        try:
+                            df.to_csv(LOCAL_MATCH_FILE, index=False)
+                        except Exception:
+                            pass
+                    return df.copy()
             except Exception as e:
                 print(f"[DataManager] Supabase read matches error: {e}")
 
         # 2. Đọc từ local CSV
         if os.path.exists(LOCAL_MATCH_FILE):
             try:
-                return pd.read_csv(LOCAL_MATCH_FILE)
+                df = pd.read_csv(LOCAL_MATCH_FILE)
+                with self._lock:
+                    self._matches_df_cache = df
+                    self._matches_cache_time = now
+                return df.copy()
             except Exception as e:
                 print(f"[DataManager] Read local CSV error: {e}")
 
@@ -229,11 +306,14 @@ class DataManager:
                 file_content = self.github_repo.get_contents(MATCH_FILE_PATH)
                 file_data = file_content.decoded_content.decode('utf-8')
                 df = pd.read_csv(StringIO(file_data))
-                try:
-                    df.to_csv(LOCAL_MATCH_FILE, index=False)
-                except Exception:
-                    pass
-                return df
+                with self._lock:
+                    self._matches_df_cache = df
+                    self._matches_cache_time = now
+                    try:
+                        df.to_csv(LOCAL_MATCH_FILE, index=False)
+                    except Exception:
+                        pass
+                return df.copy()
             except Exception as e:
                 print(f"[DataManager] Read GitHub CSV failed: {e}")
 
@@ -242,22 +322,17 @@ class DataManager:
     def save_matches_df(self, df: pd.DataFrame) -> bool:
         """Lưu DataFrame trận đấu vào local file và GitHub."""
         saved_local = False
-        try:
-            df.to_csv(LOCAL_MATCH_FILE, index=False)
-            saved_local = True
-        except Exception as e:
-            print(f"[DataManager] Save local CSV error: {e}")
+        with self._lock:
+            try:
+                df.to_csv(LOCAL_MATCH_FILE, index=False)
+                saved_local = True
+                self._matches_df_cache = df.copy()
+                self._matches_cache_time = time.time()
+            except Exception as e:
+                print(f"[DataManager] Save local CSV error: {e}")
 
         if self.github_repo:
-            try:
-                csv_content = df.to_csv(index=False)
-                try:
-                    file_item = self.github_repo.get_contents(MATCH_FILE_PATH)
-                    self.github_repo.update_file(MATCH_FILE_PATH, "Update match_data.csv", csv_content, file_item.sha)
-                except Exception:
-                    self.github_repo.create_file(MATCH_FILE_PATH, "Create match_data.csv", csv_content)
-            except Exception as e:
-                print(f"[DataManager] Save GitHub CSV error: {e}")
+            threading.Thread(target=self._backup_matches_github, args=(df.copy(),), daemon=True).start()
 
         return saved_local
 

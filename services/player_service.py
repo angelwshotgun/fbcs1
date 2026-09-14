@@ -32,12 +32,18 @@ class PlayerService:
 
         profiles = data_manager.read_players_data()
 
-        # Tập hợp tất cả player IDs từ cả profiles và lịch sử trận đấu
-        all_ids = set(profiles.keys()).union(set(elo_map.keys()))
+        # Chuẩn hóa toàn bộ map về key chữ thường để tránh trùng lặp do lệch hoa/thường
+        profiles_lower = {k.lower(): v for k, v in profiles.items()}
+        elo_lower = {k.lower(): v for k, v in elo_map.items()}
+        elo_norm_lower = {k.lower(): v for k, v in elo_norm_map.items()}
+        form_lower = {k.lower(): v for k, v in form_map.items()}
+        stats_lower = {k.lower(): v for k, v in stats_map.items()}
+
+        all_ids = sorted(list(set(profiles_lower.keys()).union(set(elo_lower.keys()))))
 
         results = []
         for pid in all_ids:
-            profile = profiles.get(pid, {})
+            profile = profiles_lower.get(pid, {})
 
             # Stats cơ bản (thang điểm 1 - 10)
             skill = float(profile.get('skill', 7.0))
@@ -52,9 +58,9 @@ class PlayerService:
             )
 
             # Elo ẩn & Phong độ từ lịch sử đấu
-            hidden_elo = elo_map.get(pid, 1200.0)
-            elo_norm = elo_norm_map.get(pid, 5.5)
-            form_info = form_map.get(pid, {
+            hidden_elo = elo_lower.get(pid, 1200.0)
+            elo_norm = elo_norm_lower.get(pid, 5.5)
+            form_info = form_lower.get(pid, {
                 'score': 5.0,
                 'multiplier': 1.0,
                 'status': 'neutral',
@@ -66,14 +72,11 @@ class PlayerService:
             })
 
             # Thống kê số trận
-            p_stats = stats_map.get(pid, {'matches': 0, 'wins': 0, 'losses': 0, 'winrate': 0.0})
+            p_stats = stats_lower.get(pid, {'matches': 0, 'wins': 0, 'losses': 0, 'winrate': 0.0})
 
-            has_profile = pid in profiles
+            has_profile = pid in profiles_lower
 
             # Điểm thực chiến tổng hợp (Power Rating 1-10)
-            # Nếu có cả Elo ẩn và Stats: 65% Elo ẩn + 35% Stats OVR
-            # Nếu chưa có profile: dùng 100% Elo ẩn quy đổi
-            # Nếu người mới chưa có trận: dùng Stats OVR
             if p_stats['matches'] > 0 and has_profile:
                 combined_power = round(0.65 * elo_norm + 0.35 * stats_ovr, 2)
             elif p_stats['matches'] > 0:
@@ -81,7 +84,6 @@ class PlayerService:
             else:
                 combined_power = round(stats_ovr, 2)
 
-            # Nhân hệ số phong độ hiện tại
             effective_power = round(combined_power * form_info.get('multiplier', 1.0), 2)
 
             player_obj = {
@@ -89,7 +91,6 @@ class PlayerService:
                 'nickname': profile.get('nickname', pid.capitalize()),
                 'avatar': profile.get('avatar', f"https://api.dicebear.com/7.x/bottts/svg?seed={pid}"),
                 'has_profile': has_profile,
-                # Stats thang điểm 1 - 10
                 'skill': skill,
                 'champion_pool': champ_pool,
                 'flex_lane': flex_lane,
@@ -97,14 +98,11 @@ class PlayerService:
                 'stats_ovr': stats_ovr,
                 'favorite_champions': profile.get('favorite_champions', []),
                 'primary_role': profile.get('primary_role', 'ALL'),
-                # Chỉ số thi đấu thực tế
                 'hidden_elo': hidden_elo,
                 'elo_normalized': elo_norm,
                 'combined_power': combined_power,
                 'effective_power': effective_power,
-                # Phong độ (Read-only)
                 'form': form_info,
-                # Thống kê trận
                 'matches': p_stats.get('matches', 0),
                 'wins': p_stats.get('wins', 0),
                 'losses': p_stats.get('losses', 0),
@@ -112,14 +110,14 @@ class PlayerService:
             }
             results.append(player_obj)
 
-        # Sắp xếp mặc định theo Elo ẩn giảm dần
         results.sort(key=lambda x: (x['hidden_elo'], x['effective_power']), reverse=True)
         return results
 
     def get_player(self, player_id: str) -> Optional[Dict[str, Any]]:
+        pid = player_id.strip().lower()
         all_players = self.get_all_players()
         for p in all_players:
-            if p['id'] == player_id:
+            if p['id'].lower() == pid:
                 return p
         return None
 
@@ -128,9 +126,9 @@ class PlayerService:
         if not player_id:
             return False, "ID người chơi không được để trống", None
 
-        # Kiểm tra trùng lặp
+        # Kiểm tra trùng lặp không phân biệt hoa thường
         profiles = data_manager.read_players_data()
-        if player_id in profiles:
+        if any(k.lower() == player_id for k in profiles.keys()):
             return False, f"Người chơi '{player_id}' đã tồn tại", None
 
         # Khởi tạo thông số chuẩn hóa thang 1-10
@@ -143,7 +141,7 @@ class PlayerService:
         fav_champs = data.get('favorite_champions', [])
         primary_role = data.get('primary_role', 'MID')
 
-        profiles[player_id] = {
+        new_player = {
             'id': player_id,
             'nickname': nickname,
             'avatar': avatar,
@@ -155,20 +153,31 @@ class PlayerService:
             'primary_role': primary_role
         }
 
-        success = data_manager.save_players_data(profiles)
+        # Lưu đơn lẻ nhanh chóng
+        success = data_manager.save_single_player(new_player)
         if success:
-            self.refresh_metrics()
             return True, "Thêm người chơi thành công", self.get_player(player_id)
         return False, "Lỗi khi lưu người chơi vào cơ sở dữ liệu", None
 
     def update_player(self, player_id: str, data: Dict[str, Any]) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        pid = player_id.strip().lower()
         profiles = data_manager.read_players_data()
-        if player_id not in profiles:
-            # Nếu người chơi có trong CSV nhưng chưa có trong players.json thì khởi tạo mới
-            profiles[player_id] = {'id': player_id}
 
-        cur = profiles[player_id]
+        target_key = None
+        for k in profiles.keys():
+            if k.lower() == pid:
+                target_key = k
+                break
 
+        if target_key is not None:
+            cur = profiles[target_key].copy()
+            # Nếu key cũ khác với pid chuẩn hóa (ví dụ sniperTX vs snipertx), xóa key cũ để không bị 2 bản ghi
+            if target_key != pid:
+                data_manager.delete_single_player(target_key)
+        else:
+            cur = {'id': pid}
+
+        cur['id'] = pid
         if 'nickname' in data and data['nickname']:
             cur['nickname'] = str(data['nickname']).strip()
         if 'avatar' in data and data['avatar']:
@@ -186,20 +195,19 @@ class PlayerService:
         if 'primary_role' in data:
             cur['primary_role'] = str(data['primary_role']).strip().upper()
 
-        # CHÚ Ý: Trường form và elo KHÔNG ĐƯỢC PHÉP chỉnh sửa thủ công từ data!
-
-        success = data_manager.save_players_data(profiles)
+        # Lưu đơn lẻ nhanh chóng
+        success = data_manager.save_single_player(cur)
         if success:
-            self.refresh_metrics()
-            return True, "Cập nhật thông tin thành công", self.get_player(player_id)
+            return True, "Cập nhật thông tin thành công", self.get_player(pid)
         return False, "Lỗi khi cập nhật dữ liệu", None
 
     def delete_player(self, player_id: str) -> Tuple[bool, str]:
         pid = player_id.strip().lower()
         profiles = data_manager.read_players_data()
-        if pid in profiles:
-            data_manager.delete_single_player(pid)
-            self.refresh_metrics()
+        target_keys = [k for k in profiles.keys() if k.lower() == pid]
+        if target_keys:
+            for k in target_keys:
+                data_manager.delete_single_player(k)
             return True, f"Đã xóa hồ sơ người chơi '{pid}'"
         return False, f"Không tìm thấy người chơi '{pid}' trong danh sách hồ sơ"
 

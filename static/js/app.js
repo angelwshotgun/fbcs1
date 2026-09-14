@@ -323,15 +323,19 @@ async function rerollTeams() {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i> <span>Đang xếp...</span>';
     }
 
-    if (captain1 && captain2 && selectedCaptainsRemaining.length === 8) {
-        await handleCreateTeamsWithCaptains();
-    } else {
-        await handleCreateTeams();
-    }
-
-    if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-dice text-sm"></i> <span>Xếp Lại (RNG)</span>';
+    try {
+        if (currentTeamsResult && currentTeamsResult.captain1 && selectedCaptains.length === 2 && selectedCaptainMembers.length === 8) {
+            await handleCreateTeamsWithCaptains();
+        } else {
+            await handleCreateTeams();
+        }
+    } catch (err) {
+        console.error("Lỗi khi xếp lại đội:", err);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-dice text-sm"></i> <span>Xếp Lại (RNG)</span>';
+        }
     }
 }
 
@@ -359,8 +363,10 @@ function createTeamPlayerCard(p, teamColor) {
     return div;
 }
 
+let isSubmittingMatch = false;
+
 async function submitMatchWinner(winningTeam) {
-    if (!currentTeamsResult) return;
+    if (!currentTeamsResult || isSubmittingMatch) return;
 
     const winnerLabel = winningTeam === 'team1' ? 'Đội Xanh' : 'Đội Đỏ';
 
@@ -371,50 +377,52 @@ async function submitMatchWinner(winningTeam) {
         showCancelButton: true,
         confirmButtonText: 'Đồng Ý Lưu',
         cancelButtonText: 'Hủy',
+        showLoaderOnConfirm: true,
+        preConfirm: async () => {
+            isSubmittingMatch = true;
+            try {
+                const res = await fetch('/api/update_match_result', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        team1: currentTeamsResult.team1_names,
+                        team2: currentTeamsResult.team2_names,
+                        winner: winningTeam,
+                        team1_power: currentTeamsResult.team1_power || 0,
+                        team2_power: currentTeamsResult.team2_power || 0,
+                        synergies: {
+                            team1: currentTeamsResult.team1_synergies || [],
+                            team2: currentTeamsResult.team2_synergies || []
+                        }
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Lỗi khi lưu kết quả trận đấu');
+                }
+                return data;
+            } catch (err) {
+                Swal.showValidationMessage(err.message || 'Lỗi kết nối khi lưu kết quả');
+            } finally {
+                isSubmittingMatch = false;
+            }
+        },
+        allowOutsideClick: () => !Swal.isLoading(),
         ...SWAL_THEME
     });
 
-    if (!confirm.isConfirmed) return;
-
-    try {
-        const res = await fetch('/api/update_match_result', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                team1: currentTeamsResult.team1_names,
-                team2: currentTeamsResult.team2_names,
-                winner: winningTeam,
-                team1_power: currentTeamsResult.team1_power || 0,
-                team2_power: currentTeamsResult.team2_power || 0,
-                synergies: {
-                    team1: currentTeamsResult.team1_synergies || [],
-                    team2: currentTeamsResult.team2_synergies || []
-                }
-            })
+    if (confirm.isConfirmed && confirm.value) {
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã cập nhật trận đấu!',
+            text: 'Elo ẩn và Phong độ đã được cập nhật thành công.',
+            timer: 2000,
+            showConfirmButton: false,
+            ...SWAL_THEME
         });
-        const data = await res.json();
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Đã cập nhật trận đấu!',
-                text: 'Elo ẩn và Phong độ đã được cập nhật thành công.',
-                timer: 2000,
-                showConfirmButton: false,
-                ...SWAL_THEME
-            });
-            await loadAllPlayers();
-            await loadStatus();
-            clearSelectedPlayers();
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Lỗi',
-                text: data.error,
-                ...SWAL_THEME
-            });
-        }
-    } catch (err) {
-        console.error("Lỗi ghi nhận kết quả:", err);
+        await loadAllPlayers();
+        await loadStatus();
+        clearSelectedPlayers();
     }
 }
 
@@ -770,8 +778,12 @@ function randomizeAvatar() {
     document.getElementById('form-avatar-preview').src = newAvatar;
 }
 
+let isSavingPlayer = false;
+
 async function handleSavePlayer(e) {
     e.preventDefault();
+    if (isSavingPlayer) return;
+
     const mode = document.getElementById('form-mode').value;
     const id = document.getElementById('form-id').value.trim().toLowerCase();
     const nickname = document.getElementById('form-nickname').value.trim();
@@ -781,15 +793,38 @@ async function handleSavePlayer(e) {
     const flex_lane = parseFloat(document.getElementById('form-flex').value);
     const consistency = parseFloat(document.getElementById('form-consist').value);
 
+    if (!id) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Thiếu ID',
+            text: 'Vui lòng nhập ID định danh cho tuyển thủ.',
+            ...SWAL_THEME
+        });
+        return;
+    }
+
     const payload = {
         id,
-        nickname,
+        nickname: nickname || id.toUpperCase(),
         avatar,
         skill,
         champion_pool,
         flex_lane,
         consistency
     };
+
+    const saveBtn = document.getElementById('btn-save-player') || document.querySelector('#player-form button[type="submit"]');
+    const origBtnHtml = saveBtn ? saveBtn.innerHTML : 'Lưu Thông Tin';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Đang lưu...';
+        saveBtn.classList.add('opacity-70', 'cursor-not-allowed');
+    }
+
+    const formInputs = document.querySelectorAll('#player-form input');
+    formInputs.forEach(input => input.disabled = true);
+
+    isSavingPlayer = true;
 
     try {
         let res;
@@ -800,7 +835,7 @@ async function handleSavePlayer(e) {
                 body: JSON.stringify(payload)
             });
         } else {
-            res = await fetch(`/api/players/${id}`, {
+            res = await fetch(`/api/players/${encodeURIComponent(id)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -809,6 +844,7 @@ async function handleSavePlayer(e) {
 
         const data = await res.json();
         if (data.success) {
+            closePlayerModal();
             Swal.fire({
                 icon: 'success',
                 title: 'Thành công',
@@ -817,7 +853,6 @@ async function handleSavePlayer(e) {
                 showConfirmButton: false,
                 ...SWAL_THEME
             });
-            closePlayerModal();
             await loadAllPlayers();
         } else {
             Swal.fire({
@@ -829,6 +864,26 @@ async function handleSavePlayer(e) {
         }
     } catch (err) {
         console.error("Lỗi lưu người chơi:", err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi kết nối',
+            text: 'Không thể kết nối đến máy chủ. Vui lòng thử lại.',
+            ...SWAL_THEME
+        });
+    } finally {
+        isSavingPlayer = false;
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = origBtnHtml;
+            saveBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        }
+        formInputs.forEach(input => {
+            if (input.id === 'form-id' && mode === 'edit') {
+                input.disabled = true;
+            } else {
+                input.disabled = false;
+            }
+        });
     }
 }
 
