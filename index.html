@@ -1,223 +1,633 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team Creator</title>
+    <title>FBCS AI 3.0 - Hệ Thống Chia Đội & Quản Lý Tuyển Thủ eSports</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0b0f19',
+                        darkCard: '#111827',
+                        darkBorder: '#1f2937',
+                        accentGold: '#f59e0b',
+                        accentCyan: '#06b6d4',
+                        accentBlue: '#3b82f6',
+                        accentRed: '#ef4444'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Chart.js for Radar Chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         }
-        #playerButtons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
+        .glow-gold {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
         }
-        button {
-            padding: 10px;
-            cursor: pointer;
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
         }
-        .selected {
-            background-color: #4CAF50;
-            color: white;
+        .glow-fire {
+            box-shadow: 0 0 18px rgba(239, 68, 68, 0.35);
         }
-        #createTeamBtn, .winBtn {
-            display: block;
-            margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
         }
-        #result {
-            margin-top: 20px;
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111827;
         }
-        header {
-            background-color: #f0f0f0;
-            padding: 10px;
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
         }
-
-        nav ul {
-            list-style: none;
-            display: flex;
-            justify-content: space-around;
-        }
-
-        nav li {
-            display: inline-block;
-        }
-
-        nav a {
-            text-decoration: none;
-            color: #333;
-            padding: 10px;
-        }
-
-        nav a:hover {
-            background-color: #ccc;
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
         }
     </style>
 </head>
-<body>
-    <header>
-        <nav>
-          <ul>
-            <li><a href="/">Chia đội</a></li>
-            <li><a href="/player">Elo</a></li>
-            <li><a href="/pair">Danh sách 2</a></li>
-            <li><a href="/captains">Chia đội với Đội trưởng</a></li>
-        </ul>
-        </nav>
-      </header>
-    <h1>FBCS AI 2.0</h1>
-    <div id="playerButtons"></div>
-    <button id="createTeamBtn" onclick="createTeams()">Create Teams</button>
-    <div id="result"></div>
+<body class="min-h-screen flex flex-col bg-darkBg text-gray-100">
 
-    <script>
-        let selectedPlayers = [];
-        let currentTeams = null;
+    <!-- Top Navigation Header -->
+    <header class="bg-darkCard border-b border-darkBorder sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('matchmaker')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-cyan-500 flex items-center justify-center text-white font-black text-xl shadow-lg">
+                        <i class="fa-solid fa-gamepad"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xl font-extrabold tracking-wider bg-gradient-to-r from-amber-400 via-yellow-300 to-cyan-400 bg-clip-text text-transparent">FBCS AI</span>
+                            <span class="bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold border border-amber-500/30">v3.0 HYBRID</span>
+                        </div>
+                        <p class="text-xs text-gray-400 hidden sm:block">Smart Matchmaker & Player Rating System</p>
+                    </div>
+                </div>
 
-        function togglePlayer(player) {
-            const index = selectedPlayers.indexOf(player);
-            if (index > -1) {
-                selectedPlayers.splice(index, 1);
-            } else {
-                if (selectedPlayers.length < 10) {
-                    selectedPlayers.push(player);
-                } else {
-                    alert("You can only select up to 10 players.");
-                    return;
-                }
-            }
-            updateButtonStyles();
-        }
+                <!-- Navigation Tabs -->
+                <nav class="flex space-x-1 sm:space-x-2 overflow-x-auto py-2">
+                    <button onclick="switchTab('matchmaker')" id="tab-btn-matchmaker" class="nav-tab px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2 bg-amber-500 text-gray-950 shadow-md">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Chia Đội</span>
+                    </button>
+                    <button onclick="switchTab('captains')" id="tab-btn-captains" class="nav-tab px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-gray-800">
+                        <i class="fa-solid fa-crown"></i>
+                        <span>Đội Trưởng</span>
+                    </button>
+                    <button onclick="switchTab('players')" id="tab-btn-players" class="nav-tab px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-gray-800">
+                        <i class="fa-solid fa-users-gear"></i>
+                        <span>Quản Trị</span>
+                    </button>
+                    <button onclick="switchTab('leaderboard')" id="tab-btn-leaderboard" class="nav-tab px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-gray-800">
+                        <i class="fa-solid fa-trophy"></i>
+                        <span>BXH Elo</span>
+                    </button>
+                    <button onclick="switchTab('synergies')" id="tab-btn-synergies" class="nav-tab px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-gray-800">
+                        <i class="fa-solid fa-handshake"></i>
+                        <span>Cặp Ăn Ý</span>
+                    </button>
+                    <button onclick="switchTab('settings')" id="tab-btn-settings" class="nav-tab px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-gray-800">
+                        <i class="fa-solid fa-gear"></i>
+                        <span class="hidden md:inline">Cài Đặt</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
 
-        function updateButtonStyles() {
-            const buttons = document.querySelectorAll('#playerButtons button');
-            buttons.forEach(button => {
-                if (selectedPlayers.includes(button.textContent)) {
-                    button.classList.add('selected');
-                } else {
-                    button.classList.remove('selected');
-                }
-            });
-        }
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-        async function fetchPlayers() {
-            try {
-                const response = await fetch('/players');
-                const data = await response.json();
-                return data.players.sort();
-            } catch (error) {
-                console.error('Error fetching players:', error);
-                return [];
-            }
-        }
+        <!-- ============================================== -->
+        <!-- TAB 1: CHIA ĐỘI THÔNG MINH (MATCHMAKER) -->
+        <!-- ============================================== -->
+        <section id="tab-content-matchmaker" class="tab-pane space-y-6">
+            <!-- Header bar with player counter -->
+            <div class="bg-darkCard p-5 rounded-2xl border border-darkBorder flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-3">
+                        <span>⚔️ Chia Đội Tối Ưu</span>
+                        <span id="selected-counter-badge" class="text-sm px-3 py-1 rounded-full bg-gray-800 text-amber-400 border border-amber-500/30 font-semibold">
+                            Đã chọn: <b id="selected-count-text">0</b> / 10
+                        </span>
+                    </h2>
+                    <p class="text-sm text-gray-400 mt-1">
+                        Chọn chính xác 10 tuyển thủ. Thuật toán sẽ phân tích Elo ẩn, Stats (1-10), Phong độ 🔥 và cặp ăn ý để cân bằng 2 đội.
+                    </p>
+                </div>
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <button onclick="clearSelectedPlayers()" class="px-4 py-2.5 rounded-xl border border-gray-700 hover:bg-gray-800 text-gray-300 text-sm font-medium transition">
+                        <i class="fa-solid fa-rotate-left mr-1.5"></i> Bỏ chọn tất cả
+                    </button>
+                    <button onclick="handleCreateTeams()" id="btn-create-teams" class="flex-1 md:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-gray-950 font-bold text-sm shadow-lg hover:shadow-amber-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-bolt mr-1.5"></i> Chia Đội Cân Bằng
+                    </button>
+                </div>
+            </div>
 
-        async function displayPlayers() {
-            const players = await fetchPlayers();
-            const playerButtons = document.getElementById('playerButtons');
-            players.forEach(player => {
-                const button = document.createElement('button');
-                button.textContent = player;
-                button.onclick = () => togglePlayer(player);
-                playerButtons.appendChild(button);
-            });
-        }
+            <!-- Screenshot Quick Scanner Dropzone (Ctrl+V / Drag & Drop / File Select) -->
+            <div class="bg-darkCard p-4 sm:p-5 rounded-2xl border border-darkBorder hover:border-cyan-500/50 transition duration-200">
+                <div id="screenshot-dropzone" onclick="document.getElementById('screenshot-file-input').click()" class="border-2 border-dashed border-gray-700 hover:border-cyan-400 bg-gray-950/60 hover:bg-cyan-950/20 rounded-2xl p-5 text-center cursor-pointer transition-all duration-200 group relative">
+                    <input type="file" id="screenshot-file-input" accept="image/*" class="hidden" onchange="handleScreenshotFileSelect(event)">
+                    
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 text-cyan-400 flex items-center justify-center text-xl group-hover:scale-110 group-hover:text-cyan-300 transition-all shadow-lg">
+                            <i class="fa-solid fa-camera"></i>
+                        </div>
+                        <div class="text-center sm:text-left">
+                            <h4 class="text-sm font-bold text-white flex items-center justify-center sm:justify-start gap-2">
+                                <span>📸 Quét Ảnh Màn Hình Phòng Đấu (Tự Động Chọn 10 Người)</span>
+                                <span class="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-bold border border-cyan-500/30">AI Vision</span>
+                            </h4>
+                            <p class="text-xs text-gray-400 mt-1">
+                                Chụp ảnh sảnh chờ LMHT / Discord (<kbd class="px-1.5 py-0.5 rounded bg-gray-800 border border-gray-700 text-amber-400 font-mono font-bold">Win + Shift + S</kbd>), rồi bấm <kbd class="px-1.5 py-0.5 rounded bg-gray-800 border border-gray-700 text-amber-400 font-mono font-bold">Ctrl + V</kbd> dán trực tiếp vào trang này, hoặc kéo thả ảnh vào đây!
+                            </p>
+                        </div>
+                    </div>
 
-        async function createTeams() {
-            if (selectedPlayers.length !== 10) {
-                alert("Please select exactly 10 players.");
-                return;
-            }
+                    <!-- OCR Scanning Loader (Hidden by default) -->
+                    <div id="ocr-loading-spinner" class="hidden mt-3 pt-3 border-t border-gray-800 flex items-center justify-center gap-2 text-xs font-semibold text-cyan-400">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <span>AI đang phân tích ảnh và đối chiếu 10 tuyển thủ trong sảnh chờ...</span>
+                    </div>
+                </div>
 
-            try {
-                const response = await fetch('/create_teams', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ players: selectedPlayers }),
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'An error occurred while creating teams.');
-                }
-                
-                const data = await response.json();
-                currentTeams = data;
-                displayResult(data);
-                
-                // Don't clear selectedPlayers here
-            } catch (error) {
-                console.error('Error creating teams:', error);
-                alert(error.message);
-            }
-        }
+                <!-- Last Detected Summary (Hidden by default) -->
+                <div id="ocr-result-summary" class="hidden mt-3 p-3 rounded-xl bg-cyan-950/20 border border-cyan-500/30 text-xs flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                        <span class="text-gray-300">Đã nhận diện: <b id="ocr-detected-names" class="text-white"></b></span>
+                    </div>
+                    <button onclick="handleCreateTeams()" class="px-3 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-bold text-xs shadow transition">
+                        Chia Đội Ngay
+                    </button>
+                </div>
+            </div>
 
-        function displayResult(data) {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = `
-                <h2>Teams Created</h2>
-                <h3>Team 1</h3>
-                <p>Players: ${data.team1.join(', ')}</p>
-                <p>Score: ${data.team1_score.toFixed(2)}</p>
-                <button class="winBtn" onclick="updateMatchResult('team1')">Team 1 Won</button>
-                <h3>Team 2</h3>
-                <p>Players: ${data.team2.join(', ')}</p>
-                <p>Score: ${data.team2_score.toFixed(2)}</p>
-                <button class="winBtn" onclick="updateMatchResult('team2')">Team 2 Won</button>
-            `;
-        }
+            <!-- Player Selection Grid -->
+            <div class="bg-darkCard p-5 rounded-2xl border border-darkBorder">
+                <div class="flex flex-col sm:flex-row items-center justify-between mb-4 gap-3">
+                    <h3 class="text-base font-bold text-gray-300 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-cyan-400"></i>
+                        <span>Danh Sách Tuyển Thủ Có Sẵn</span>
+                    </h3>
+                    <div class="relative w-full sm:w-64">
+                        <i class="fa-solid fa-search absolute left-3 top-3 text-gray-500 text-xs"></i>
+                        <input type="text" id="matchmaker-search" oninput="filterMatchmakerPlayers()" placeholder="Tìm tên tuyển thủ..." class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-cyan-500">
+                    </div>
+                </div>
 
-        async function updateMatchResult(winningTeam) {
-            if (!currentTeams) {
-                alert("Please create teams first.");
-                return;
-            }
+                <!-- Grid cards of players -->
+                <div id="matchmaker-players-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 custom-scrollbar max-h-[460px] overflow-y-auto p-1">
+                    <!-- Dynamic rendering via JS -->
+                </div>
+            </div>
 
-            try {
-                const response = await fetch('/update_match_result', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        team1: currentTeams.team1,
-                        team2: currentTeams.team2,
-                        winner: winningTeam
-                    }),
-                });
+            <!-- Matchmaking Result View (Hidden until teams are created) -->
+            <div id="teams-result-section" class="hidden space-y-6">
+                <div class="bg-gradient-to-b from-darkCard to-gray-900 p-6 rounded-3xl border border-amber-500/30 shadow-2xl">
+                    <div class="text-center mb-6">
+                        <span class="px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold uppercase tracking-wider">
+                            ✨ KẾT QUẢ PHÂN CHIA ĐỘI HÌNH TỐI ƯU
+                        </span>
+                        <div class="flex items-center justify-center gap-6 mt-3 text-sm text-gray-400">
+                            <span>Chênh lệch sức mạnh: <b id="res-power-diff" class="text-white text-base">0.0</b></span>
+                            <span>•</span>
+                            <span class="text-cyan-400 font-semibold">Tỷ lệ dự đoán: <span id="res-win-prob-label">50% - 50%</span></span>
+                        </div>
+                    </div>
 
-                const result = await response.json();
+                    <!-- Teams Side-by-Side Comparison -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Team 1 (Blue / Cyan) -->
+                        <div class="bg-blue-950/20 border border-blue-500/30 rounded-2xl p-5 relative overflow-hidden">
+                            <div class="flex items-center justify-between mb-4 border-b border-blue-500/20 pb-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow">1</div>
+                                    <div>
+                                        <h3 class="font-extrabold text-blue-400 text-lg">ĐỘI XANH (TEAM 1)</h3>
+                                        <p class="text-xs text-gray-400">Sức mạnh tổng: <b id="team1-power-text" class="text-blue-300">0</b></p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span id="team1-prob-badge" class="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 font-black text-sm border border-blue-500/30">50% Win</span>
+                                </div>
+                            </div>
+                            <div id="team1-players-list" class="space-y-2.5">
+                                <!-- Rendered via JS -->
+                            </div>
+                            <div class="mt-5 pt-3 border-t border-blue-500/20 flex items-center justify-between">
+                                <span class="text-xs text-gray-400">Xác nhận kết quả:</span>
+                                <button onclick="submitMatchWinner('team1')" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition">
+                                    🏆 Đội Xanh Thắng
+                                </button>
+                            </div>
+                        </div>
 
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to update match result');
-                }
+                        <!-- Team 2 (Red / Amber) -->
+                        <div class="bg-red-950/20 border border-red-500/30 rounded-2xl p-5 relative overflow-hidden">
+                            <div class="flex items-center justify-between mb-4 border-b border-red-500/20 pb-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white shadow">2</div>
+                                    <div>
+                                        <h3 class="font-extrabold text-red-400 text-lg">ĐỘI ĐỎ (TEAM 2)</h3>
+                                        <p class="text-xs text-gray-400">Sức mạnh tổng: <b id="team2-power-text" class="text-red-300">0</b></p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span id="team2-prob-badge" class="px-3 py-1 rounded-full bg-red-500/20 text-red-300 font-black text-sm border border-red-500/30">50% Win</span>
+                                </div>
+                            </div>
+                            <div id="team2-players-list" class="space-y-2.5">
+                                <!-- Rendered via JS -->
+                            </div>
+                            <div class="mt-5 pt-3 border-t border-red-500/20 flex items-center justify-between">
+                                <span class="text-xs text-gray-400">Xác nhận kết quả:</span>
+                                <button onclick="submitMatchWinner('team2')" class="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-lg transition">
+                                    🏆 Đội Đỏ Thắng
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-                alert(result.message);
-                
-                // Clear the current teams
-                currentTeams = null;
-                
-                // Clear the result display
-                document.getElementById('result').innerHTML = '';
+                    <!-- Gemini AI Tactical Commentary Box -->
+                    <div class="mt-6 pt-6 border-t border-gray-800">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                                <span>Bình Luận Viên & Phân Tích Kèo AI</span>
+                            </h4>
+                            <button onclick="requestAiAnalysis()" id="btn-run-ai" class="text-xs px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 transition">
+                                <i class="fa-solid fa-brain mr-1"></i> Phân Tích Lại Bằng AI
+                            </button>
+                        </div>
+                        <div id="ai-analysis-content" class="bg-gray-950/60 p-4 rounded-xl border border-gray-800 text-xs text-gray-300 leading-relaxed custom-scrollbar max-h-48 overflow-y-auto">
+                            Đang chờ yêu cầu phân tích... Nhấn nút phía trên để kích hoạt AI phân tích kèo đấu!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-                // Don't clear selectedPlayers, just update the button styles
-                updateButtonStyles();
+        <!-- ============================================== -->
+        <!-- TAB 2: CHIA ĐỘI VỚI ĐỘI TRƯỞNG (CAPTAINS) -->
+        <!-- ============================================== -->
+        <section id="tab-content-captains" class="tab-pane hidden space-y-6">
+            <div class="bg-darkCard p-5 rounded-2xl border border-darkBorder flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-3">
+                        <span>👑 Chia Đội Với 2 Đội Trưởng</span>
+                        <span id="captain-badge" class="text-sm px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-semibold">
+                            Cần: 2 Captains + 8 Tuyển Thủ
+                        </span>
+                    </h2>
+                    <p class="text-sm text-gray-400 mt-1">
+                        Chọn lần lượt: 2 tuyển thủ làm Captain (đánh dấu màu vàng), sau đó chọn thêm 8 tuyển thủ còn lại.
+                    </p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="clearCaptainSelection()" class="px-4 py-2 rounded-xl border border-gray-700 hover:bg-gray-800 text-gray-300 text-sm font-medium transition">
+                        <i class="fa-solid fa-rotate-left mr-1"></i> Đặt lại
+                    </button>
+                    <button onclick="handleCreateTeamsWithCaptains()" class="px-6 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-gray-950 font-bold text-sm shadow hover:shadow-amber-500/20 transition">
+                        <i class="fa-solid fa-crown mr-1"></i> Xếp Đội Cân Bằng
+                    </button>
+                </div>
+            </div>
 
-            } catch (error) {
-                console.error('Error updating match result:', error);
-                alert('An error occurred while updating the match result: ' + error.message);
-            }
-        }
+            <!-- Captains Status Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-xl font-bold">
+                        1
+                    </div>
+                    <div>
+                        <span class="text-xs uppercase tracking-wider text-amber-400 font-bold">Đội Trưởng 1</span>
+                        <h4 id="cap1-display-name" class="font-extrabold text-white text-base">Chưa chọn</h4>
+                    </div>
+                </div>
+                <div class="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-xl font-bold">
+                        2
+                    </div>
+                    <div>
+                        <span class="text-xs uppercase tracking-wider text-amber-400 font-bold">Đội Trưởng 2</span>
+                        <h4 id="cap2-display-name" class="font-extrabold text-white text-base">Chưa chọn</h4>
+                    </div>
+                </div>
+            </div>
 
-        // Automatically fetch and display players when the page loads
-        document.addEventListener('DOMContentLoaded', displayPlayers);
-    </script>
+            <!-- Captains Player Selection Grid -->
+            <div class="bg-darkCard p-5 rounded-2xl border border-darkBorder">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-bold text-gray-300">Chọn 2 Đội Trưởng & 8 Tuyển Thủ (Click lần 1-2 chọn Captain, sau đó chọn member)</h3>
+                    <span id="captain-selection-text" class="text-xs text-amber-400 font-semibold">Đã chọn: 0/10</span>
+                </div>
+                <div id="captains-players-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 custom-scrollbar max-h-[460px] overflow-y-auto p-1">
+                    <!-- Rendered via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- TAB 3: QUẢN TRỊ NGƯỜI CHƠI (PLAYER ADMIN) -->
+        <!-- ============================================== -->
+        <section id="tab-content-players" class="tab-pane hidden space-y-6">
+            <div class="bg-darkCard p-5 rounded-2xl border border-darkBorder flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-3">
+                        <span>👥 Quản Trị Tuyển Thủ</span>
+                        <span id="total-players-badge" class="text-xs px-2.5 py-1 rounded-full bg-gray-800 text-cyan-400 border border-cyan-500/30 font-bold">36 Tuyển Thủ</span>
+                    </h2>
+                    <p class="text-sm text-gray-400 mt-1">
+                        Thêm, sửa, xóa, tùy chỉnh Nickname, Avatar và các chỉ số (thang điểm 1 - 10). Phong độ và Elo ẩn được bảo vệ và tự động cập nhật.
+                    </p>
+                </div>
+                <div>
+                    <button onclick="openPlayerModal('add')" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-sm shadow-lg hover:shadow-cyan-500/25 transition flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Thêm Tuyển Thủ Mới</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter & Search Controls -->
+            <div class="bg-darkCard p-4 rounded-xl border border-darkBorder flex flex-col md:flex-row items-center justify-between gap-3">
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <div class="relative flex-1 sm:w-64">
+                        <i class="fa-solid fa-search absolute left-3 top-3 text-gray-500 text-xs"></i>
+                        <input type="text" id="admin-player-search" oninput="filterAdminPlayers()" placeholder="Tìm theo tên hoặc nickname..." class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <select id="admin-sort-by" onchange="filterAdminPlayers()" class="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-cyan-500">
+                        <option value="elo">Sắp xếp: Elo Ẩn cao nhất</option>
+                        <option value="skill">Sắp xếp: Kỹ năng cá nhân</option>
+                        <option value="form">Sắp xếp: Phong độ cao nhất</option>
+                        <option value="winrate">Sắp xếp: Tỷ lệ thắng %</option>
+                        <option value="name">Sắp xếp: Tên A-Z</option>
+                    </select>
+                </div>
+                <div class="text-xs text-gray-400 flex items-center gap-4">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span> 🔥 On fire</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span> ⚡ Phong độ tốt</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block"></span> ❄️ Xuống tay</span>
+                </div>
+            </div>
+
+            <!-- Players Cards / Table Grid -->
+            <div id="admin-players-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- Dynamically rendered via JS -->
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- TAB 4: BẢNG XẾP HẠNG CHUNG (LEADERBOARD) -->
+        <!-- ============================================== -->
+        <section id="tab-content-leaderboard" class="tab-pane hidden space-y-6">
+            <div class="bg-darkCard p-5 rounded-2xl border border-darkBorder flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-3">
+                        <span>🏆 Bảng Xếp Hạng Tổng Quát</span>
+                    </h2>
+                    <p class="text-sm text-gray-400 mt-1">
+                        Xếp hạng toàn bộ tuyển thủ theo Elo ẩn thực chiến, Phong độ tự động và các chỉ số Stats (thang 1 - 10).
+                    </p>
+                </div>
+                <button onclick="loadLeaderboard()" class="px-4 py-2 rounded-xl border border-gray-700 hover:bg-gray-800 text-gray-300 text-xs font-semibold transition">
+                    <i class="fa-solid fa-arrows-rotate mr-1.5"></i> Làm mới
+                </button>
+            </div>
+
+            <!-- Leaderboard Table -->
+            <div class="bg-darkCard rounded-2xl border border-darkBorder overflow-hidden shadow-xl">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-gray-800 bg-gray-950/50 text-xs text-gray-400 uppercase tracking-wider font-bold">
+                                <th class="py-3.5 px-4 text-center w-16">Hạng</th>
+                                <th class="py-3.5 px-4">Tuyển Thủ</th>
+                                <th class="py-3.5 px-4 text-center">Elo Ẩn</th>
+                                <th class="py-3.5 px-4 text-center">Stats OVR</th>
+                                <th class="py-3.5 px-4 text-center">Phong Độ (1-10)</th>
+                                <th class="py-3.5 px-4 text-center">Tỷ Lệ Thắng</th>
+                                <th class="py-3.5 px-4 text-center">Trận (W / L)</th>
+                                <th class="py-3.5 px-4 text-center">5 Trận Gần Nhất</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-table-body" class="divide-y divide-gray-800/60 text-sm">
+                            <!-- Rendered dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- TAB 5: CẶP BÀI TRÙNG & ĂN Ý (SYNERGIES) -->
+        <!-- ============================================== -->
+        <section id="tab-content-synergies" class="tab-pane hidden space-y-6">
+            <div class="bg-darkCard p-5 rounded-2xl border border-darkBorder">
+                <h2 class="text-2xl font-bold flex items-center gap-3">
+                    <span>🤝 Cặp Bài Trùng Ăn Ý Nhất</span>
+                </h2>
+                <p class="text-sm text-gray-400 mt-1">
+                    Thống kê tỷ lệ thắng khi 2 tuyển thủ cùng chiến tuyến qua toàn bộ 240+ trận đấu trong lịch sử.
+                </p>
+            </div>
+
+            <div id="synergies-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <!-- Dynamically rendered via JS -->
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- TAB 6: CÀI ĐẶT & KẾT NỐI (SETTINGS) -->
+        <!-- ============================================== -->
+        <section id="tab-content-settings" class="tab-pane hidden space-y-6">
+            <div class="bg-darkCard p-6 rounded-2xl border border-darkBorder max-w-3xl mx-auto space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-gear text-amber-400"></i>
+                        <span>Cài Đặt Hệ Thống & Tích Hợp API</span>
+                    </h2>
+                    <p class="text-sm text-gray-400 mt-1">Quản lý cấu hình API Key, kết nối lưu trữ và trạng thái vận hành.</p>
+                </div>
+
+                <!-- Storage Info Card -->
+                <div class="p-4 rounded-xl bg-gray-900 border border-gray-800 space-y-3">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Trạng Thái Lưu Trữ Dữ Liệu</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        <div class="p-3 rounded-lg bg-gray-950 border border-gray-800">
+                            <span class="text-xs text-gray-500">Chế độ lưu trữ:</span>
+                            <p id="storage-mode-text" class="font-bold text-cyan-400 mt-0.5">Local / GitHub</p>
+                        </div>
+                        <div class="p-3 rounded-lg bg-gray-950 border border-gray-800">
+                            <span class="text-xs text-gray-500">Tổng số trận:</span>
+                            <p id="storage-matches-text" class="font-bold text-white mt-0.5">240+ trận</p>
+                        </div>
+                        <div class="p-3 rounded-lg bg-gray-950 border border-gray-800">
+                            <span class="text-xs text-gray-500">Tổng tuyển thủ:</span>
+                            <p id="storage-players-text" class="font-bold text-amber-400 mt-0.5">36 tuyển thủ</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gemini API Key Input -->
+                <div class="p-4 rounded-xl bg-gray-900 border border-gray-800 space-y-3">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
+                        <span>Tích Hợp Gemini AI (Bình Luận Kèo)</span>
+                        <span id="gemini-status-badge" class="text-xs px-2 py-0.5 rounded bg-gray-800 text-gray-400">Chưa kích hoạt</span>
+                    </h4>
+                    <p class="text-xs text-gray-400">
+                        Nhập Gemini API Key để kích hoạt tính năng phân tích chiến thuật, dự đoán đột biến và MVP sau mỗi lần chia đội.
+                    </p>
+                    <div class="flex gap-2">
+                        <input type="password" id="input-gemini-key" placeholder="Dán Gemini API Key tại đây..." class="flex-1 bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-amber-500">
+                        <button onclick="saveGeminiApiKey()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-gray-950 font-bold text-xs transition">
+                            Lưu Key
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ============================================== -->
+    <!-- MODAL: THÊM / SỬA TUYỂN THỦ -->
+    <!-- ============================================== -->
+    <div id="player-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-darkCard border border-darkBorder rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 custom-scrollbar max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-gray-800 pb-4">
+                <h3 id="modal-player-title" class="text-lg font-extrabold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-user-pen text-amber-400"></i>
+                    <span>Chỉnh Sửa Tuyển Thủ</span>
+                </h3>
+                <button onclick="closePlayerModal()" class="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-800 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form Content -->
+            <form id="player-form" onsubmit="handleSavePlayer(event)" class="space-y-4 text-xs">
+                <input type="hidden" id="form-mode" value="edit">
+
+                <!-- Basic Info: ID & Nickname -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-gray-300 mb-1">ID Định Danh (Username)</label>
+                        <input type="text" id="form-id" required placeholder="vd: wanlee" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+                        <span class="text-[10px] text-gray-500">Không dấu, khớp cột dữ liệu trận đấu.</span>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-300 mb-1">Tên Hiển Thị (Nickname)</label>
+                        <input type="text" id="form-nickname" required placeholder="vd: Wanlee Gánh Team" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+                    </div>
+                </div>
+
+                <!-- Avatar URL & Quick Selector -->
+                <div>
+                    <label class="block font-bold text-gray-300 mb-1">Ảnh Đại Diện (Avatar URL)</label>
+                    <div class="flex items-center gap-3">
+                        <img id="form-avatar-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=preview" class="w-10 h-10 rounded-xl bg-gray-900 border border-gray-700 object-cover" alt="Preview">
+                        <input type="text" id="form-avatar" oninput="updateAvatarPreview(this.value)" placeholder="Dán link ảnh hoặc để mặc định bottts..." class="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+                        <button type="button" onclick="randomizeAvatar()" class="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl transition text-xs">
+                            <i class="fa-solid fa-dice"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STATS SLIDERS (THANG ĐIỂM 1 - 10) -->
+                <div class="p-4 rounded-2xl bg-gray-950 border border-gray-800/80 space-y-3.5">
+                    <h4 class="font-bold text-amber-400 uppercase tracking-wider text-[11px] flex items-center justify-between">
+                        <span>Chỉ Số Đánh Giá (Thang Điểm 1 - 10)</span>
+                        <span class="text-gray-400 font-normal">Kéo thanh trượt để điều chỉnh</span>
+                    </h4>
+
+                    <!-- 1. Kỹ năng cá nhân -->
+                    <div>
+                        <div class="flex justify-between font-semibold mb-1">
+                            <span class="text-gray-300">🎯 Kỹ Năng Cá Nhân (Skill):</span>
+                            <b id="val-skill" class="text-amber-400 font-bold">7.5</b>
+                        </div>
+                        <input type="range" id="form-skill" min="1.0" max="10.0" step="0.5" value="7.5" oninput="document.getElementById('val-skill').innerText = this.value" class="w-full accent-amber-500 cursor-pointer">
+                    </div>
+
+                    <!-- 2. Bể tướng -->
+                    <div>
+                        <div class="flex justify-between font-semibold mb-1">
+                            <span class="text-gray-300">⚔️ Bể Tướng (Champion Pool):</span>
+                            <b id="val-pool" class="text-cyan-400 font-bold">7.0</b>
+                        </div>
+                        <input type="range" id="form-pool" min="1.0" max="10.0" step="0.5" value="7.0" oninput="document.getElementById('val-pool').innerText = this.value" class="w-full accent-cyan-500 cursor-pointer">
+                    </div>
+
+                    <!-- 3. Flex lane -->
+                    <div>
+                        <div class="flex justify-between font-semibold mb-1">
+                            <span class="text-gray-300">🔄 Flex Lane (Độ Linh Hoạt Vị Trí):</span>
+                            <b id="val-flex" class="text-blue-400 font-bold">6.5</b>
+                        </div>
+                        <input type="range" id="form-flex" min="1.0" max="10.0" step="0.5" value="6.5" oninput="document.getElementById('val-flex').innerText = this.value" class="w-full accent-blue-500 cursor-pointer">
+                    </div>
+
+                    <!-- 4. Tính ổn định -->
+                    <div>
+                        <div class="flex justify-between font-semibold mb-1">
+                            <span class="text-gray-300">🛡️ Tính Ổn Định (Consistency):</span>
+                            <b id="val-consist" class="text-emerald-400 font-bold">7.0</b>
+                        </div>
+                        <input type="range" id="form-consist" min="1.0" max="10.0" step="0.5" value="7.0" oninput="document.getElementById('val-consist').innerText = this.value" class="w-full accent-emerald-500 cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- READONLY FIELD: PHONG ĐỘ & ELO TỰ ĐỘNG -->
+                <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-amber-400 text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-lock text-[10px]"></i>
+                            <span>Phong Độ & Elo Ẩn: TỰ ĐỘNG TÍNH TOÁN</span>
+                        </span>
+                        <span id="form-display-badge" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold text-[10px]">
+                            🔥 8.5/10 (Read-only)
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-gray-400">
+                        Chỉ số Phong độ được hệ thống tính tự động từ chuỗi thắng/thua các trận đấu gần nhất trong dữ liệu, không cho phép can thiệp thủ công để đảm bảo tính công bằng.
+                    </p>
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-gray-800">
+                    <button type="button" onclick="closePlayerModal()" class="px-4 py-2 rounded-xl border border-gray-700 hover:bg-gray-800 text-gray-300 font-semibold transition">
+                        Hủy
+                    </button>
+                    <button type="submit" class="px-6 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-gray-950 font-bold shadow-lg transition">
+                        Lưu Thông Tin
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Core Script -->
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
