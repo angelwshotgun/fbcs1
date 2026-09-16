@@ -1,16 +1,16 @@
 <!-- ============================================== -->
 <!-- MODAL: GHI NHẬN KẾT QUẢ & PHÂN TÍCH ELO TRẬN ĐẤU (STANDARD HOẶC KÈM ẢNH) -->
 <!-- ============================================== -->
-<div id="match-result-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full p-5 sm:p-7 space-y-5 my-8">
+<div id="match-result-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div id="match-result-modal-card" class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-5xl xl:max-w-6xl w-full p-4 sm:p-6 space-y-4 my-auto max-h-[95vh] flex flex-col transition-all">
         <!-- Header -->
-        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3.5 flex-shrink-0">
             <div class="flex items-center gap-3">
                 <div id="modal-winner-badge-icon" class="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-lg font-bold shadow-xs">
                     <i class="fa-solid fa-trophy"></i>
                 </div>
                 <div>
-                    <h3 class="text-lg font-black font-heading text-slate-900 flex items-center gap-2">
+                    <h3 class="text-base sm:text-lg font-black font-heading text-slate-900 flex items-center gap-2">
                         <span>Ghi Nhận Kết Quả:</span>
                         <span id="modal-winner-team-name" class="text-blue-600 font-extrabold">Đội Xanh Thắng</span>
                     </h3>
@@ -29,7 +29,7 @@
         </div>
 
         <!-- Mode Selector Tabs (2 Options) -->
-        <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl">
+        <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl flex-shrink-0">
             <button type="button" onclick="switchMatchResultTab('standard')" id="btn-tab-standard" class="py-2.5 px-3 rounded-xl text-xs font-bold font-heading transition flex items-center justify-center gap-1.5 bg-white text-indigo-700 shadow-xs">
                 <i class="fa-solid fa-bolt"></i>
                 <span>Lưu Nhanh (Không kèm ảnh)</span>
@@ -40,142 +40,176 @@
             </button>
         </div>
 
-        <!-- OPTION 1: Lưu chuẩn (Standard Save) Content -->
-        <div id="match-tab-content-standard" class="space-y-4">
-            <div class="p-4.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2.5 text-slate-600 leading-relaxed">
-                <div class="flex items-center justify-between">
-                    <span class="font-bold text-slate-700 flex items-center gap-1.5">
-                        <i class="fa-solid fa-calculator text-indigo-600"></i> Quy tắc tính điểm:
-                    </span>
-                    <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 text-[11px]">Công thức Logistic Elo</span>
-                </div>
-                <p>
-                    Hệ thống sẽ tính điểm biến động đồng đội tiêu chuẩn cho cả 10 tuyển thủ dựa trên chênh lệch Elo giữa 2 đội (xấp xỉ <b class="text-emerald-600 font-bold">+16 Elo</b> cho đội thắng và <b class="text-rose-600 font-bold">-16 Elo</b> cho đội thua).
-                </p>
-                <div class="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 font-bold text-slate-800 text-xs">
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
-                        <span>Đội Thắng: <b id="modal-std-winner-name" class="text-blue-600 font-extrabold">Đội Xanh</b></span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full bg-rose-600 inline-block"></span>
-                        <span>Đội Thua: <b id="modal-std-loser-name" class="text-rose-600 font-extrabold">Đội Đỏ</b></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex items-center justify-end gap-2.5 pt-2">
-                <button type="button" onclick="closeMatchResultModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition">
-                    Hủy
-                </button>
-                <button type="button" onclick="confirmSaveStandardMatch()" id="btn-confirm-save-standard" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold font-heading shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-check"></i>
-                    <span>Xác Nhận Lưu Kết Quả Ngay</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- OPTION 2: Kèm ảnh thông số trận & AI Phân Tích (AI Scoreboard Analysis) Content -->
-        <div id="match-tab-content-ai" class="hidden space-y-4">
-            <!-- Dropzone for scoreboard image -->
-            <div id="scoreboard-dropzone-area" class="border-2 border-dashed border-purple-200 hover:border-purple-400 bg-purple-50/30 hover:bg-purple-50/60 rounded-2xl p-5 text-center cursor-pointer transition relative" onclick="document.getElementById('scoreboard-file-input').click()">
-                <input type="file" id="scoreboard-file-input" accept="image/*" class="hidden" onchange="handleScoreboardFileSelect(event)">
-                
-                <div id="scoreboard-dropzone-empty" class="space-y-1.5">
-                    <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center mx-auto text-xl shadow-2xs">
-                        <i class="fa-solid fa-camera"></i>
-                    </div>
-                    <div class="font-bold text-slate-800 text-xs font-heading">
-                        Dán ảnh bảng điểm kết thúc trận đấu (<kbd class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-mono text-[10px] font-bold">Ctrl + V</kbd>)
-                    </div>
-                    <p class="text-[11px] text-slate-500">
-                        Chụp màn hình bảng kết quả có KDA, sát thương, MVP/SVP hoặc click vào đây để chọn file ảnh
-                    </p>
-                </div>
-
-                <!-- Preview thumbnail when image loaded -->
-                <div id="scoreboard-preview-container" class="hidden flex items-center justify-between gap-3 text-left">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <img id="scoreboard-preview-img" src="" class="w-16 h-12 rounded-xl object-cover border border-purple-200 flex-shrink-0 bg-slate-900" alt="Scoreboard preview">
-                        <div class="truncate">
-                            <span class="font-bold text-xs text-slate-900 block truncate" id="scoreboard-file-name">Ảnh bảng điểm</span>
-                            <span class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-                                <i class="fa-solid fa-circle-check"></i> Đã nạp ảnh thành công
-                            </span>
-                        </div>
-                    </div>
-                    <button type="button" onclick="event.stopPropagation(); removeScoreboardImage();" class="px-2.5 py-1 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs transition">
-                        <i class="fa-solid fa-trash-can mr-1"></i> Đổi ảnh
-                    </button>
-                </div>
-            </div>
-
-            <!-- Run AI Button -->
-            <div id="scoreboard-ai-controls">
-                <button type="button" onclick="runScoreboardAiAnalysis()" id="btn-run-scoreboard-ai" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold font-heading text-xs shadow-md shadow-purple-500/20 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span>AI Phân Tích Thông Số & Đề Xuất Điểm Elo</span>
-                </button>
-            </div>
-
-            <!-- AI Loading Spinner -->
-            <div id="scoreboard-ai-loading" class="hidden p-5 rounded-2xl bg-purple-50 border border-purple-200 text-center space-y-2">
-                <i class="fa-solid fa-spinner fa-spin text-purple-600 text-2xl"></i>
-                <div class="text-xs font-bold text-purple-900 font-heading">
-                    Gemini AI đang trích xuất KDA, sát thương, vàng và chấm điểm 10 tuyển thủ...
-                </div>
-                <p class="text-[11px] text-purple-600">Thưởng thêm Elo cho MVP gánh đội, giảm nhẹ điểm phạt cho SVP nỗ lực</p>
-            </div>
-
-            <!-- AI Results Table & Summary (Hidden until analyzed) -->
-            <div id="scoreboard-ai-results" class="hidden space-y-3.5">
-                <!-- AI Commentary Summary -->
-                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
-                    <div class="flex items-center justify-between font-bold text-slate-800">
-                        <span class="flex items-center gap-1.5 text-purple-700">
-                            <i class="fa-solid fa-brain"></i> Nhận định BLV AI:
+        <!-- Scrollable Body Content -->
+        <div class="overflow-y-auto custom-scrollbar flex-1 pr-1 space-y-4">
+            <!-- OPTION 1: Lưu chuẩn (Standard Save) Content -->
+            <div id="match-tab-content-standard" class="space-y-4 max-w-2xl mx-auto py-3">
+                <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-3 text-slate-600 leading-relaxed">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-calculator text-indigo-600"></i> Quy tắc tính điểm:
                         </span>
-                        <div class="flex items-center gap-1.5 text-[11px]">
-                            <span id="ai-mvp-badge" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-200">👑 MVP: -</span>
-                            <span id="ai-svp-badge" class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold border border-indigo-200">⭐ SVP: -</span>
+                        <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 text-[11px]">Công thức Logistic Elo</span>
+                    </div>
+                    <p>
+                        Hệ thống sẽ tính điểm biến động đồng đội tiêu chuẩn cho cả 10 tuyển thủ dựa trên chênh lệch Elo giữa 2 đội (xấp xỉ <b class="text-emerald-600 font-bold">+16 Elo</b> cho đội thắng và <b class="text-rose-600 font-bold">-16 Elo</b> cho đội thua).
+                    </p>
+                    <div class="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 font-bold text-slate-800 text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
+                            <span>Đội Thắng: <b id="modal-std-winner-name" class="text-blue-600 font-extrabold">Đội Xanh</b></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-rose-600 inline-block"></span>
+                            <span>Đội Thua: <b id="modal-std-loser-name" class="text-rose-600 font-extrabold">Đội Đỏ</b></span>
                         </div>
                     </div>
-                    <p id="ai-match-summary-text" class="text-slate-600 text-[11px] leading-relaxed">
-                        Tóm tắt trận đấu...
-                    </p>
                 </div>
 
-                <!-- 10 Players KDA & Delta Elo Table -->
-                <div class="border border-slate-200 rounded-2xl overflow-hidden max-h-64 overflow-y-auto custom-scrollbar">
-                    <table class="w-full text-left text-xs border-collapse">
-                        <thead class="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider sticky top-0 bg-slate-50 z-10 font-bold">
-                            <tr>
-                                <th class="py-2.5 px-3">Tuyển Thủ</th>
-                                <th class="py-2.5 px-2 text-center">Tướng</th>
-                                <th class="py-2.5 px-2 text-center">KDA</th>
-                                <th class="py-2.5 px-2 text-center">Đánh Giá</th>
-                                <th class="py-2.5 px-3 text-center w-28">Δ Elo Đề Xuất</th>
-                            </tr>
-                        </thead>
-                        <tbody id="scoreboard-players-table-body" class="divide-y divide-slate-100 text-[11px]">
-                            <!-- Populated dynamically via JS -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="flex items-center justify-between text-[11px] text-slate-400">
-                    <span>* Bạn có thể bấm vào các ô <b>Δ Elo</b> trên bảng để tùy chỉnh số điểm trước khi lưu.</span>
-                </div>
-
-                <!-- Action buttons -->
-                <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                <div class="flex items-center justify-end gap-2.5 pt-2">
                     <button type="button" onclick="closeMatchResultModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition">
                         Hủy
                     </button>
-                    <button type="button" onclick="confirmSaveAiCustomMatch()" id="btn-confirm-save-ai" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold font-heading shadow-md shadow-purple-500/20 transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-circle-check"></i>
-                        <span>Xác Nhận & Áp Dụng Elo Phân Tích</span>
+                    <button type="button" onclick="confirmSaveStandardMatch()" id="btn-confirm-save-standard" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold font-heading shadow-md shadow-indigo-500/20 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Xác Nhận Lưu Kết Quả Ngay</span>
                     </button>
+                </div>
+            </div>
+
+            <!-- OPTION 2: Kèm ảnh thông số trận & AI Phân Tích (AI Scoreboard Analysis) Content -->
+            <div id="match-tab-content-ai" class="hidden space-y-4">
+                <!-- Dropzone / Image Preview Card -->
+                <div id="scoreboard-dropzone-area" class="border-2 border-dashed border-purple-200 hover:border-purple-300 bg-purple-50/20 hover:bg-purple-50/40 rounded-2xl p-4 transition relative" onclick="if(event.target.closest('#scoreboard-preview-container button, #scoreboard-preview-container a')) return; document.getElementById('scoreboard-file-input').click()">
+                    <input type="file" id="scoreboard-file-input" accept="image/*" class="hidden" onchange="handleScoreboardFileSelect(event)">
+                    
+                    <div id="scoreboard-dropzone-empty" class="space-y-2 py-6 text-center cursor-pointer">
+                        <div class="w-14 h-14 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center mx-auto text-2xl shadow-2xs">
+                            <i class="fa-solid fa-camera"></i>
+                        </div>
+                        <div class="font-bold text-slate-800 text-sm font-heading">
+                            Dán ảnh bảng điểm kết thúc trận đấu (<kbd class="px-2 py-0.5 rounded-lg bg-purple-100 text-purple-800 font-mono text-xs font-bold">Ctrl + V</kbd>)
+                        </div>
+                        <p class="text-xs text-slate-500 max-w-md mx-auto">
+                            Chụp màn hình bảng kết quả có KDA, sát thương, MVP/SVP hoặc click vào đây để chọn file ảnh từ máy tính
+                        </p>
+                    </div>
+
+                    <!-- Preview container when image loaded -->
+                    <div id="scoreboard-preview-container" class="hidden space-y-3">
+                        <div class="flex items-center justify-between gap-3 pb-2 border-b border-purple-100">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-sm flex-shrink-0">
+                                    <i class="fa-solid fa-image"></i>
+                                </span>
+                                <div class="truncate">
+                                    <span class="font-bold text-xs text-slate-900 block truncate" id="scoreboard-file-name">Ảnh bảng điểm</span>
+                                    <span class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                                        <i class="fa-solid fa-circle-check"></i> Đã nạp ảnh thành công • Sẵn sàng phân tích
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <button type="button" onclick="event.stopPropagation(); toggleScoreboardImageSize()" id="btn-toggle-img-size" class="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold transition flex items-center gap-1.5" title="Mở rộng / Thu gọn xem ảnh">
+                                    <i class="fa-solid fa-up-right-and-down-left-from-center text-[11px]"></i>
+                                    <span id="txt-toggle-img-size">Mở Rộng Ảnh</span>
+                                </button>
+                                <a id="scoreboard-view-full-btn" href="#" target="_blank" onclick="event.stopPropagation()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5" title="Mở ảnh gốc trong tab mới">
+                                    <i class="fa-solid fa-arrow-up-right-from-square text-[11px]"></i>
+                                    <span>Ảnh Gốc</span>
+                                </a>
+                                <button type="button" onclick="event.stopPropagation(); removeScoreboardImage();" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold transition flex items-center gap-1.5">
+                                    <i class="fa-solid fa-trash-can text-[11px]"></i>
+                                    <span>Đổi Ảnh</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Big Image Preview Box -->
+                        <div id="scoreboard-img-wrapper" class="relative rounded-2xl overflow-hidden bg-slate-950 border border-purple-200/80 shadow-inner flex items-center justify-center transition-all duration-200 max-h-72">
+                            <img id="scoreboard-preview-img" src="" class="w-full h-full max-h-72 object-contain mx-auto transition-all" alt="Scoreboard preview">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Run AI Button -->
+                <div id="scoreboard-ai-controls">
+                    <button type="button" onclick="runScoreboardAiAnalysis()" id="btn-run-scoreboard-ai" class="w-full py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold font-heading text-xs sm:text-sm shadow-md shadow-purple-500/20 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>AI Phân Tích Thông Số & Đề Xuất Điểm Elo</span>
+                    </button>
+                </div>
+
+                <!-- AI Loading Spinner -->
+                <div id="scoreboard-ai-loading" class="hidden p-6 rounded-2xl bg-purple-50 border border-purple-200 text-center space-y-2">
+                    <i class="fa-solid fa-spinner fa-spin text-purple-600 text-3xl"></i>
+                    <div class="text-sm font-bold text-purple-900 font-heading">
+                        Gemini AI đang đọc KDA, sát thương, vàng và nhận xét chi tiết từng tuyển thủ...
+                    </div>
+                    <p class="text-xs text-purple-600">Thưởng thêm Elo cho MVP/Gánh đội, giảm điểm phạt cho SVP, và trừ bớt Elo người hưởng ké</p>
+                </div>
+
+                <!-- AI Results Table & Summary (Hidden until analyzed) -->
+                <div id="scoreboard-ai-results" class="hidden space-y-4">
+                    <!-- AI Commentary Summary -->
+                    <div class="p-4 rounded-2xl bg-gradient-to-r from-purple-50/80 to-indigo-50/80 border border-purple-200 text-xs space-y-2">
+                        <div class="flex flex-wrap items-center justify-between gap-2 font-bold text-slate-800">
+                            <span class="flex items-center gap-2 text-purple-800 text-sm font-heading">
+                                <i class="fa-solid fa-brain"></i>
+                                <span>Nhận Định & Đánh Giá Tổng Quan Từ BLV AI:</span>
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <span id="ai-mvp-badge" class="px-3 py-1 rounded-xl bg-amber-100 text-amber-800 font-extrabold border border-amber-300 text-xs shadow-2xs">👑 MVP: -</span>
+                                <span id="ai-svp-badge" class="px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 font-extrabold border border-indigo-300 text-xs shadow-2xs">⭐ SVP: -</span>
+                            </div>
+                        </div>
+                        <p id="ai-match-summary-text" class="text-slate-700 text-xs sm:text-sm leading-relaxed font-normal">
+                            Tóm tắt trận đấu...
+                        </p>
+                    </div>
+
+                    <!-- 10 Players KDA & Delta Elo Table -->
+                    <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-xs bg-white">
+                        <div class="max-h-[500px] overflow-y-auto custom-scrollbar">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="bg-slate-100 border-b border-slate-200 text-[11px] text-slate-600 uppercase tracking-wider sticky top-0 z-10 font-black">
+                                    <tr>
+                                        <th class="py-3 px-3.5 w-44">Tuyển Thủ</th>
+                                        <th class="py-3 px-2.5 text-center w-28">Tướng</th>
+                                        <th class="py-3 px-2.5 text-center w-24">KDA</th>
+                                        <th class="py-3 px-2.5 text-center w-24">Sát Thương</th>
+                                        <th class="py-3 px-2.5 text-center w-28">Đánh Giá</th>
+                                        <th class="py-3 px-3.5 text-left">Nhận Xét / Feedback AI</th>
+                                        <th class="py-3 px-3.5 text-center w-32">Δ Elo Đề Xuất</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="scoreboard-players-table-body" class="divide-y divide-slate-100 text-xs">
+                                    <!-- Populated dynamically via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2">
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-info text-indigo-500"></i>
+                            <span>Bạn có thể chỉnh sửa trực tiếp số điểm trong ô <b>Δ Elo</b> của từng tuyển thủ trước khi xác nhận lưu.</span>
+                        </span>
+                        <span class="font-medium text-slate-400 text-[11px]">
+                            * Điểm Elo sau khi xác nhận sẽ cập nhật ngay vào bảng xếp hạng
+                        </span>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                        <button type="button" onclick="closeMatchResultModal()" class="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition">
+                            Hủy
+                        </button>
+                        <button type="button" onclick="confirmSaveAiCustomMatch()" id="btn-confirm-save-ai" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold font-heading shadow-md shadow-purple-500/25 transition flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span>Xác Nhận & Áp Dụng Elo Phân Tích</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

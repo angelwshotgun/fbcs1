@@ -111,7 +111,7 @@ async function handleCreateTeamsWithCaptains() {
         return;
     }
 
-    const balanceMode = document.getElementById('captain-matchmaking-mode')?.value || document.getElementById('matchmaking-mode')?.value || 'composite';
+    const balanceMode = document.getElementById('captain-matchmaking-mode')?.value || document.getElementById('matchmaking-mode')?.value || 'pure_elo';
 
     try {
         const res = await fetch('/api/create_teams_with_captains', {

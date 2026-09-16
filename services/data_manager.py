@@ -429,13 +429,14 @@ class DataManager:
         """
         Ghi nhận trận đấu mới đa chiều:
         1. Ghi nhận vào Supabase (bảng matches + match_participants kèm siêu dữ liệu AI).
-        2. Đồng thời cập nhật ma trận DataFrame cục bộ để duy trì tương thích và sao lưu.
-        3. Lưu chi tiết cá nhân hóa (KDA, delta Elo cá nhân, AI summary) vào match_details.json.
+        2. Nếu ghi thành công lên Supabase -> Nạp lại DataFrame và chi tiết đã đồng bộ (tránh duplicate).
+        3. Nếu Supabase chưa cấu hình hoặc lỗi -> Cập nhật ma trận DataFrame và file JSON cục bộ.
         """
+        inserted_to_supabase = False
         # 1. Ghi vào Supabase
         if supabase_service.is_configured():
             try:
-                supabase_service.insert_match(
+                ok, res = supabase_service.insert_match(
                     team1=team1,
                     team2=team2,
                     winner=winner,
@@ -447,13 +448,21 @@ class DataManager:
                     player_performances=player_performances,
                     ai_summary=ai_summary
                 )
+                if ok:
+                    inserted_to_supabase = True
                 with self._lock:
                     self._matches_df_cache = None
                     self._matches_cache_time = 0
             except Exception as e:
                 print(f"[DataManager] Supabase insert match notice: {e}")
 
-        # 2. Cập nhật local DataFrame
+        # Khi đã ghi thành công vào Supabase, read_matches_df và read_match_details đã nạp đầy đủ trận mới
+        if inserted_to_supabase:
+            df = self.read_matches_df(force_refresh=True)
+            self.read_match_details()
+            return df
+
+        # 2. Cập nhật local DataFrame (fallback khi không có Supabase)
         df = self.read_matches_df(force_refresh=True)
         all_players_in_match = set(team1 + team2)
         for player in all_players_in_match:

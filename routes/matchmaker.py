@@ -12,7 +12,7 @@ def api_create_teams():
         players = data.get('players', [])
         allow_rng = data.get('allow_rng', True)
         rng_tolerance = float(data.get('rng_tolerance', 0.6))
-        balance_mode = data.get('balance_mode', 'composite')
+        balance_mode = data.get('balance_mode', 'pure_elo')
 
         result = matchmaking_service.create_balanced_teams(
             players,
@@ -36,7 +36,7 @@ def api_create_teams_with_captains():
         remaining = data.get('remaining_players', [])
         allow_rng = data.get('allow_rng', True)
         rng_tolerance = float(data.get('rng_tolerance', 0.6))
-        balance_mode = data.get('balance_mode', 'composite')
+        balance_mode = data.get('balance_mode', 'pure_elo')
 
         result = matchmaking_service.create_teams_with_captains(
             captain1,

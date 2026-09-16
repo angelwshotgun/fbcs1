@@ -63,7 +63,7 @@ class MatchmakingService:
         p_map: Dict[str, Any],
         pair_synergy_map: Dict[str, Any],
         trio_synergy_map: Dict[str, Any],
-        balance_mode: str = 'composite'
+        balance_mode: str = 'pure_elo'
     ) -> Tuple[float, List[Dict[str, Any]]]:
         """
         Đánh giá sức mạnh của 1 đội 5 người:
@@ -243,7 +243,7 @@ class MatchmakingService:
         candidates: List[Dict[str, Any]],
         allow_rng: bool = True,
         rng_tolerance: float = 0.6,
-        balance_mode: str = 'composite'
+        balance_mode: str = 'pure_elo'
     ) -> Tuple[Dict[str, Any], float, int]:
         """
         Chọn kết quả chia đội có tính toán ngẫu nhiên (RNG) trong ngưỡng cân bằng:
@@ -287,7 +287,7 @@ class MatchmakingService:
         player_ids: List[str],
         allow_rng: bool = True,
         rng_tolerance: float = 0.6,
-        balance_mode: str = 'composite'
+        balance_mode: str = 'pure_elo'
     ) -> Dict[str, Any]:
         """Chia 10 người chơi thành 2 đội 5-5 với tính toán cân bằng và sai số RNG thông minh."""
         if len(player_ids) != 10:
@@ -386,7 +386,7 @@ class MatchmakingService:
         remaining_players: List[str],
         allow_rng: bool = True,
         rng_tolerance: float = 0.6,
-        balance_mode: str = 'composite'
+        balance_mode: str = 'pure_elo'
     ) -> Dict[str, Any]:
         """Chia đội với 2 Đội trưởng cố định và 8 thành viên còn lại (hỗ trợ RNG cân bằng)."""
         if len(remaining_players) != 8:
