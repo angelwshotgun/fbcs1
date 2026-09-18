@@ -39,6 +39,11 @@ CREATE TABLE IF NOT EXISTS public.matches (
     result_code INT NOT NULL CHECK (result_code IN (1, 2)),
     synergies_applied JSONB DEFAULT '{}'::jsonb,
     notes TEXT,
+    team1_kills INT DEFAULT 0,
+    team2_kills INT DEFAULT 0,
+    match_closeness NUMERIC(4, 2) DEFAULT 0.50,
+    is_stomp BOOLEAN DEFAULT FALSE,
+    balance_rating VARCHAR(20) DEFAULT 'unknown',
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
@@ -54,6 +59,10 @@ CREATE TABLE IF NOT EXISTS public.match_participants (
     is_winner BOOLEAN NOT NULL,
     champion VARCHAR(50),
     role VARCHAR(30),
+    kills INT DEFAULT 0,
+    deaths INT DEFAULT 0,
+    assists INT DEFAULT 0,
+    damage INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 

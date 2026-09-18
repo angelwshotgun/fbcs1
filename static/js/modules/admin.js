@@ -448,9 +448,66 @@ function switchAdminSubTab(subTab) {
     }
 }
 
+async function loadBalanceReport() {
+    try {
+        const res = await fetch('/api/balance_report?n=20');
+        const data = await res.json();
+        if (!data.success) return;
+
+        const dist = data.rating_distribution || {};
+        const total = (dist.perfect || 0) + (dist.fair || 0) + (dist.unbalanced || 0) + (dist.stomp || 0);
+
+        const perfectEl = document.getElementById('stat-perfect-count');
+        const fairEl = document.getElementById('stat-fair-count');
+        const unbalEl = document.getElementById('stat-unbalanced-count');
+        const stompEl = document.getElementById('stat-stomp-count');
+
+        if (perfectEl) perfectEl.innerText = dist.perfect || 0;
+        if (fairEl) fairEl.innerText = dist.fair || 0;
+        if (unbalEl) unbalEl.innerText = dist.unbalanced || 0;
+        if (stompEl) stompEl.innerText = dist.stomp || 0;
+
+        const calcRate = (cnt) => total > 0 ? `${Math.round((cnt / total) * 100)}%` : '0%';
+        const pRate = document.getElementById('stat-perfect-rate');
+        const fRate = document.getElementById('stat-fair-rate');
+        const uRate = document.getElementById('stat-unbalanced-rate');
+        const sRate = document.getElementById('stat-stomp-rate');
+
+        if (pRate) pRate.innerText = calcRate(dist.perfect || 0);
+        if (fRate) fRate.innerText = calcRate(dist.fair || 0);
+        if (uRate) uRate.innerText = calcRate(dist.unbalanced || 0);
+        if (sRate) sRate.innerText = calcRate(dist.stomp || 0);
+
+        const avgEl = document.getElementById('stat-avg-closeness');
+        if (avgEl) {
+            avgEl.innerText = data.matches_with_kill_data > 0 ? `${Math.round(data.average_closeness * 100)}%` : 'Chưa có số liệu';
+        }
+
+        const trendText = document.getElementById('balance-trend-text');
+        const trendBadge = document.getElementById('balance-trend-badge');
+        if (trendText && trendBadge) {
+            if (data.trend === 'improving') {
+                trendText.innerText = 'Xu hướng: Đang cân bằng tốt hơn';
+                trendBadge.className = 'px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border-emerald-200';
+            } else if (data.trend === 'declining') {
+                trendText.innerText = 'Xu hướng: Có dấu hiệu lệch kèo';
+                trendBadge.className = 'px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 bg-rose-50 text-rose-700 border-rose-200';
+            } else {
+                trendText.innerText = 'Xu hướng: Ổn định';
+                trendBadge.className = 'px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 bg-slate-50 text-slate-600 border-slate-200';
+            }
+        }
+    } catch (e) {
+        console.warn('[BalanceReport] Failed to load:', e);
+    }
+}
+
 async function loadAdminMatches() {
     const tbody = document.getElementById('admin-matches-table-body');
     if (!tbody) return;
+
+    // Load Balance Report stats concurrently
+    loadBalanceReport();
 
     tbody.innerHTML = `
         <tr>
@@ -477,6 +534,31 @@ async function loadAdminMatches() {
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-rose-500 font-bold">${err.message}</td></tr>`;
     }
+}
+
+function getBalanceBadgeHtml(match) {
+    const t1k = match.team1_kills || 0;
+    const t2k = match.team2_kills || 0;
+    if (t1k === 0 && t2k === 0) return '';
+    
+    const rating = match.balance_rating || 'unknown';
+    const icons = { perfect: '🟢', fair: '🟡', unbalanced: '🟠', stomp: '🔴', unknown: '⚪' };
+    const labels = { perfect: 'Sát nút', fair: 'Cân bằng', unbalanced: 'Lệch', stomp: 'Stomp', unknown: '' };
+    const colors = { perfect: 'bg-emerald-50 text-emerald-700 border-emerald-200', fair: 'bg-amber-50 text-amber-700 border-amber-200', unbalanced: 'bg-orange-50 text-orange-700 border-orange-200', stomp: 'bg-rose-50 text-rose-700 border-rose-200', unknown: 'bg-slate-50 text-slate-500 border-slate-200' };
+    
+    const icon = icons[rating] || '⚪';
+    const label = labels[rating] || '';
+    const colorClass = colors[rating] || colors.unknown;
+    
+    return `
+        <div class="flex items-center gap-2 mt-1">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold border ${colorClass}">
+                <i class="fa-solid fa-skull-crossbones text-[10px]"></i>
+                ${t1k} - ${t2k}
+            </span>
+            ${label ? `<span class="text-[10px] font-medium ${colorClass.split(' ')[1]}">${icon} ${label}</span>` : ''}
+        </div>
+    `;
 }
 
 function renderAdminMatchesTable(matches) {
@@ -535,12 +617,19 @@ function renderAdminMatchesTable(matches) {
 
         const noteText = m.notes || m.ai_summary || '-';
 
+        const balanceBadgeHtml = getBalanceBadgeHtml(m);
+
         tr.innerHTML = `
             <td class="py-3.5 px-4 text-center font-mono font-bold text-slate-600">#${m.id}</td>
             <td class="py-3.5 px-4 whitespace-nowrap text-slate-500 font-medium">${dateStr}</td>
             <td class="py-3.5 px-4"><div class="space-y-0.5">${t1PlayersHtml}</div></td>
             <td class="py-3.5 px-4"><div class="space-y-0.5">${t2PlayersHtml}</div></td>
-            <td class="py-3.5 px-4 text-center whitespace-nowrap">${winnerBadge}</td>
+            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                <div class="flex flex-col items-center gap-1">
+                    ${winnerBadge}
+                    ${balanceBadgeHtml}
+                </div>
+            </td>
             <td class="py-3.5 px-4 text-slate-600 max-w-[220px]">
                 <div class="truncate text-[11px]" title="${noteText}">${noteText}</div>
             </td>
@@ -567,6 +656,10 @@ function openEditMatchModal(matchId) {
     document.getElementById('edit-match-id-badge').innerText = match.id;
     document.getElementById('edit-match-code-badge').innerText = match.match_code || `M-${match.id}`;
     document.getElementById('edit-match-notes').value = match.notes || '';
+    const t1kInput = document.getElementById('edit-team1-kills');
+    const t2kInput = document.getElementById('edit-team2-kills');
+    if (t1kInput) t1kInput.value = (match.team1_kills !== undefined && match.team1_kills !== null) ? match.team1_kills : '';
+    if (t2kInput) t2kInput.value = (match.team2_kills !== undefined && match.team2_kills !== null) ? match.team2_kills : '';
 
     // Set winner radio
     if (match.winner === 'team1') {
@@ -649,6 +742,8 @@ async function handleSaveEditMatch() {
 
     const winner = document.getElementById('edit-winner-t1')?.checked ? 'team1' : 'team2';
     const notes = document.getElementById('edit-match-notes')?.value || '';
+    const team1_kills = parseInt(document.getElementById('edit-team1-kills')?.value) || 0;
+    const team2_kills = parseInt(document.getElementById('edit-team2-kills')?.value) || 0;
 
     const btn = document.getElementById('btn-save-edit-match');
     if (btn) {
@@ -660,7 +755,7 @@ async function handleSaveEditMatch() {
         const res = await fetch(`/api/matches/${matchId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ team1, team2, winner, notes })
+            body: JSON.stringify({ team1, team2, winner, notes, team1_kills, team2_kills })
         });
         const data = await res.json();
         if (!data.success) {

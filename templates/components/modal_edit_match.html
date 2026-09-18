@@ -82,6 +82,25 @@
                 </div>
             </div>
 
+            <!-- Kill Score Inputs -->
+            <div class="p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/60 to-rose-50/60 border border-slate-200 space-y-2">
+                <label class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-skull-crossbones text-orange-500"></i>
+                    <span>Tỉ Số Mạng Hạ Gục (Kill Score):</span>
+                </label>
+                <div class="flex items-center justify-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-blue-700">Đội Xanh:</span>
+                        <input type="number" id="edit-team1-kills" min="0" max="99" placeholder="0" class="w-16 text-center text-base font-black font-heading border-2 border-blue-200 rounded-xl py-1 bg-white text-blue-700 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <span class="text-slate-400 font-bold">—</span>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="edit-team2-kills" min="0" max="99" placeholder="0" class="w-16 text-center text-base font-black font-heading border-2 border-rose-200 rounded-xl py-1 bg-white text-rose-700 focus:outline-none focus:border-rose-500">
+                        <span class="text-xs font-bold text-rose-700">:Đội Đỏ</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Notes / AI info -->
             <div class="space-y-1.5">
                 <label class="text-xs font-bold text-slate-700">Ghi Chú / Thông Tin Trận Đấu:</label>

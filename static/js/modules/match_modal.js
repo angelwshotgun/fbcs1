@@ -84,6 +84,48 @@ function switchMatchResultTab(tabName) {
     }
 }
 
+function updateKillScorePreview() {
+    const t1Input = document.getElementById('input-team1-kills');
+    const t2Input = document.getElementById('input-team2-kills');
+    const preview = document.getElementById('kill-score-preview');
+    if (!t1Input || !t2Input || !preview) return;
+
+    const t1k = parseInt(t1Input.value) || 0;
+    const t2k = parseInt(t2Input.value) || 0;
+
+    if (t1k === 0 && t2k === 0) {
+        preview.classList.add('hidden');
+        return;
+    }
+
+    const total = t1k + t2k;
+    const diff = Math.abs(t1k - t2k);
+    const closeness = total > 0 ? (1.0 - diff / total) : 0.5;
+
+    let rating, icon, color;
+    if (diff <= 5 || closeness >= 0.85) {
+        rating = 'Sát Nút'; icon = '🟢'; color = 'text-emerald-600';
+    } else if (diff <= 10 || closeness >= 0.60) {
+        rating = 'Cân Bằng'; icon = '🟡'; color = 'text-amber-600';
+    } else if (diff <= 15 || closeness >= 0.40) {
+        rating = 'Lệch'; icon = '🟠'; color = 'text-orange-600';
+    } else {
+        rating = 'Stomp'; icon = '🔴'; color = 'text-rose-600';
+    }
+
+    preview.classList.remove('hidden');
+    preview.innerHTML = `
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/80 border border-slate-200 shadow-xs">
+            <span>${icon}</span>
+            <span class="font-bold ${color}">${rating}</span>
+            <span class="text-slate-400">•</span>
+            <span>Closeness: <b>${(closeness * 100).toFixed(0)}%</b></span>
+            <span class="text-slate-400">•</span>
+            <span>Kill Diff: <b class="${color}">${diff}</b></span>
+        </span>
+    `;
+}
+
 async function confirmSaveStandardMatch() {
     if (isSubmittingSimulationMatch) return;
     isSubmittingSimulationMatch = true;
@@ -102,6 +144,8 @@ async function confirmSaveStandardMatch() {
                 team1: simTeam1,
                 team2: simTeam2,
                 winner: currentMatchModalWinner,
+                team1_kills: parseInt(document.getElementById('input-team1-kills')?.value) || 0,
+                team2_kills: parseInt(document.getElementById('input-team2-kills')?.value) || 0,
                 notes: 'Lưu kết quả chuẩn (không kèm ảnh)'
             })
         });
@@ -445,6 +489,8 @@ async function confirmSaveAiCustomMatch() {
                 player_deltas: customDeltas,
                 player_performances: playersList,
                 ai_summary: currentAiScoreboardAnalysis.ai_summary,
+                team1_kills: parseInt(document.getElementById('input-team1-kills')?.value) || 0,
+                team2_kills: parseInt(document.getElementById('input-team2-kills')?.value) || 0,
                 notes: `AI Scoreboard: MVP ${currentAiScoreboardAnalysis.match_mvp || '-'}, SVP ${currentAiScoreboardAnalysis.match_svp || '-'}`
             })
         });

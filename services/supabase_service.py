@@ -286,7 +286,12 @@ class SupabaseService:
         notes: str = '',
         player_deltas: Optional[Dict[str, float]] = None,
         player_performances: Optional[List[Dict[str, Any]]] = None,
-        ai_summary: str = ''
+        ai_summary: str = '',
+        team1_kills: int = 0,
+        team2_kills: int = 0,
+        match_closeness: float = 0.5,
+        is_stomp: bool = False,
+        balance_rating: str = 'unknown'
     ) -> Tuple[bool, Any]:
         """
         Ghi nhận trận đấu đa chiều vào Supabase:
@@ -316,7 +321,12 @@ class SupabaseService:
             'winner': winner,
             'result_code': result_code,
             'synergies_applied': syn_payload,
-            'notes': notes
+            'notes': notes,
+            'team1_kills': int(team1_kills),
+            'team2_kills': int(team2_kills),
+            'match_closeness': float(match_closeness),
+            'is_stomp': bool(is_stomp),
+            'balance_rating': str(balance_rating)
         }
 
         # 1. Ghi vào bảng matches
@@ -401,6 +411,16 @@ class SupabaseService:
             match_update['team2_power'] = float(data['team2_power'])
         if 'synergies_applied' in data:
             match_update['synergies_applied'] = data['synergies_applied']
+        if 'team1_kills' in data:
+            match_update['team1_kills'] = int(data['team1_kills'])
+        if 'team2_kills' in data:
+            match_update['team2_kills'] = int(data['team2_kills'])
+        if 'match_closeness' in data:
+            match_update['match_closeness'] = float(data['match_closeness'])
+        if 'is_stomp' in data:
+            match_update['is_stomp'] = bool(data['is_stomp'])
+        if 'balance_rating' in data:
+            match_update['balance_rating'] = str(data['balance_rating'])
 
         ok, res = self._request(
             f"matches?id=eq.{match_id}",

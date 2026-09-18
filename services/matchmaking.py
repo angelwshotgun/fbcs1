@@ -1,5 +1,6 @@
 import math
 import random
+import statistics
 from itertools import combinations
 from typing import List, Dict, Any, Tuple
 from services.player_service import player_service
@@ -56,6 +57,37 @@ class MatchmakingService:
         if trio_key in trio_synergy_map:
             return float(trio_synergy_map[trio_key].get('synergy_score', 0.0))
         return 0.0
+
+    def _calc_elo_spread_penalty(self, team_elos: List[float]) -> float:
+        """Phạt khi Elo chênh lệch nội bộ đội quá lớn (1 người quá cao, còn lại quá thấp)."""
+        if len(team_elos) < 2:
+            return 0.0
+        elo_std = statistics.stdev(team_elos)
+        # Bắt đầu phạt khi std > 80, phạt tối đa ~30 điểm Elo
+        if elo_std <= 80:
+            return 0.0
+        penalty = (elo_std - 80) * 0.3
+        return round(min(30.0, penalty), 1)
+
+    def _check_recent_similarity(self, team1_set: set, team2_set: set, recent_matches: List[Dict[str, Any]]) -> float:
+        """Tính hệ số phạt nếu đội hình quá giống trận gần đây (tránh lặp lại nhàm chán)."""
+        if not recent_matches:
+            return 0.0
+        max_penalty = 0.0
+        for match in recent_matches[-5:]:  # Kiểm tra 5 trận gần nhất
+            prev_t1 = set(match.get('team1_players', []))
+            prev_t2 = set(match.get('team2_players', []))
+            if not prev_t1 or not prev_t2:
+                continue
+            # Tính overlap cao nhất (so sánh cả 2 chiều)
+            overlap_1 = len(team1_set & prev_t1) + len(team2_set & prev_t2)
+            overlap_2 = len(team1_set & prev_t2) + len(team2_set & prev_t1)
+            best_overlap = max(overlap_1, overlap_2)
+            similarity = best_overlap / 10.0  # 10 người tổng cộng
+            if similarity >= 0.8:  # >= 80% trùng
+                penalty = (similarity - 0.7) * 150.0  # penalty lên đến ~45 Elo points
+                max_penalty = max(max_penalty, penalty)
+        return round(max_penalty, 1)
 
     def _evaluate_team(
         self,
@@ -130,7 +162,18 @@ class MatchmakingService:
                     })
 
             # TUYỆT ĐỐI KHÔNG DÙNG CHỈ SỐ STATS (Kỹ năng, Bể tướng, Flex lane, Tính ổn định)
-            total_score = round(base_elo + duo_bonus + trio_bonus, 1)
+            # Phạt chênh lệch Elo nội bộ đội (Elo Spread Penalty)
+            team_elos = [p_map[p]['hidden_elo'] for p in team_tuple]
+            spread_penalty = self._calc_elo_spread_penalty(team_elos)
+            if spread_penalty > 0:
+                synergies.append({
+                    'type': 'spread_penalty',
+                    'icon': '⚠️',
+                    'label': 'Chênh lệch nội bộ',
+                    'names': f'Std Elo: {round(statistics.stdev(team_elos), 0)}',
+                    'bonus': -spread_penalty
+                })
+            total_score = round(base_elo + duo_bonus + trio_bonus - spread_penalty, 1)
             return total_score, synergies
 
         # Chế độ Toàn Diện (Composite): Kết hợp Elo ẩn + Stats 1-10 + Phong độ + Bổ trợ chiến thuật
@@ -298,6 +341,14 @@ class MatchmakingService:
             raise ValueError("Danh sách người chơi không được có tên trùng lặp")
 
         p_map = self._get_player_map(unique_players)
+        
+        # Lấy lịch sử trận gần đây để kiểm tra anti-repeat
+        try:
+            from services.data_manager import data_manager
+            recent_matches = data_manager.get_matches_history()[:5]
+        except Exception:
+            recent_matches = []
+            
         metrics = player_service.get_metrics()
         pair_synergy = metrics.get('pair_synergy', {})
         trio_synergy = metrics.get('trio_synergy', {})
@@ -319,6 +370,12 @@ class MatchmakingService:
             score_1, syns_1 = self._evaluate_team(t1_tuple, p_map, pair_synergy, trio_synergy, balance_mode=balance_mode)
             score_2, syns_2 = self._evaluate_team(t2_tuple, p_map, pair_synergy, trio_synergy, balance_mode=balance_mode)
             diff = abs(score_1 - score_2)
+
+            # Anti-repeat: Phạt nếu đội hình quá giống trận gần đây
+            repeat_penalty = self._check_recent_similarity(
+                set(t1_tuple), set(t2_tuple), recent_matches
+            )
+            diff += repeat_penalty
 
             candidates.append({
                 'team1': t1_tuple,
@@ -397,6 +454,14 @@ class MatchmakingService:
             raise ValueError("Đội trưởng và các người chơi không được trùng lặp")
 
         p_map = self._get_player_map(all_players)
+        
+        # Lấy lịch sử trận gần đây để kiểm tra anti-repeat
+        try:
+            from services.data_manager import data_manager
+            recent_matches = data_manager.get_matches_history()[:5]
+        except Exception:
+            recent_matches = []
+
         metrics = player_service.get_metrics()
         pair_synergy = metrics.get('pair_synergy', {})
         trio_synergy = metrics.get('trio_synergy', {})
@@ -411,6 +476,12 @@ class MatchmakingService:
             score_1, syns_1 = self._evaluate_team(t1, p_map, pair_synergy, trio_synergy, balance_mode=balance_mode)
             score_2, syns_2 = self._evaluate_team(t2, p_map, pair_synergy, trio_synergy, balance_mode=balance_mode)
             diff = abs(score_1 - score_2)
+
+            # Anti-repeat: Phạt nếu đội hình quá giống trận gần đây
+            repeat_penalty = self._check_recent_similarity(
+                set(t1), set(t2), recent_matches
+            )
+            diff += repeat_penalty
 
             candidates.append({
                 'team1': t1,

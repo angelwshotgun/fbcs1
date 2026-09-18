@@ -9,6 +9,52 @@ class EloService:
     def __init__(self, base_elo: float = 1200.0, k_factor: float = 32.0):
         self.base_elo = base_elo
         self.k_factor = k_factor
+    def calc_match_closeness(self, team1_kills: int, team2_kills: int) -> Tuple[float, str, bool]:
+        """
+        Tính mức độ cân bằng của trận đấu từ tỉ số hạ gục.
+        Returns: (closeness, balance_rating, is_stomp)
+        - closeness: 0.0 (stomp hoàn toàn) → 1.0 (sát nút)
+        - balance_rating: 'perfect' | 'fair' | 'unbalanced' | 'stomp' | 'unknown'
+        - is_stomp: True nếu trận lệch hẳn
+        """
+        total = team1_kills + team2_kills
+        if total == 0:
+            return 0.5, 'unknown', False
+        
+        diff = abs(team1_kills - team2_kills)
+        ratio = diff / total
+        closeness = round(1.0 - ratio, 2)
+        
+        # Phân loại dựa trên cả closeness và kill diff tuyệt đối
+        if diff <= 5 or closeness >= 0.85:
+            balance_rating = 'perfect'
+            is_stomp = False
+        elif diff <= 10 or closeness >= 0.60:
+            balance_rating = 'fair'
+            is_stomp = False
+        elif diff <= 15 or closeness >= 0.40:
+            balance_rating = 'unbalanced'
+            is_stomp = False
+        else:
+            balance_rating = 'stomp'
+            is_stomp = True
+        
+        return closeness, balance_rating, is_stomp
+
+    def _calc_adaptive_k(self, closeness: float, base_k: float = 32.0) -> float:
+        """
+        K-factor thích ứng theo mức độ cân bằng trận đấu.
+        - Trận sát nút (closeness >= 0.7): K giảm ~22 → Elo ít thay đổi (chia đội đã đúng)
+        - Trận bình thường (0.35-0.7): K = 32 (giữ nguyên)
+        - Trận stomp (closeness < 0.35): K tăng ~45 → Elo thay đổi mạnh (chia sai, cần sửa nhanh)
+        """
+        if closeness >= 0.7:
+            return round(base_k * 0.7, 1)  # ~22.4
+        elif closeness >= 0.35:
+            return base_k  # 32
+        else:
+            stomp_mult = 1.0 + (0.35 - closeness) * 2.0
+            return round(base_k * min(1.5, stomp_mult), 1)  # up to ~48
 
     def calculate_all_metrics(
         self,
@@ -30,7 +76,8 @@ class EloService:
                 'stats': {},
                 'pair_synergy': {},
                 'trio_synergy': {},
-                'elo_normalized': {}
+                'elo_normalized': {},
+                'match_closeness_history': []
             }
 
         player_cols = [c for c in df.columns if c != 'Result']
@@ -44,6 +91,9 @@ class EloService:
 
         pair_stats: Dict[Tuple[str, str], Dict[str, int]] = {}
         trio_stats: Dict[Tuple[str, str, str], Dict[str, int]] = {}
+
+        # Track closeness history for balance report
+        match_closeness_history = []
 
         # Duyệt qua từng trận đấu theo thứ tự từ đầu đến cuối
         for idx, row in df.iterrows():
@@ -68,14 +118,38 @@ class EloService:
             actual_1 = 1.0 if result == 1 else 0.0
             actual_2 = 1.0 - actual_1
 
-            delta_1 = self.k_factor * (actual_1 - expected_1)
-            delta_2 = self.k_factor * (actual_2 - expected_2)
-
             # Kiểm tra xem trận đấu này có lưu delta tùy chỉnh / phân tích cá nhân hóa không
             meta = None
             if match_details:
                 meta = match_details.get(str(idx)) or match_details.get(idx)
             custom_deltas = meta.get('player_deltas', {}) if meta else {}
+
+            # Lấy tỉ số hạ gục nếu có
+            t1_kills = 0
+            t2_kills = 0
+            if meta:
+                t1_kills = int(meta.get('team1_kills', 0))
+                t2_kills = int(meta.get('team2_kills', 0))
+
+            # Tính closeness và adaptive K
+            if t1_kills > 0 or t2_kills > 0:
+                closeness, b_rating, is_stomp = self.calc_match_closeness(t1_kills, t2_kills)
+                effective_k = self._calc_adaptive_k(closeness, self.k_factor)
+                match_closeness_history.append({
+                    'match_idx': idx,
+                    'closeness': closeness,
+                    'rating': b_rating,
+                    'is_stomp': is_stomp,
+                    't1_kills': t1_kills,
+                    't2_kills': t2_kills,
+                    'effective_k': effective_k
+                })
+            else:
+                closeness = 0.5  # Không có dữ liệu kill → dùng K mặc định
+                effective_k = self.k_factor
+
+            delta_1 = effective_k * (actual_1 - expected_1)
+            delta_2 = effective_k * (actual_2 - expected_2)
 
             # Ước tính sức mạnh tương quan để điều chỉnh Elo cho trường hợp hưởng ké (không có ảnh AI)
             def calc_contrib_power(pid: str) -> float:
@@ -331,7 +405,8 @@ class EloService:
             'form': form_data,
             'stats': stats,
             'pair_synergy': pair_synergy,
-            'trio_synergy': trio_synergy
+            'trio_synergy': trio_synergy,
+            'match_closeness_history': match_closeness_history
         }
 
 

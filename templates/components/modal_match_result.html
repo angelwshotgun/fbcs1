@@ -66,6 +66,35 @@
                     </div>
                 </div>
 
+                <!-- Tỉ số hạ gục (Kill Score) - Tùy chọn -->
+                <div class="p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 to-rose-50/80 border border-slate-200 space-y-3">
+                    <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
+                        <i class="fa-solid fa-skull-crossbones text-orange-500"></i>
+                        <span>Tỉ Số Hạ Gục (Tùy chọn)</span>
+                        <span class="text-[10px] font-medium text-slate-400 ml-auto">Giúp hệ thống đánh giá trận cân hay lệch</span>
+                    </div>
+                    <div class="flex items-center justify-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
+                            <span class="text-xs font-bold text-blue-700">Đội Xanh</span>
+                            <input type="number" id="input-team1-kills" min="0" max="99" value="" placeholder="0"
+                                class="w-16 text-center text-lg font-black font-heading border-2 border-blue-200 rounded-xl py-1.5 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white text-blue-700 transition"
+                                oninput="updateKillScorePreview()">
+                        </div>
+                        <div class="text-xl font-black text-slate-400">—</div>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="input-team2-kills" min="0" max="99" value="" placeholder="0"
+                                class="w-16 text-center text-lg font-black font-heading border-2 border-rose-200 rounded-xl py-1.5 focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-white text-rose-700 transition"
+                                oninput="updateKillScorePreview()">
+                            <span class="text-xs font-bold text-rose-700">Đội Đỏ</span>
+                            <span class="w-3 h-3 rounded-full bg-rose-600 inline-block"></span>
+                        </div>
+                    </div>
+                    <div id="kill-score-preview" class="text-center text-xs text-slate-500 hidden">
+                        <!-- Will be populated by JS -->
+                    </div>
+                </div>
+
                 <div class="flex items-center justify-end gap-2.5 pt-2">
                     <button type="button" onclick="closeMatchResultModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition">
                         Hủy

@@ -80,6 +80,53 @@
             </button>
         </div>
 
+        <!-- Balance Report Overview Card -->
+        <div id="admin-balance-report-card" class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center text-base">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm sm:text-base font-black font-heading text-slate-900">Báo Cáo Chất Lượng Cân Bằng Trận Đấu</h3>
+                        <p class="text-xs text-slate-500">Đo lường trận cân vs lệch thông qua tỉ số mạng hạ gục và hệ số hồi quy Elo</p>
+                    </div>
+                </div>
+                <div id="balance-trend-badge" class="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 bg-slate-50 text-slate-600 border-slate-200">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span id="balance-trend-text">Đang phân tích...</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div class="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100">
+                    <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">Sát Nút (Diff &le; 5)</span>
+                    <b id="stat-perfect-count" class="text-xl font-black font-heading text-emerald-600">0</b>
+                    <span id="stat-perfect-rate" class="text-[10px] text-emerald-700 block font-medium">0%</span>
+                </div>
+                <div class="p-3 rounded-2xl bg-amber-50/60 border border-amber-100">
+                    <span class="text-[11px] font-bold text-amber-800 uppercase tracking-wider block">Cân Bằng (Diff &le; 10)</span>
+                    <b id="stat-fair-count" class="text-xl font-black font-heading text-amber-600">0</b>
+                    <span id="stat-fair-rate" class="text-[10px] text-amber-700 block font-medium">0%</span>
+                </div>
+                <div class="p-3 rounded-2xl bg-orange-50/60 border border-orange-100">
+                    <span class="text-[11px] font-bold text-orange-800 uppercase tracking-wider block">Lệch Kèo (Diff &le; 15)</span>
+                    <b id="stat-unbalanced-count" class="text-xl font-black font-heading text-orange-600">0</b>
+                    <span id="stat-unbalanced-rate" class="text-[10px] text-orange-700 block font-medium">0%</span>
+                </div>
+                <div class="p-3 rounded-2xl bg-rose-50/60 border border-rose-100">
+                    <span class="text-[11px] font-bold text-rose-800 uppercase tracking-wider block">Stomp / Áp Đảo</span>
+                    <b id="stat-stomp-count" class="text-xl font-black font-heading text-rose-600">0</b>
+                    <span id="stat-stomp-rate" class="text-[10px] text-rose-700 block font-medium">0%</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 pt-1 px-1 gap-2">
+                <span>Độ cân bằng trung bình: <b id="stat-avg-closeness" class="text-slate-800 font-black font-heading text-sm">--%</b></span>
+                <span class="text-[11px] text-slate-400"><i class="fa-solid fa-circle-info mr-1"></i>Trận Stomp tự kích hoạt Adaptive K (K=40-48) để điều chỉnh Elo hội tụ nhanh hơn</span>
+            </div>
+        </div>
+
         <!-- Matches Table -->
         <div class="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
             <div class="overflow-x-auto custom-scrollbar">

@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from services.data_manager import data_manager
 from services.player_service import player_service
 
@@ -55,6 +55,82 @@ def api_get_status():
         'total_players': total_players,
         'has_gemini': bool(os.getenv('GEMINI_API_KEY'))
     }), 200
+
+
+@stats_bp.route('/api/balance_report', methods=['GET'])
+def api_balance_report():
+    """Báo cáo chất lượng cân đội qua các trận gần đây."""
+    try:
+        matches = data_manager.get_matches_history()
+        metrics = player_service.get_metrics()
+        closeness_history = metrics.get('match_closeness_history', [])
+        
+        # Lấy N trận gần nhất (mặc định 10)
+        n = int(request.args.get('n', 10))
+        recent = matches[:n]  # matches đã sắp xếp mới nhất trước
+        
+        # Thống kê balance rating
+        rating_counts = {'perfect': 0, 'fair': 0, 'unbalanced': 0, 'stomp': 0, 'unknown': 0}
+        total_closeness = 0.0
+        matches_with_kills = 0
+        stomp_matches = []
+        
+        for m in recent:
+            rating = m.get('balance_rating', 'unknown')
+            if rating in rating_counts:
+                rating_counts[rating] += 1
+            else:
+                rating_counts['unknown'] += 1
+            
+            t1k = m.get('team1_kills', 0)
+            t2k = m.get('team2_kills', 0)
+            if t1k > 0 or t2k > 0:
+                matches_with_kills += 1
+                cl = m.get('match_closeness', 0.5)
+                total_closeness += cl
+            
+            if m.get('is_stomp', False):
+                stomp_matches.append({
+                    'id': m.get('id'),
+                    'match_code': m.get('match_code', ''),
+                    'team1_kills': t1k,
+                    'team2_kills': t2k,
+                    'winner': m.get('winner', ''),
+                    'created_at': m.get('created_at', '')
+                })
+        
+        avg_closeness = round(total_closeness / max(1, matches_with_kills), 2)
+        total_rated = sum(rating_counts.values())
+        
+        # Xu hướng: so sánh avg closeness 5 trận gần nhất vs 5 trận trước đó
+        trend = 'stable'
+        if len(closeness_history) >= 6:
+            recent_5 = [h['closeness'] for h in closeness_history[-5:]]
+            prev_5 = [h['closeness'] for h in closeness_history[-10:-5]]
+            if prev_5:
+                avg_recent = sum(recent_5) / len(recent_5)
+                avg_prev = sum(prev_5) / len(prev_5)
+                if avg_recent > avg_prev + 0.05:
+                    trend = 'improving'
+                elif avg_recent < avg_prev - 0.05:
+                    trend = 'declining'
+        
+        return jsonify({
+            'success': True,
+            'total_matches_analyzed': len(recent),
+            'matches_with_kill_data': matches_with_kills,
+            'average_closeness': avg_closeness,
+            'trend': trend,
+            'rating_distribution': rating_counts,
+            'stomp_rate': round(rating_counts['stomp'] / max(1, total_rated) * 100, 1) if total_rated > 0 else 0,
+            'perfect_rate': round(rating_counts['perfect'] / max(1, total_rated) * 100, 1) if total_rated > 0 else 0,
+            'stomp_matches': stomp_matches,
+            'closeness_history': closeness_history[-20:]  # 20 trận gần nhất
+        }), 200
+    except Exception as e:
+        import traceback
+        current_app.logger.error(f"Error in api_balance_report: {traceback.format_exc()}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # Legacy endpoints

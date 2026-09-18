@@ -20,6 +20,8 @@ def api_update_match_result():
         player_deltas = data.get('player_deltas')
         player_performances = data.get('player_performances')
         ai_summary = data.get('ai_summary', '')
+        team1_kills = int(data.get('team1_kills', 0))
+        team2_kills = int(data.get('team2_kills', 0))
 
         if not team1 or not team2 or winner not in ['team1', 'team2']:
             return jsonify({'success': False, 'error': 'Dữ liệu trận đấu không hợp lệ'}), 400
@@ -41,7 +43,9 @@ def api_update_match_result():
             notes=notes,
             player_deltas=player_deltas,
             player_performances=player_performances,
-            ai_summary=ai_summary
+            ai_summary=ai_summary,
+            team1_kills=team1_kills,
+            team2_kills=team2_kills
         )
 
         # Tính toán lại toàn bộ metrics ngay lập tức
@@ -77,6 +81,8 @@ def api_update_match(match_id: int):
         winner = data.get('winner', 'team1')
         notes = data.get('notes', '')
         player_deltas = data.get('player_deltas')
+        team1_kills = int(data.get('team1_kills', 0))
+        team2_kills = int(data.get('team2_kills', 0))
 
         if len(team1) != 5 or len(team2) != 5:
             return jsonify({'success': False, 'error': 'Mỗi đội phải có chính xác 5 tuyển thủ'}), 400
@@ -94,7 +100,9 @@ def api_update_match(match_id: int):
             team2=team2,
             winner=winner,
             notes=notes,
-            player_deltas=player_deltas
+            player_deltas=player_deltas,
+            team1_kills=team1_kills,
+            team2_kills=team2_kills
         )
 
         if not ok:
