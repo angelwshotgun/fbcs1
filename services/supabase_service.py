@@ -337,6 +337,37 @@ class SupabaseService:
             prefer='return=representation'
         )
 
+        # Fallback tự động nếu Supabase chưa chạy migration (chưa có cột team1_kills)
+        if not ok and isinstance(res, str) and 'column' in res and 'does not exist' in res:
+            print("[SupabaseService] Notice: New kill score columns not found on Supabase. Falling back to metadata...")
+            fallback_row = {
+                'match_code': match_code,
+                'team1_players': team1,
+                'team2_players': team2,
+                'team1_power': float(team1_power),
+                'team2_power': float(team2_power),
+                'winner': winner,
+                'result_code': result_code,
+                'synergies_applied': syn_payload,
+                'notes': notes
+            }
+            # Lưu kill info vào metadata trong synergies_applied
+            if 'metadata' not in fallback_row['synergies_applied']:
+                fallback_row['synergies_applied']['metadata'] = {}
+            fallback_row['synergies_applied']['metadata'].update({
+                'team1_kills': int(team1_kills),
+                'team2_kills': int(team2_kills),
+                'match_closeness': float(match_closeness),
+                'is_stomp': bool(is_stomp),
+                'balance_rating': str(balance_rating)
+            })
+            ok, res = self._request(
+                'matches',
+                method='POST',
+                data=fallback_row,
+                prefer='return=representation'
+            )
+
         if not ok:
             return False, f"Lỗi tạo trận đấu: {res}"
 
@@ -428,6 +459,17 @@ class SupabaseService:
             data=match_update,
             prefer='return=representation'
         )
+        if not ok and isinstance(res, str) and 'column' in res and 'does not exist' in res:
+            print("[SupabaseService] Notice: New kill score columns not found on Supabase. Falling back to metadata...")
+            for k in ['team1_kills', 'team2_kills', 'match_closeness', 'is_stomp', 'balance_rating']:
+                match_update.pop(k, None)
+            ok, res = self._request(
+                f"matches?id=eq.{match_id}",
+                method='PATCH',
+                data=match_update,
+                prefer='return=representation'
+            )
+
         if not ok:
             return False, f"Lỗi cập nhật bảng matches: {res}"
 
