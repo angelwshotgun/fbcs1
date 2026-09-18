@@ -16,6 +16,37 @@
         </button>
     </div>
 
+    <!-- Badge Filter Toolbar -->
+    <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-1.5 text-xs font-bold font-heading">
+            <span class="text-slate-400 text-[11px] uppercase tracking-wider mr-1">Bộ Lọc Danh Hiệu:</span>
+            <button type="button" onclick="setLeaderboardBadgeFilter('all')" id="btn-badge-filter-all" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white shadow-xs transition">
+                Tất Cả
+            </button>
+            <button type="button" onclick="setLeaderboardBadgeFilter('top1_podium')" id="btn-badge-filter-top1_podium" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>👑</span> <span>Top 3 BXH</span>
+            </button>
+            <button type="button" onclick="setLeaderboardBadgeFilter('mvp')" id="btn-badge-filter-mvp" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>🏆</span> <span>Vua MVP</span>
+            </button>
+            <button type="button" onclick="setLeaderboardBadgeFilter('svp')" id="btn-badge-filter-svp" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>🛡️</span> <span>Chúa Tể SVP</span>
+            </button>
+            <button type="button" onclick="setLeaderboardBadgeFilter('streak')" id="btn-badge-filter-streak" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>🔥</span> <span>Chuỗi Thắng</span>
+            </button>
+            <button type="button" onclick="setLeaderboardBadgeFilter('clutch_stomp')" id="btn-badge-filter-clutch_stomp" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>🥊</span> <span>Lội Ngược Dòng & Hủy Diệt</span>
+            </button>
+            <button type="button" onclick="setLeaderboardBadgeFilter('traits')" id="btn-badge-filter-traits" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>🎯</span> <span>Tay To & Bể Tướng</span>
+            </button>
+        </div>
+        <div id="leaderboard-filtered-count" class="text-xs text-slate-400 font-medium">
+            Hiển thị toàn bộ tuyển thủ
+        </div>
+    </div>
+
     <!-- Leaderboard Table -->
     <div class="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
         <div class="overflow-x-auto custom-scrollbar">
@@ -28,7 +59,7 @@
                         <th class="py-4 px-4 text-center">Stats OVR</th>
                         <th class="py-4 px-4 text-center">Phong Độ (1-10)</th>
                         <th class="py-4 px-4 text-center">Tỷ Lệ Thắng</th>
-                        <th class="py-4 px-4 text-center">Vai Trò</th>
+                        <th class="py-4 px-4 text-center">Vai Trò & Danh Hiệu</th>
                         <th class="py-4 px-4 text-center">Trận (W / L)</th>
                         <th class="py-4 px-4 text-center">Gần Nhất</th>
                     </tr>

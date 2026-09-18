@@ -93,21 +93,48 @@ class PlayerService:
 
             effective_power = round(combined_power * form_info.get('multiplier', 1.0), 2)
 
-            # Tính toán vai trò thực chiến: Phân biệt người dẫn dắt (Carry) vs Hưởng ké (Passenger)
+            # Tính toán vai trò thực chiến và thu thập dữ liệu chi tiết từ lịch sử trận
             m_count = p_stats.get('matches', 0)
             wr_val = p_stats.get('winrate', 0.0)
             passenger_tags_count = 0
             carry_tags_count = 0
+            mvp_count = 0
+            svp_count = 0
+            clutch_wins = 0
+            stomp_wins = 0
+
             if match_details:
                 for m_rec in match_details.values():
+                    t1_players = [str(x).lower() for x in m_rec.get('team1', [])]
+                    t2_players = [str(x).lower() for x in m_rec.get('team2', [])]
+                    winner = m_rec.get('winner')
+                    is_winner = (winner == 'team1' and pid in t1_players) or (winner == 'team2' and pid in t2_players)
+
+                    if is_winner:
+                        is_stomp = m_rec.get('is_stomp', False)
+                        closeness = float(m_rec.get('match_closeness', 0.5))
+                        t1k = int(m_rec.get('team1_kills', 0))
+                        t2k = int(m_rec.get('team2_kills', 0))
+                        diff = abs(t1k - t2k) if (t1k > 0 or t2k > 0) else None
+
+                        if is_stomp or (diff is not None and diff >= 15):
+                            stomp_wins += 1
+                        elif closeness >= 0.75 or (diff is not None and diff <= 6):
+                            clutch_wins += 1
+
                     perfs = m_rec.get('player_performances', [])
-                    for pf in perfs:
-                        if str(pf.get('player_id', '')).lower() == pid:
-                            tag = str(pf.get('performance_tag', '')).upper()
-                            if tag in ['PASSENGER', 'CARRIED']:
-                                passenger_tags_count += 1
-                            elif tag in ['MVP', 'CARRY']:
-                                carry_tags_count += 1
+                    if isinstance(perfs, list):
+                        for pf in perfs:
+                            if str(pf.get('player_id', '')).lower() == pid:
+                                tag = str(pf.get('performance_tag', '')).upper()
+                                if tag in ['PASSENGER', 'CARRIED']:
+                                    passenger_tags_count += 1
+                                elif tag in ['MVP', 'CARRY']:
+                                    carry_tags_count += 1
+                                if tag == 'MVP':
+                                    mvp_count += 1
+                                elif tag == 'SVP':
+                                    svp_count += 1
 
             if m_count < 2:
                 role_key = 'newbie'
@@ -125,7 +152,7 @@ class PlayerService:
                 role_key = 'carry'
                 role_label = 'Chủ lực'
                 role_icon = '👑'
-                role_badge = 'bg-amber-100 text-amber-800 border-amber-300'
+                role_badge = 'bg-purple-100 text-purple-800 border-purple-300'
                 role_desc = 'Người dẫn dắt lối chơi, đóng góp trực tiếp vào chiến thắng'
             elif wr_val <= 35.0 and stats_ovr >= 6.8:
                 role_key = 'unlucky'
@@ -150,6 +177,120 @@ class PlayerService:
                 'carry_count': carry_tags_count
             }
 
+            # Hệ thống Badges đa dạng
+            badges = []
+
+            # 1. Danh hiệu Thực chiến
+            if mvp_count >= 1:
+                badges.append({
+                    'key': 'mvp',
+                    'label': f'MVP x{mvp_count}' if mvp_count > 1 else 'MVP',
+                    'icon': '🏆',
+                    'badge_class': 'bg-amber-100 text-amber-800 border-amber-300 font-bold',
+                    'desc': f'Tỏa sáng rực rỡ và đạt danh hiệu MVP {mvp_count} lần'
+                })
+
+            if svp_count >= 1:
+                badges.append({
+                    'key': 'svp',
+                    'label': f'SVP x{svp_count}' if svp_count > 1 else 'SVP',
+                    'icon': '🛡️',
+                    'badge_class': 'bg-rose-100 text-rose-800 border-rose-300 font-bold',
+                    'desc': f'Chiến binh đơn độc gánh đội thua {svp_count} lần'
+                })
+
+            if clutch_wins >= 1:
+                badges.append({
+                    'key': 'clutch',
+                    'label': f'Lội Ngược Dòng x{clutch_wins}' if clutch_wins > 1 else 'Lội Ngược Dòng',
+                    'icon': '🥊',
+                    'badge_class': 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
+                    'desc': f'Bản lĩnh giành chiến thắng trong {clutch_wins} trận sát nút căng thẳng'
+                })
+
+            if stomp_wins >= 1:
+                badges.append({
+                    'key': 'stomp',
+                    'label': f'Hủy Diệt x{stomp_wins}' if stomp_wins > 1 else 'Hủy Diệt',
+                    'icon': '💥',
+                    'badge_class': 'bg-red-100 text-red-800 border-red-300 font-bold',
+                    'desc': f'Đè bẹp đối thủ áp đảo trong {stomp_wins} trận Stomp'
+                })
+
+            # 2. Danh hiệu Chuỗi Thắng / Thua & Phong độ
+            streak_str = form_info.get('streak', '')
+            if streak_str.startswith('W'):
+                try:
+                    s_num = int(streak_str[1:])
+                    if s_num >= 4:
+                        badges.append({
+                            'key': 'streak_god',
+                            'label': f'Bất Bại {s_num}W',
+                            'icon': '⚡',
+                            'badge_class': 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-600 shadow-2xs font-black',
+                            'desc': f'Đang giữ chuỗi toàn thắng {s_num} trận liên tiếp'
+                        })
+                    elif s_num >= 2:
+                        badges.append({
+                            'key': 'streak_w',
+                            'label': f'Chuỗi {s_num}W',
+                            'icon': '🔥',
+                            'badge_class': 'bg-amber-50 text-amber-700 border-amber-200 font-bold',
+                            'desc': f'Hưng phấn với chuỗi thắng {s_num} trận'
+                        })
+                except Exception:
+                    pass
+            elif streak_str.startswith('L'):
+                try:
+                    s_num = int(streak_str[1:])
+                    if s_num >= 3:
+                        badges.append({
+                            'key': 'streak_l',
+                            'label': f'Giải Hạn {s_num}L',
+                            'icon': '🧊',
+                            'badge_class': 'bg-slate-100 text-slate-600 border-slate-300',
+                            'desc': f'Chuỗi thua {s_num} trận không may, cần người kéo lại'
+                        })
+                except Exception:
+                    pass
+
+            # 3. Danh hiệu Tố chất & Kỹ năng
+            if skill >= 8.5:
+                badges.append({
+                    'key': 'mech_god',
+                    'label': 'Tay To',
+                    'icon': '🎯',
+                    'badge_class': 'bg-teal-100 text-teal-800 border-teal-300 font-bold',
+                    'desc': 'Kỹ năng cá nhân vượt trội (Skill >= 8.5/10)'
+                })
+
+            if champ_pool >= 8.0:
+                badges.append({
+                    'key': 'deep_pool',
+                    'label': 'Kho Tướng',
+                    'icon': '📚',
+                    'badge_class': 'bg-violet-100 text-violet-800 border-violet-300 font-bold',
+                    'desc': 'Bể tướng rất rộng (Champion Pool >= 8.0/10)'
+                })
+
+            if flex_lane >= 8.0:
+                badges.append({
+                    'key': 'flex_god',
+                    'label': 'Tắc Kè Hoa',
+                    'icon': '🔄',
+                    'badge_class': 'bg-cyan-100 text-cyan-800 border-cyan-300 font-bold',
+                    'desc': 'Linh hoạt mọi làn đường (Flex Lane >= 8.0/10)'
+                })
+
+            if consistency >= 8.0:
+                badges.append({
+                    'key': 'iron_anchor',
+                    'label': 'Hòn Đá Tảng',
+                    'icon': '⚓',
+                    'badge_class': 'bg-slate-100 text-slate-800 border-slate-300 font-bold',
+                    'desc': 'Thi đấu ổn định tuyệt đối (Consistency >= 8.0/10)'
+                })
+
             player_obj = {
                 'id': pid,
                 'nickname': profile.get('nickname', pid.capitalize()),
@@ -168,6 +309,7 @@ class PlayerService:
                 'effective_power': effective_power,
                 'form': form_info,
                 'impact_role': impact_role,
+                'badges': badges,
                 'matches': p_stats.get('matches', 0),
                 'wins': p_stats.get('wins', 0),
                 'losses': p_stats.get('losses', 0),
@@ -176,6 +318,38 @@ class PlayerService:
             results.append(player_obj)
 
         results.sort(key=lambda x: (x['hidden_elo'], x['effective_power']), reverse=True)
+
+        # Gán danh hiệu Xếp Hạng dựa trên thứ tự BXH
+        active_rank = 1
+        for p in results:
+            if p.get('matches', 0) > 0:
+                if active_rank == 1:
+                    p['badges'].insert(0, {
+                        'key': 'top1',
+                        'label': 'Bá Chủ BXH',
+                        'icon': '👑',
+                        'badge_class': 'bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-slate-900 border-amber-400 font-black shadow-2xs',
+                        'desc': 'Đang nắm giữ vị trí Số 1 trên Bảng Xếp Hạng Elo toàn máy chủ'
+                    })
+                elif active_rank in [2, 3]:
+                    p['badges'].insert(0, {
+                        'key': 'podium',
+                        'label': f'Top {active_rank}',
+                        'icon': '🥈' if active_rank == 2 else '🥉',
+                        'badge_class': 'bg-indigo-100 text-indigo-800 border-indigo-300 font-bold',
+                        'desc': f'Tuyển thủ thuộc Top {active_rank} máy chủ'
+                    })
+                elif p.get('matches', 0) <= 2 and (p.get('winrate', 0) >= 60.0 or p.get('hidden_elo', 0) >= 1230.0):
+                    p['badges'].insert(0, {
+                        'key': 'rising_star',
+                        'label': 'Tân Binh Quái Kiệt',
+                        'icon': '⭐',
+                        'badge_class': 'bg-sky-100 text-sky-800 border-sky-300 font-bold',
+                        'desc': 'Tân binh khởi đầu xuất sắc với tỷ lệ thắng và Elo cao'
+                    })
+                p['rank'] = active_rank
+                active_rank += 1
+
         return results
 
     def get_player(self, player_id: str) -> Optional[Dict[str, Any]]:

@@ -1,24 +1,81 @@
 // TAB 4: LEADERBOARD (BẢNG XẾP HẠNG)
 // ==========================================
+let currentLeaderboardBadgeFilter = 'all';
+
+function setLeaderboardBadgeFilter(filterKey) {
+    currentLeaderboardBadgeFilter = filterKey;
+
+    const filterBtns = [
+        'all', 'top1_podium', 'mvp', 'svp', 'streak', 'clutch_stomp', 'traits'
+    ];
+
+    filterBtns.forEach(key => {
+        const btn = document.getElementById(`btn-badge-filter-${key}`);
+        if (!btn) return;
+        if (key === filterKey) {
+            btn.className = "px-3 py-1.5 rounded-xl bg-indigo-600 text-white shadow-xs transition flex items-center gap-1";
+        } else {
+            btn.className = "px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1";
+        }
+    });
+
+    renderLeaderboard();
+}
+
 function renderLeaderboard() {
     const tbody = document.getElementById('leaderboard-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
 
     // Chỉ hiển thị tuyển thủ đã thi đấu ít nhất 1 trận (loại bỏ người chơi chưa đánh trận nào)
-    const rankedPlayers = allPlayers
+    let rankedPlayers = allPlayers
         .filter(p => (p.matches || 0) > 0)
         .sort((a, b) => b.hidden_elo - a.hidden_elo);
+
+    // Áp dụng bộ lọc danh hiệu nếu có
+    if (currentLeaderboardBadgeFilter !== 'all') {
+        rankedPlayers = rankedPlayers.filter(p => {
+            const bKeys = (p.badges || []).map(b => b.key);
+            if (currentLeaderboardBadgeFilter === 'top1_podium') {
+                return bKeys.includes('top1') || bKeys.includes('podium');
+            }
+            if (currentLeaderboardBadgeFilter === 'mvp') {
+                return bKeys.includes('mvp');
+            }
+            if (currentLeaderboardBadgeFilter === 'svp') {
+                return bKeys.includes('svp');
+            }
+            if (currentLeaderboardBadgeFilter === 'streak') {
+                return bKeys.includes('streak_w') || bKeys.includes('streak_god');
+            }
+            if (currentLeaderboardBadgeFilter === 'clutch_stomp') {
+                return bKeys.includes('clutch') || bKeys.includes('stomp');
+            }
+            if (currentLeaderboardBadgeFilter === 'traits') {
+                return bKeys.some(k => ['mech_god', 'deep_pool', 'flex_god', 'iron_anchor'].includes(k));
+            }
+            return true;
+        });
+    }
+
+    const countLabel = document.getElementById('leaderboard-filtered-count');
+    if (countLabel) {
+        if (currentLeaderboardBadgeFilter === 'all') {
+            countLabel.innerText = `Hiển thị toàn bộ ${rankedPlayers.length} tuyển thủ`;
+        } else {
+            countLabel.innerHTML = `Lọc được: <b class="text-indigo-600 font-bold">${rankedPlayers.length}</b> tuyển thủ`;
+        }
+    }
 
     if (rankedPlayers.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-12 text-slate-400">
+                <td colspan="9" class="text-center py-12 text-slate-400">
                     <div class="flex flex-col items-center justify-center gap-2">
-                        <i class="fa-solid fa-trophy text-slate-300 text-3xl"></i>
-                        <span class="font-bold text-slate-600 text-sm">Chưa có tuyển thủ nào đủ điều kiện xếp hạng Elo</span>
+                        <i class="fa-solid fa-filter text-slate-300 text-3xl"></i>
+                        <span class="font-bold text-slate-600 text-sm">Không có tuyển thủ nào khớp với bộ lọc danh hiệu này</span>
                         <p class="text-xs text-slate-400 max-w-md">
-                            Bảng xếp hạng chỉ hiển thị tuyển thủ đã tham gia ít nhất 1 trận đấu thực tế. Hãy ghi nhận kết quả trận đấu trong tab <b>Mô Phỏng 5vs5</b> để xuất hiện trên BXH!
+                            Hãy thử chọn danh hiệu khác hoặc bấm "Tất Cả" để xem toàn bộ bảng xếp hạng!
                         </p>
                     </div>
                 </td>
@@ -28,7 +85,7 @@ function renderLeaderboard() {
     }
 
     rankedPlayers.forEach((p, idx) => {
-        const rank = idx + 1;
+        const rank = p.rank || (idx + 1);
         let rankBadge = `<span class="font-bold text-slate-500">#${rank}</span>`;
         if (rank === 1) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-400 text-slate-900 font-black flex items-center justify-center mx-auto shadow-xs">1</span>`;
         if (rank === 2) rankBadge = `<span class="w-7 h-7 rounded-full bg-slate-300 text-slate-900 font-black flex items-center justify-center mx-auto shadow-xs">2</span>`;
@@ -39,11 +96,27 @@ function renderLeaderboard() {
             return `<span class="w-5 h-5 rounded-md bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold inline-flex items-center justify-center">L</span>`;
         }).join('');
 
+        // Render Impact Role (Chính)
+        const roleBadgeHtml = `
+            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${p.impact_role?.badge || 'bg-slate-100 text-slate-700 border-slate-200'}" title="${p.impact_role?.desc || ''}">
+                <span>${p.impact_role?.icon || '⚖️'}</span>
+                <span>${p.impact_role?.label || 'Tròn vai'}</span>
+            </span>
+        `;
+
+        // Render Các Danh Hiệu Đa Dạng Kèm Tooltip
+        const extraBadgesHtml = (p.badges || []).map(b => `
+            <span class="px-2 py-0.5 rounded-full text-[10px] inline-flex items-center gap-1 border shadow-2xs transition hover:scale-105 cursor-help ${b.badge_class || 'bg-slate-100 text-slate-700 border-slate-200'}" title="${b.desc || b.label}">
+                <span>${b.icon}</span>
+                <span>${b.label}</span>
+            </span>
+        `).join('');
+
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition";
         tr.innerHTML = `
-            <td class="py-3 px-4 text-center">${rankBadge}</td>
-            <td class="py-3 px-4">
+            <td class="py-3.5 px-4 text-center">${rankBadge}</td>
+            <td class="py-3.5 px-4">
                 <div class="flex items-center gap-3">
                     <img src="${p.avatar}" class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 object-cover" alt="${p.nickname}">
                     <div>
@@ -52,32 +125,32 @@ function renderLeaderboard() {
                     </div>
                 </div>
             </td>
-            <td class="py-3 px-4 text-center font-extrabold text-indigo-600">
+            <td class="py-3.5 px-4 text-center font-extrabold text-indigo-600 text-sm">
                 ${Math.round(p.hidden_elo)}
             </td>
-            <td class="py-3 px-4 text-center">
-                <span class="px-2.5 py-0.5 rounded-lg bg-slate-100 font-bold text-amber-700 border border-slate-200">
+            <td class="py-3.5 px-4 text-center">
+                <span class="px-2.5 py-0.5 rounded-lg bg-slate-100 font-bold text-amber-700 border border-slate-200 text-xs">
                     ${p.stats_ovr || p.skill}
                 </span>
             </td>
-            <td class="py-3 px-4 text-center">
-                <span class="font-bold text-slate-800">
+            <td class="py-3.5 px-4 text-center">
+                <span class="font-bold text-slate-800 text-xs">
                     ${p.form?.icon || '🌱'} ${p.form?.score || 5.0}
                 </span>
             </td>
-            <td class="py-3 px-4 text-center font-bold ${p.winrate >= 50 ? 'text-emerald-600' : 'text-slate-500'}">
+            <td class="py-3.5 px-4 text-center font-bold text-xs ${p.winrate >= 50 ? 'text-emerald-600' : 'text-slate-500'}">
                 ${p.winrate}%
             </td>
-            <td class="py-3 px-4 text-center whitespace-nowrap">
-                <span class="px-2.5 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${p.impact_role?.badge || 'bg-slate-100 text-slate-700 border-slate-200'}" title="${p.impact_role?.desc || ''}">
-                    <span>${p.impact_role?.icon || '⚖️'}</span>
-                    <span>${p.impact_role?.label || 'Tròn vai'}</span>
-                </span>
+            <td class="py-3.5 px-4">
+                <div class="flex flex-wrap items-center justify-center gap-1.5 max-w-[320px] mx-auto">
+                    ${roleBadgeHtml}
+                    ${extraBadgesHtml}
+                </div>
             </td>
-            <td class="py-3 px-4 text-center text-xs text-slate-500">
-                ${p.matches} (<span class="text-emerald-600">${p.wins}</span> / <span class="text-rose-600">${p.losses}</span>)
+            <td class="py-3.5 px-4 text-center text-xs text-slate-500 whitespace-nowrap">
+                ${p.matches} (<span class="text-emerald-600 font-bold">${p.wins}</span> / <span class="text-rose-600 font-bold">${p.losses}</span>)
             </td>
-            <td class="py-3 px-4 text-center">
+            <td class="py-3.5 px-4 text-center whitespace-nowrap">
                 <div class="flex items-center justify-center gap-1">
                     ${recentBadges || '<span class="text-slate-400 text-xs">-</span>'}
                 </div>
