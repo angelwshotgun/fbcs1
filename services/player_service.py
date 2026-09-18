@@ -177,10 +177,10 @@ class PlayerService:
                 'carry_count': carry_tags_count
             }
 
-            # Hệ thống Badges đa dạng
+            # Hệ thống Badges thực chiến (hoàn toàn dựa vào dữ liệu thi đấu thực tế, không dùng stats tĩnh)
             badges = []
 
-            # 1. Danh hiệu Thực chiến
+            # 1. Danh hiệu Thực chiến cá nhân (AI Scoreboard / Trình diễn)
             if mvp_count >= 1:
                 badges.append({
                     'key': 'mvp',
@@ -199,13 +199,14 @@ class PlayerService:
                     'desc': f'Chiến binh đơn độc gánh đội thua {svp_count} lần'
                 })
 
+            # 2. Danh hiệu tương quan thế trận & tỉ số hạ gục (Kill Score & Match Closeness)
             if clutch_wins >= 1:
                 badges.append({
                     'key': 'clutch',
                     'label': f'Lội Ngược Dòng x{clutch_wins}' if clutch_wins > 1 else 'Lội Ngược Dòng',
                     'icon': '🥊',
                     'badge_class': 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
-                    'desc': f'Bản lĩnh giành chiến thắng trong {clutch_wins} trận sát nút căng thẳng'
+                    'desc': f'Bản lĩnh giành chiến thắng trong {clutch_wins} trận sát nút kịch tính'
                 })
 
             if stomp_wins >= 1:
@@ -217,78 +218,22 @@ class PlayerService:
                     'desc': f'Đè bẹp đối thủ áp đảo trong {stomp_wins} trận Stomp'
                 })
 
-            # 2. Danh hiệu Chuỗi Thắng / Thua & Phong độ
-            streak_str = form_info.get('streak', '')
-            if streak_str.startswith('W'):
-                try:
-                    s_num = int(streak_str[1:])
-                    if s_num >= 4:
-                        badges.append({
-                            'key': 'streak_god',
-                            'label': f'Bất Bại {s_num}W',
-                            'icon': '⚡',
-                            'badge_class': 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-600 shadow-2xs font-black',
-                            'desc': f'Đang giữ chuỗi toàn thắng {s_num} trận liên tiếp'
-                        })
-                    elif s_num >= 2:
-                        badges.append({
-                            'key': 'streak_w',
-                            'label': f'Chuỗi {s_num}W',
-                            'icon': '🔥',
-                            'badge_class': 'bg-amber-50 text-amber-700 border-amber-200 font-bold',
-                            'desc': f'Hưng phấn với chuỗi thắng {s_num} trận'
-                        })
-                except Exception:
-                    pass
-            elif streak_str.startswith('L'):
-                try:
-                    s_num = int(streak_str[1:])
-                    if s_num >= 3:
-                        badges.append({
-                            'key': 'streak_l',
-                            'label': f'Giải Hạn {s_num}L',
-                            'icon': '🧊',
-                            'badge_class': 'bg-slate-100 text-slate-600 border-slate-300',
-                            'desc': f'Chuỗi thua {s_num} trận không may, cần người kéo lại'
-                        })
-                except Exception:
-                    pass
-
-            # 3. Danh hiệu Tố chất & Kỹ năng
-            if skill >= 8.5:
+            # 3. Danh hiệu Tỷ lệ thắng & Cống hiến thực chiến
+            if m_count >= 3 and wr_val >= 70.0:
                 badges.append({
-                    'key': 'mech_god',
-                    'label': 'Tay To',
-                    'icon': '🎯',
-                    'badge_class': 'bg-teal-100 text-teal-800 border-teal-300 font-bold',
-                    'desc': 'Kỹ năng cá nhân vượt trội (Skill >= 8.5/10)'
+                    'key': 'high_wr',
+                    'label': f'Tỷ Lệ Thắng Cao ({round(wr_val)}%)',
+                    'icon': '💎',
+                    'badge_class': 'bg-blue-100 text-blue-800 border-blue-300 font-bold',
+                    'desc': f'Duy trì tỷ lệ thắng vượt trội {round(wr_val)}% sau {m_count} trận đấu'
                 })
-
-            if champ_pool >= 8.0:
+            elif m_count >= 6:
                 badges.append({
-                    'key': 'deep_pool',
-                    'label': 'Kho Tướng',
-                    'icon': '📚',
-                    'badge_class': 'bg-violet-100 text-violet-800 border-violet-300 font-bold',
-                    'desc': 'Bể tướng rất rộng (Champion Pool >= 8.0/10)'
-                })
-
-            if flex_lane >= 8.0:
-                badges.append({
-                    'key': 'flex_god',
-                    'label': 'Tắc Kè Hoa',
-                    'icon': '🔄',
-                    'badge_class': 'bg-cyan-100 text-cyan-800 border-cyan-300 font-bold',
-                    'desc': 'Linh hoạt mọi làn đường (Flex Lane >= 8.0/10)'
-                })
-
-            if consistency >= 8.0:
-                badges.append({
-                    'key': 'iron_anchor',
-                    'label': 'Hòn Đá Tảng',
-                    'icon': '⚓',
+                    'key': 'veteran',
+                    'label': f'Chiến Tướng ({m_count} trận)',
+                    'icon': '⚔️',
                     'badge_class': 'bg-slate-100 text-slate-800 border-slate-300 font-bold',
-                    'desc': 'Thi đấu ổn định tuyệt đối (Consistency >= 8.0/10)'
+                    'desc': f'Tuyển thủ bền bỉ tham gia tích cực với {m_count} trận đấu thực tế'
                 })
 
             player_obj = {

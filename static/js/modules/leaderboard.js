@@ -6,7 +6,7 @@ function setLeaderboardBadgeFilter(filterKey) {
     currentLeaderboardBadgeFilter = filterKey;
 
     const filterBtns = [
-        'all', 'top1_podium', 'mvp', 'svp', 'streak', 'clutch_stomp', 'traits'
+        'all', 'top1_podium', 'mvp', 'svp', 'clutch_stomp', 'high_wr_vet'
     ];
 
     filterBtns.forEach(key => {
@@ -45,14 +45,11 @@ function renderLeaderboard() {
             if (currentLeaderboardBadgeFilter === 'svp') {
                 return bKeys.includes('svp');
             }
-            if (currentLeaderboardBadgeFilter === 'streak') {
-                return bKeys.includes('streak_w') || bKeys.includes('streak_god');
-            }
             if (currentLeaderboardBadgeFilter === 'clutch_stomp') {
                 return bKeys.includes('clutch') || bKeys.includes('stomp');
             }
-            if (currentLeaderboardBadgeFilter === 'traits') {
-                return bKeys.some(k => ['mech_god', 'deep_pool', 'flex_god', 'iron_anchor'].includes(k));
+            if (currentLeaderboardBadgeFilter === 'high_wr_vet') {
+                return bKeys.includes('high_wr') || bKeys.includes('veteran');
             }
             return true;
         });
