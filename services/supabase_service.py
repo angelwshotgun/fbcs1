@@ -275,6 +275,30 @@ class SupabaseService:
         cols = [c for c in df.columns if c != 'Result'] + ['Result']
         return df[cols]
 
+    @staticmethod
+    def _parse_kda(kda_val: Any) -> Tuple[int, int, int]:
+        if not kda_val:
+            return 0, 0, 0
+        try:
+            parts = str(kda_val).split('/')
+            if len(parts) == 3:
+                return int(parts[0].strip()), int(parts[1].strip()), int(parts[2].strip())
+        except Exception:
+            pass
+        return 0, 0, 0
+
+    @staticmethod
+    def _parse_damage(dmg_val: Any) -> int:
+        if not dmg_val:
+            return 0
+        try:
+            s = str(dmg_val).strip().lower()
+            if s.endswith('k'):
+                return int(float(s[:-1]) * 1000)
+            return int(float(s))
+        except Exception:
+            return 0
+
     def insert_match(
         self,
         team1: List[str],
@@ -374,30 +398,41 @@ class SupabaseService:
         match_id = None
         if isinstance(res, list) and len(res) > 0 and 'id' in res[0]:
             match_id = res[0]['id']
-
         # 2. Ghi chi tiết 10 tuyển thủ vào bảng match_participants nếu có match_id
         if match_id:
             participants = []
             perf_map = {str(p.get('player_id', '')).lower(): p for p in (player_performances or [])}
             for p in team1:
                 p_perf = perf_map.get(str(p).lower(), {})
+                k, d, a = self._parse_kda(p_perf.get('kda'))
+                dmg = self._parse_damage(p_perf.get('damage'))
                 participants.append({
                     'match_id': match_id,
                     'player_id': p,
                     'team': 1,
                     'is_winner': (winner == 'team1'),
                     'champion': p_perf.get('champion') if p_perf.get('champion') and p_perf.get('champion') != '-' else None,
-                    'role': p_perf.get('performance_tag')
+                    'role': p_perf.get('performance_tag'),
+                    'kills': k,
+                    'deaths': d,
+                    'assists': a,
+                    'damage': dmg
                 })
             for p in team2:
                 p_perf = perf_map.get(str(p).lower(), {})
+                k, d, a = self._parse_kda(p_perf.get('kda'))
+                dmg = self._parse_damage(p_perf.get('damage'))
                 participants.append({
                     'match_id': match_id,
                     'player_id': p,
                     'team': 2,
                     'is_winner': (winner == 'team2'),
                     'champion': p_perf.get('champion') if p_perf.get('champion') and p_perf.get('champion') != '-' else None,
-                    'role': p_perf.get('performance_tag')
+                    'role': p_perf.get('performance_tag'),
+                    'kills': k,
+                    'deaths': d,
+                    'assists': a,
+                    'damage': dmg
                 })
 
             self._request(
@@ -476,20 +511,43 @@ class SupabaseService:
         # Cập nhật match_participants: xóa cũ và tạo mới
         self._request(f"match_participants?match_id=eq.{match_id}", method='DELETE')
 
+        syn = data.get('synergies_applied') or {}
+        meta = syn.get('metadata') if isinstance(syn, dict) else {}
+        perfs = meta.get('player_performances', []) if meta else []
+        perf_map = {str(p.get('player_id', '')).lower(): p for p in perfs}
+
         participants = []
         for p in team1:
+            p_perf = perf_map.get(str(p).lower(), {})
+            k, d, a = self._parse_kda(p_perf.get('kda'))
+            dmg = self._parse_damage(p_perf.get('damage'))
             participants.append({
                 'match_id': match_id,
                 'player_id': p,
                 'team': 1,
-                'is_winner': (winner == 'team1')
+                'is_winner': (winner == 'team1'),
+                'champion': p_perf.get('champion') if p_perf.get('champion') and p_perf.get('champion') != '-' else None,
+                'role': p_perf.get('performance_tag'),
+                'kills': k,
+                'deaths': d,
+                'assists': a,
+                'damage': dmg
             })
         for p in team2:
+            p_perf = perf_map.get(str(p).lower(), {})
+            k, d, a = self._parse_kda(p_perf.get('kda'))
+            dmg = self._parse_damage(p_perf.get('damage'))
             participants.append({
                 'match_id': match_id,
                 'player_id': p,
                 'team': 2,
-                'is_winner': (winner == 'team2')
+                'is_winner': (winner == 'team2'),
+                'champion': p_perf.get('champion') if p_perf.get('champion') and p_perf.get('champion') != '-' else None,
+                'role': p_perf.get('performance_tag'),
+                'kills': k,
+                'deaths': d,
+                'assists': a,
+                'damage': dmg
             })
 
         self._request('match_participants', method='POST', data=participants, prefer='return=minimal')

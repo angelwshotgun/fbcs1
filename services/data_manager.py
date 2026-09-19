@@ -376,7 +376,12 @@ class DataManager:
                             'player_deltas': p_deltas,
                             'player_performances': p_perfs,
                             'ai_summary': ai_sum,
-                            'notes': m.get('notes', '')
+                            'notes': m.get('notes', ''),
+                            'team1_kills': int(m.get('team1_kills', 0)),
+                            'team2_kills': int(m.get('team2_kills', 0)),
+                            'match_closeness': float(m.get('match_closeness', 0.5)),
+                            'is_stomp': bool(m.get('is_stomp', False)),
+                            'balance_rating': str(m.get('balance_rating', 'unknown'))
                         }
                         # Đánh dấu theo cả số thứ tự dòng (cho EloService) và theo ID trận
                         details[str(idx)] = record
@@ -494,6 +499,9 @@ class DataManager:
 
         # 3. Lưu chi tiết cá nhân hóa vào match_details.json
         match_details = self.read_match_details()
+        # Tính closeness cho local fallback
+        from services.elo_service import elo_service as _elo_svc
+        _closeness, _b_rating, _stomp = _elo_svc.calc_match_closeness(team1_kills, team2_kills)
         match_record = {
             'match_index': match_idx,
             'timestamp': time.time(),
@@ -508,6 +516,9 @@ class DataManager:
             'notes': notes or '',
             'team1_kills': team1_kills,
             'team2_kills': team2_kills,
+            'match_closeness': _closeness,
+            'is_stomp': _stomp,
+            'balance_rating': _b_rating,
         }
         match_details[str(match_idx)] = match_record
         self.save_match_details(match_details)
