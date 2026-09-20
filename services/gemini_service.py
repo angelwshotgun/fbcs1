@@ -82,17 +82,20 @@ class GeminiService:
             }
 
         prompt = f"""
-Bạn là chuyên gia phân tích eSports (LMHT/Dota) hàng đầu. Hãy phân tích kèo đấu giữa 2 đội sau:
-Team 1 ({', '.join(t1_names)}):
-- Phong độ cao: {', '.join(t1_on_fire) if t1_on_fire else 'Bình ổn'}
-Team 2 ({', '.join(t2_names)}):
-- Phong độ cao: {', '.join(t2_on_fire) if t2_on_fire else 'Bình ổn'}
+You are an elite eSports analyst and professional shoutcaster (League of Legends / Dota 2). Analyze the upcoming 5v5 matchup between the following two teams:
 
-Hãy viết ngắn gọn 3-4 đoạn:
-1. Đánh giá tương quan lực lượng và điểm đột biến
-2. Điều kiện thắng (Win Condition) cho từng đội
-3. Dự đoán tuyển thủ có thể trở thành MVP
-Phong cách sôi nổi, hào hứng của bình luận viên chuyên nghiệp.
+Team 1 (Blue Side): {', '.join(t1_names)}
+- High-form players: {', '.join(t1_on_fire) if t1_on_fire else 'Stable'}
+
+Team 2 (Red Side): {', '.join(t2_names)}
+- High-form players: {', '.join(t2_on_fire) if t2_on_fire else 'Stable'}
+
+Provide a concise, high-energy 3-4 paragraph preview in Vietnamese (professional caster tone):
+1. Team strengths comparison, lane matchup dynamics, and potential playmakers / X-factors.
+2. Clear Win Conditions for each team.
+3. MVP prediction and key player to watch.
+
+Use clear markdown headings and bullet points for maximum readability.
 """
         payload = {
             "contents": [{
@@ -128,44 +131,73 @@ Phong cách sôi nổi, hào hứng của bình luận viên chuyên nghiệp.
         # Tạo danh sách tuyển thủ đã biết để AI đối chiếu chính xác
         players_reference = []
         valid_ids_map = {}
+        # Ánh xạ bí danh đặc biệt (ví dụ: người chơi nyan đã gộp/chuyển giao sang hungpui)
+        SPECIAL_ALIASES = {
+            'nyan': 'hungpui',
+            'hungpui': 'hungpui'
+        }
+
         for p in known_players:
-            pid = str(p['id']).lower()
-            nick = str(p['nickname'])
-            valid_ids_map[pid] = nick
+            pid = str(p['id']).strip().lower()
+            nick = str(p.get('nickname', pid)).strip()
+            valid_ids_map[pid] = pid
             valid_ids_map[nick.lower()] = pid
-            players_reference.append(f"- ID: {p['id']}, Nickname: {nick}")
+
+            base_nick = ""
+            if '#' in nick:
+                base_nick = nick.split('#')[0].strip()
+                if base_nick:
+                    valid_ids_map[base_nick.lower()] = pid
+
+            for al in p.get('aliases', []):
+                if al:
+                    valid_ids_map[str(al).strip().lower()] = pid
+
+            if base_nick:
+                players_reference.append(f"- ID: {p['id']}, Nickname: {nick} (Ingame lobby name: '{base_nick}')")
+            else:
+                players_reference.append(f"- ID: {p['id']}, Nickname: {nick}")
+
+        # Gán bổ sung các alias đặc biệt
+        for alias_k, target_id in SPECIAL_ALIASES.items():
+            valid_ids_map[alias_k.lower()] = target_id
+
         ref_text = "\n".join(players_reference)
 
         prompt = f"""
-Bạn là AI chuyên gia đọc sảnh chờ game (League of Legends custom lobby, Discord room, game scoreboard, loading screen).
-Nhiệm vụ: Xem bức ảnh chụp màn hình này và trích xuất danh sách tên người chơi tham gia.
+You are an expert AI vision system specialized in gaming lobbies and match scoreboards (League of Legends custom lobbies, Discord rooms, in-game scoreboards, loading screens).
+Task: Inspect the attached screenshot and extract all participating player names.
 
-LƯU Ý QUAN TRỌNG:
-- Bức ảnh có thể là sảnh chờ 2 đội 5vs5 (Đội Xanh / Đội Đỏ, Trái / Phải, hoặc Team 1 / Team 2).
-- Bức ảnh cũng có thể chỉ hiển thị 5 người của 1 đội (bảng kết quả trận đấu, thẻ đội 5 người, v.v.).
-- Hãy đọc chính xác tất cả tên người chơi (bỏ qua các tiền tố rank, cấp độ, ping, clan tag thừa nếu có thể).
-- Hãy đối chiếu mỗi tên đọc được với danh sách hệ thống dưới đây:
+CRITICAL INSTRUCTIONS:
+- The image may depict a 5v5 custom lobby (Blue vs Red side, Left vs Right columns, or Team 1 vs Team 2).
+- Alternatively, it might only show 5 players from a single team (team card, end-game banner, etc.).
+- Accurately transcribe all visible player names (ignore rank borders, summoner levels, ping indicators, and extraneous clan tags).
+- Cross-reference every detected name against the registered system roster below:
 
-=== DANH SÁCH NGƯỜI CHƠI HỆ THỐNG ===
+=== SYSTEM REGISTERED PLAYER ROSTER ===
 {ref_text}
-=====================================
+======================================
 
-Quy tắc ánh xạ:
-1. Nếu tên trong ảnh giống hoặc tương đương (cho phép khác biệt nhỏ về hoa/thường, dấu cách, icon) với tuyển thủ trong danh sách hệ thống -> gán `matched_id` là đúng ID đó.
-2. Nếu tên trong ảnh KHÔNG có trong danh sách hệ thống -> gán `matched_id` là null (hoặc rỗng), nhưng VẪN PHẢI GIỮ `raw_name` đọc được từ ảnh để người dùng có thể tạo người chơi mới.
-3. Phân bổ vào 2 đội:
-   - `team1`: danh sách người chơi Đội 1 (hoặc Đội Xanh / Cột Trái / 5 người đầu tiên). Tối đa 5 người.
-   - `team2`: danh sách người chơi Đội 2 (hoặc Đội Đỏ / Cột Phải). Tối đa 5 người (nếu ảnh chỉ có 1 đội thì để mảng rỗng `[]`).
+MATCHING RULES:
+1. Exact or Fuzzy Match: If a detected name matches or closely resembles (case-insensitive, whitespace variations, special character/icon differences) a registered player, set `matched_id` to that player's exact system ID.
+2. RIOT ID & IN-GAME SUMMONER NAMES:
+   - In League of Legends lobbies, summoner names usually appear without their Riot tagline (e.g., 'Nyan#Tabby' displays simply as 'Nyan').
+   - Special alias mapping: The name 'Nyan' or 'nyan' MUST be mapped to the registered system ID 'hungpui'.
+   - NEVER invent new IDs or return an unverified ID; only use the exact system IDs provided above.
+3. Unrecognized Players: If a detected name does not match any registered player in the roster, set `matched_id` to null, but ALWAYS preserve the exact `raw_name` extracted from the image so the administrator can register them.
+4. Team Allocation:
+   - `team1`: List of players in Team 1 (Blue Side / Left Column / first 5 slots). Maximum 5 players.
+   - `team2`: List of players in Team 2 (Red Side / Right Column / second 5 slots). Maximum 5 players (if only 1 team is present in the image, provide an empty list `[]`).
 
-BẮT BUỘC TRẢ VỀ ĐÚNG 1 ĐỐI TƯỢNG JSON (không có markdown backticks ```json):
+RETURN ONLY A VALID JSON OBJECT (no markdown backticks, no extra text):
 {{
   "team1": [
-    {{"raw_name": "Tên trên ảnh", "matched_id": "id_he_thong_hoac_null"}}
+    {{"raw_name": "Detected name in image", "matched_id": "system_player_id_or_null"}}
   ],
   "team2": [
-    {{"raw_name": "Tên trên ảnh", "matched_id": "id_he_thong_hoac_null"}}
+    {{"raw_name": "Detected name in image", "matched_id": "system_player_id_or_null"}}
   ],
-  "detected_names": ["Tất cả các tên đọc được từ ảnh"]
+  "detected_names": ["List of all detected names from image"]
 }}
 """
         clean_base64 = image_data
@@ -209,27 +241,48 @@ BẮT BUỘC TRẢ VỀ ĐÚNG 1 ĐỐI TƯỢNG JSON (không có markdown backt
             # Chuẩn hóa slots cho 5vs5 (mỗi team đủ 5 slot)
             known_ids_set = {p['id'].lower() for p in known_players}
 
+            def find_player_id(text: str) -> Optional[str]:
+                if not text:
+                    return None
+                t = str(text).strip().lower()
+                # 1. Tra cứu trực tiếp
+                if t in valid_ids_map:
+                    return valid_ids_map[t]
+                # 2. Bỏ Riot tag sau dấu '#' (ví dụ: "nyan#tabby" -> "nyan")
+                if '#' in t:
+                    base = t.split('#')[0].strip()
+                    if base in valid_ids_map:
+                        return valid_ids_map[base]
+                # 3. Tìm theo dạng ngoặc đơn/phụ bản (ví dụ: "nyan(hungpui)")
+                for k, target_pid in valid_ids_map.items():
+                    if len(k) >= 3 and (k in t or t in k):
+                        return target_pid
+                return None
+
             def normalize_slot(item, idx):
                 if not item:
                     return {"slot": idx + 1, "raw_name": "", "matched_id": None}
                 raw_name = str(item.get('raw_name', '')).strip()
                 matched_id = item.get('matched_id')
+
+                final_id = None
                 if matched_id:
-                    matched_id = str(matched_id).strip().lower()
-                    if matched_id not in known_ids_set:
-                        # Thử tìm theo nickname
-                        found_pid = valid_ids_map.get(matched_id) or valid_ids_map.get(raw_name.lower())
-                        matched_id = found_pid if found_pid in known_ids_set else None
+                    clean_mid = str(matched_id).strip().lower()
+                    if clean_mid in known_ids_set:
+                        final_id = clean_mid
+                    else:
+                        final_id = find_player_id(clean_mid) or find_player_id(raw_name)
                 elif raw_name:
-                    # Thử match lại theo raw_name
-                    found_pid = valid_ids_map.get(raw_name.lower())
-                    if found_pid and found_pid in known_ids_set:
-                        matched_id = found_pid
+                    final_id = find_player_id(raw_name)
+
+                # Đảm bảo final_id phải là 1 ID hợp lệ trong known_ids_set
+                if final_id and final_id not in known_ids_set:
+                    final_id = None
 
                 return {
                     "slot": idx + 1,
                     "raw_name": raw_name,
-                    "matched_id": matched_id
+                    "matched_id": final_id
                 }
 
             team1_slots = [normalize_slot(raw_team1[i] if i < len(raw_team1) else None, i) for i in range(5)]
@@ -276,70 +329,93 @@ BẮT BUỘC TRẢ VỀ ĐÚNG 1 ĐỐI TƯỢNG JSON (không có markdown backt
                 'error': 'Chưa cấu hình Gemini API Key. Vui lòng dán API Key vào ô nhập hoặc mục Cài Đặt.'
             }
 
-        t1_lines = [f"- ID: {p.get('id')}, Tên: {p.get('nickname')}" for p in team1_players]
-        t2_lines = [f"- ID: {p.get('id')}, Tên: {p.get('nickname')}" for p in team2_players]
+        def format_player_line(p):
+            pid = p.get('id', '')
+            nick = p.get('nickname', pid)
+            base = nick.split('#')[0].strip() if '#' in nick else ""
+            if base and base.lower() != nick.lower():
+                return f"- ID: {pid}, Name: {nick} (In-game display in screenshot: '{base}')"
+            return f"- ID: {pid}, Name: {nick}"
 
-        winning_team_label = "Đội 1 (Xanh / Team 1)" if winner == 'team1' else "Đội 2 (Đỏ / Team 2)"
-        losing_team_label = "Đội 2 (Đỏ / Team 2)" if winner == 'team1' else "Đội 1 (Xanh / Team 1)"
+        t1_lines = [format_player_line(p) for p in team1_players]
+        t2_lines = [format_player_line(p) for p in team2_players]
+
+        winning_team_label = "Team 1 (Blue Side / Đội 1 Xanh)" if winner == 'team1' else "Team 2 (Red Side / Đội 2 Đỏ)"
+        losing_team_label = "Team 2 (Red Side / Đội 2 Đỏ)" if winner == 'team1' else "Team 1 (Blue Side / Đội 1 Xanh)"
 
         prompt = f"""
-Bạn là chuyên gia phân tích eSports (LMHT, Dota 2, Valorant) và chuyên gia toán học xếp hạng Elo.
-Nhiệm vụ: Hãy xem ảnh chụp màn hình bảng thống kê chi tiết kết thúc trận đấu (End-game Scoreboard) đính kèm.
+You are a world-class eSports analyst (League of Legends, Dota 2, Valorant) and a competitive Elo rating mathematician.
+Task: Analyze the attached post-game scoreboard screenshot (End-Game Scoreboard) with utmost precision.
 
-Bối cảnh trận đấu:
-- {winning_team_label} là ĐỘI CHIẾN THẮNG (WINNER).
-- {losing_team_label} là ĐỘI THUA CUỘC (LOSER).
+MATCH CONTEXT:
+- {winning_team_label} is the WINNER.
+- {losing_team_label} is the LOSER.
 
-Danh sách 10 tuyển thủ tham gia:
-[ĐỘI 1 (XANH)]:
+CRITICAL INSTRUCTION ON SCREENSHOT LAYOUT & TEAM ORIENTATION:
+- In the League of Legends client end-game screen, the screenshot taker's team is ALWAYS displayed on the TOP panel, regardless of whether they were Blue side or Red side!
+- Therefore, the TOP panel is NOT necessarily Team 1 (Blue Side)! If a player from Team 2 (Red Side) captured the screenshot, Team 2 will be shown at the top.
+- You MUST cross-reference each player's in-game name and champion against the roster below to accurately map each player to [TEAM 1 (BLUE SIDE)] or [TEAM 2 (RED SIDE)].
+
+STRICT ELO DELTA SIGN RULES:
+- Winning team players ({winning_team_label}) MUST RECEIVE A POSITIVE Elo delta (+) ranging from +3 to +28 (MVP, GREAT, SOLID, PASSENGER).
+- Losing team players ({losing_team_label}) MUST RECEIVE A NEGATIVE Elo delta (-) ranging from -5 to -26 (SVP, SOLID, FEEDER).
+- UNDER NO CIRCUMSTANCES should a winning player receive a negative delta, or a losing player receive a positive delta!
+
+10 PARTICIPATING PLAYERS ROSTER:
+[TEAM 1 (BLUE SIDE)]:
 {chr(10).join(t1_lines)}
 
-[ĐỘI 2 (ĐỎ)]:
+[TEAM 2 (RED SIDE)]:
 {chr(10).join(t2_lines)}
 
-HƯỚNG DẪN ĐỌC THÔNG SỐ VÀ TÍNH ĐIỂM ELO:
-1. Đọc thông số của từng tuyển thủ từ bảng điểm trên ảnh:
-   - Tên tuyển thủ và tướng/vị trí tương ứng (khớp với danh sách 10 người chơi trên).
-   - Chỉ số KDA (Hạ gục / Bị hạ / Hỗ trợ, ví dụ "14/2/9").
-   - Chỉ số phụ (nếu thấy): Sát thương (Damage), Vàng (Gold), CS (Lính), MVP, SVP/ACE.
-2. ĐẶC BIỆT CHÚ Ý PHÂN BIỆT "NGƯỜI DẪN DẮT (CARRY)" VÀ "KẺ HƯỞNG KÉ / ĐƯỢC GÁNH (PASSENGER)":
-   - Rất nhiều người chơi trong đội thắng nhưng thực tế KHÔNG HỀ DẪN DẮT hay đóng góp gì, thậm chí là gánh nặng (feed, chết liên tục, sát thương đáy bảng) và chỉ "HƯỞNG KÉ CHIẾN THẮNG" do đồng đội quá xuất sắc gánh.
-   - Những người "hưởng ké" này TUYỆT ĐỐI KHÔNG ĐƯỢC NHẬN ĐIỂM ELO CAO, điểm Elo của họ chỉ được tăng tượng trưng từ +2 đến +7 Elo (thay vì mức +16 của cả đội)!
-   - Ngược lại, những tuyển thủ thực sự là đầu tàu dẫn dắt (MVP/Carry) phải nhận điểm Elo vượt trội xứng đáng (+24 đến +28 Elo).
+DATA EXTRACTION & ELO CALCULATION GUIDELINES:
+1. Extract stats for all 10 players from the scoreboard:
+   - In-game summoner name and champion played (matched with the 10 players listed above).
+   - KDA (Kills / Deaths / Assists, e.g., "13/7/6").
+   - Secondary metrics: Damage (e.g., "24.5k"), Gold, CS, MVP, SVP/ACE badges.
+   - Total team kills: `team1_kills` and `team2_kills` (sum of individual kills per team, or read from team kill totals).
 
-PHÂN LOẠI & ĐỀ XUẤT ĐIỂM ELO CHI TIẾT:
-   - ĐỘI THẮNG (WINNER):
-     + [MVP / CARRY] - Người Dẫn Dắt / Gánh Đội Xuất Sắc: KDA áp đảo, sát thương top đầu, mở giao tranh then chốt. Điểm: 9.0 - 10.0 -> Đề xuất Elo: +24 đến +28. Tag: "MVP"
-     + [GREAT] - Đóng Góp Lớn / Trụ Cột: KDA đẹp, phối hợp chặt chẽ, tạo đột biến. Điểm: 7.5 - 8.9 -> Đề xuất Elo: +18 đến +22. Tag: "GREAT"
-     + [SOLID] - Tròn Vai / Bình Ổn: Hoàn thành nhiệm vụ ở đường, KDA cân bằng. Điểm: 6.0 - 7.4 -> Đề xuất Elo: +14 đến +16. Tag: "SOLID"
-     + [PASSENGER] - HƯỞNG KÉ / ĐƯỢC GÁNH: KDA âm sâu (ví dụ 1/7/2, 0/5/3, 2/9/4), sát thương thấp nhất đội, chết nhiều ở giai đoạn đi đường, gần như không có tác động tới chiến thắng mà chỉ hưởng ké thành quả của đồng đội. Điểm: 2.5 - 4.9 -> Đề xuất Elo: CHỈ +3 ĐẾN +7 ELO. Tag: "PASSENGER"
-   - ĐỘI THUA (LOSER):
-     + [SVP] - Nỗ Lực Gánh Đội Thua / Điểm Sáng Đơn Độc: KDA tốt, sát thương cao, chơi kiên cường nhưng đồng đội quá đuối. Điểm: 7.5 - 8.9 -> Đề xuất Elo: CHỈ TRỪ NHẸ -5 ĐẾN -9 ELO (để bảo vệ tuyển thủ chơi tốt). Tag: "SVP"
-     + [SOLID] - Khá / Tròn Vai: Cố gắng thi đấu nhưng không lật được kèo. Điểm: 5.0 - 6.9 -> Đề xuất Elo: -12 đến -15. Tag: "SOLID"
-     + [FEEDER] - Phá Game / Thọt Nặng / Tạ Của Đội: Feed mạng liên tục, mất kiểm soát, kéo cả đội xuống. Điểm: 1.0 - 4.4 -> Đề xuất Elo: TRỪ NẶNG -20 ĐẾN -26 ELO. Tag: "FEEDER"
+2. CRITICAL DISTINCTION: "CARRY / PLAYMAKER" VS "PASSENGER / CARRIED":
+   - Winning team players with poor contributions (e.g., negative KDA like 1/7/2, 0/5/3, 2/9/4, bottom-tier damage, excessive deaths) are "PASSENGERS" who were merely carried by their teammates.
+   - Passengers MUST NOT receive high Elo gains! Award them only a nominal +3 to +7 Elo (Tag: "PASSENGER").
+   - Conversely, primary Carries / MVPs with dominant KDA and top damage must be handsomely rewarded (+24 to +28 Elo, Tag: "MVP").
 
-BẮT BUỘC TRẢ VỀ ĐÚNG 1 ĐỐI TƯỢNG JSON (không có markdown backticks ```json):
+3. DETAILED PERFORMANCE CATEGORIES & DELTA RANGES:
+   - WINNING TEAM:
+     * [MVP] Primary Carry: Dominant KDA, top-tier damage, clutch playmaking. Score: 9.0 - 10.0 -> Delta: +24 to +28. Tag: "MVP".
+     * [GREAT] Major Contributor / Pillar: Solid KDA, high teamfight participation. Score: 7.5 - 8.9 -> Delta: +18 to +22. Tag: "GREAT".
+     * [SOLID] Reliable / Role Player: Won lane or held even, balanced KDA. Score: 6.0 - 7.4 -> Delta: +14 to +16. Tag: "SOLID".
+     * [PASSENGER] Carried / Burden: Heavily negative KDA, lowest damage, repeatedly caught out, won only due to stellar teammates. Score: 2.5 - 4.9 -> Delta: ONLY +3 to +7. Tag: "PASSENGER".
+   - LOSING TEAM:
+     * [SVP] Valiant Effort / Bright Spot: Strong KDA and high damage despite defeat. Score: 7.5 - 8.9 -> Delta: ONLY -5 to -9 (protect standout performance). Tag: "SVP".
+     * [SOLID] Fair / Decent: Tried their best but unable to turn the tide. Score: 5.0 - 6.9 -> Delta: -12 to -15. Tag: "SOLID".
+     * [FEEDER] Underperforming / Feeder: Excessive deaths, negative momentum, dragged team down. Score: 1.0 - 4.4 -> Delta: -20 to -26. Tag: "FEEDER".
+
+RETURN ONLY A VALID JSON OBJECT (no markdown backticks, no extra text):
 {{
   "winner": "{winner}",
-  "match_mvp": "Tên tuyển thủ MVP",
-  "match_svp": "Tên tuyển thủ SVP",
-  "ai_summary": "Tóm tắt 2-3 câu bình luận về trận đấu, điểm nhấn chiến thuật và sự tỏa sáng của các tuyển thủ.",
+  "match_mvp": "Player name of the MVP",
+  "match_svp": "Player name of the SVP",
+  "team1_kills": 0,
+  "team2_kills": 0,
+  "ai_summary": "A concise 2-3 sentence match summary in Vietnamese highlighting the tactical turning points, key carries, and decisive plays.",
   "players_analysis": [
     {{
-      "player_id": "id_chinh_xac_trong_danh_sach",
-      "nickname": "Tên tuyển thủ",
+      "player_id": "exact_id_from_roster",
+      "nickname": "Player nickname",
       "team": 1,
-      "champion": "Tên tướng (nếu nhận diện được)",
-      "kda": "12/2/8",
+      "champion": "Champion name (e.g. Lucian)",
+      "kda": "13/7/6",
       "damage": "24.5k",
       "performance_score": 9.2,
       "performance_tag": "MVP",
       "recommended_delta": 24.0,
-      "comment": "Lý do ngắn gọn 1 câu giải thích mức điểm này"
+      "comment": "One concise sentence in Vietnamese explaining this rating/delta"
     }}
   ]
 }}
-Lưu ý: Bắt buộc phải có đủ 10 người chơi trong mảng `players_analysis` (5 người team 1 và 5 người team 2) với `player_id` chính xác theo danh sách trên.
+Note: The `players_analysis` array MUST contain all 10 players (5 for team 1, 5 for team 2) with their exact `player_id`.
+`team1_kills` and `team2_kills` are the total kills for Team 1 and Team 2 respectively.
 """
         clean_base64 = image_data
         if ',' in image_data:
@@ -377,17 +453,47 @@ Lưu ý: Bắt buộc phải có đủ 10 người chơi trong mảng `players_a
 
             # Chuẩn hóa lại map người chơi để đảm bảo đủ 10 người và có recommended_delta hợp lệ
             players_analysis = parsed.get('players_analysis', [])
-            analysis_by_id = {str(item.get('player_id', '')).lower(): item for item in players_analysis}
-            analysis_by_nick = {str(item.get('nickname', '')).lower(): item for item in players_analysis}
+            analysis_by_id = {str(item.get('player_id', '')).strip().lower(): item for item in players_analysis}
+            analysis_by_nick = {}
+            for item in players_analysis:
+                n = str(item.get('nickname', '')).strip().lower()
+                analysis_by_nick[n] = item
+                if '#' in n:
+                    analysis_by_nick[n.split('#')[0].strip()] = item
+
+            # Ánh xạ bí danh đặc biệt (nyan -> hungpui)
+            SPECIAL_MAP = {'nyan': 'hungpui'}
+            for old_id, new_id in SPECIAL_MAP.items():
+                if old_id in analysis_by_id and new_id not in analysis_by_id:
+                    analysis_by_id[new_id] = analysis_by_id[old_id]
+
+            def find_analysis_for_player(p_info):
+                p_id = str(p_info['id']).strip().lower()
+                p_nick = str(p_info.get('nickname', '')).strip().lower()
+                p_base = p_nick.split('#')[0].strip() if '#' in p_nick else ""
+                return (
+                    analysis_by_id.get(p_id) or
+                    analysis_by_nick.get(p_nick) or
+                    (analysis_by_nick.get(p_base) if p_base else None) or
+                    (analysis_by_id.get('nyan') if p_id == 'hungpui' else None) or
+                    (analysis_by_nick.get('nyan') if p_id == 'hungpui' else None)
+                )
 
             normalized_list = []
             for p in team1_players:
-                pid = str(p['id']).lower()
-                nick = str(p.get('nickname', '')).lower()
-                found = analysis_by_id.get(pid) or analysis_by_nick.get(nick)
+                found = find_analysis_for_player(p)
                 default_delta = 16.0 if winner == 'team1' else -16.0
                 if found:
-                    delta = float(found.get('recommended_delta', default_delta))
+                    raw_delta = float(found.get('recommended_delta', default_delta))
+                    raw_tag = str(found.get('performance_tag', 'SOLID')).upper()
+                    # Bảo đảm dấu điểm Elo luôn chuẩn xác theo kết quả thắng/thua
+                    if winner == 'team1':
+                        delta = abs(raw_delta) if raw_delta != 0 else 16.0
+                        tag = 'MVP' if raw_tag in ['MVP', 'SVP'] else ('GREAT' if raw_tag == 'GREAT' else ('PASSENGER' if raw_tag == 'FEEDER' else raw_tag))
+                    else:
+                        delta = -abs(raw_delta) if raw_delta != 0 else -16.0
+                        tag = 'SVP' if raw_tag in ['MVP', 'SVP'] else ('FEEDER' if raw_tag in ['FEEDER', 'PASSENGER'] else 'SOLID')
+
                     normalized_list.append({
                         "player_id": p['id'],
                         "nickname": p.get('nickname', p['id']),
@@ -396,7 +502,7 @@ Lưu ý: Bắt buộc phải có đủ 10 người chơi trong mảng `players_a
                         "kda": found.get('kda', '-'),
                         "damage": found.get('damage', '-'),
                         "performance_score": float(found.get('performance_score', 6.0)),
-                        "performance_tag": found.get('performance_tag', 'SOLID'),
+                        "performance_tag": tag,
                         "recommended_delta": round(delta, 1),
                         "comment": found.get('comment', 'Thi đấu tròn vai')
                     })
@@ -415,12 +521,19 @@ Lưu ý: Bắt buộc phải có đủ 10 người chơi trong mảng `players_a
                     })
 
             for p in team2_players:
-                pid = str(p['id']).lower()
-                nick = str(p.get('nickname', '')).lower()
-                found = analysis_by_id.get(pid) or analysis_by_nick.get(nick)
+                found = find_analysis_for_player(p)
                 default_delta = 16.0 if winner == 'team2' else -16.0
                 if found:
-                    delta = float(found.get('recommended_delta', default_delta))
+                    raw_delta = float(found.get('recommended_delta', default_delta))
+                    raw_tag = str(found.get('performance_tag', 'SOLID')).upper()
+                    # Bảo đảm dấu điểm Elo luôn chuẩn xác theo kết quả thắng/thua
+                    if winner == 'team2':
+                        delta = abs(raw_delta) if raw_delta != 0 else 16.0
+                        tag = 'MVP' if raw_tag in ['MVP', 'SVP'] else ('GREAT' if raw_tag == 'GREAT' else ('PASSENGER' if raw_tag == 'FEEDER' else raw_tag))
+                    else:
+                        delta = -abs(raw_delta) if raw_delta != 0 else -16.0
+                        tag = 'SVP' if raw_tag in ['MVP', 'SVP'] else ('FEEDER' if raw_tag in ['FEEDER', 'PASSENGER'] else 'SOLID')
+
                     normalized_list.append({
                         "player_id": p['id'],
                         "nickname": p.get('nickname', p['id']),
@@ -429,7 +542,7 @@ Lưu ý: Bắt buộc phải có đủ 10 người chơi trong mảng `players_a
                         "kda": found.get('kda', '-'),
                         "damage": found.get('damage', '-'),
                         "performance_score": float(found.get('performance_score', 6.0)),
-                        "performance_tag": found.get('performance_tag', 'SOLID'),
+                        "performance_tag": tag,
                         "recommended_delta": round(delta, 1),
                         "comment": found.get('comment', 'Thi đấu tròn vai')
                     })
@@ -447,12 +560,49 @@ Lưu ý: Bắt buộc phải có đủ 10 người chơi trong mảng `players_a
                         "comment": 'Tròn vai theo diễn biến trận đấu'
                     })
 
+            # Tính tổng mạng hạ gục từ AI hoặc suy ra từ KDA cá nhân
+            t1k_ai = int(parsed.get('team1_kills', 0) or 0)
+            t2k_ai = int(parsed.get('team2_kills', 0) or 0)
+
+            if t1k_ai == 0 and t2k_ai == 0:
+                # Fallback: tính từ cột Kills cá nhân trong normalized_list
+                for item in normalized_list:
+                    kda_str = item.get('kda', '-')
+                    parts = str(kda_str).replace(' ', '').split('/')
+                    try:
+                        kills = int(parts[0])
+                    except Exception:
+                        kills = 0
+                    if item.get('team') == 1:
+                        t1k_ai += kills
+                    else:
+                        t2k_ai += kills
+
+            # Tính match_closeness, is_stomp, balance_rating
+            total_kills = t1k_ai + t2k_ai
+            diff_kills = abs(t1k_ai - t2k_ai)
+            closeness = round(1.0 - diff_kills / total_kills, 4) if total_kills > 0 else 0.5
+            is_stomp = diff_kills > 15 or closeness < 0.40
+            if diff_kills <= 5 or closeness >= 0.85:
+                balance_rating = 'perfect'
+            elif diff_kills <= 10 or closeness >= 0.60:
+                balance_rating = 'fair'
+            elif diff_kills <= 15 or closeness >= 0.40:
+                balance_rating = 'unbalanced'
+            else:
+                balance_rating = 'stomp'
+
             return {
                 "success": True,
                 "winner": winner,
                 "match_mvp": parsed.get('match_mvp', ''),
                 "match_svp": parsed.get('match_svp', ''),
                 "ai_summary": parsed.get('ai_summary', 'Đã phân tích thông số trận đấu thành công.'),
+                "team1_kills": t1k_ai,
+                "team2_kills": t2k_ai,
+                "match_closeness": closeness,
+                "is_stomp": is_stomp,
+                "balance_rating": balance_rating,
                 "players_analysis": normalized_list
             }
 

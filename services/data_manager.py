@@ -247,6 +247,8 @@ class DataManager:
 
             self._players_cache = players_data
             self._players_cache_time = time.time()
+            self._matches_df_cache = None
+            self._matches_cache_time = 0
 
         # Xóa trên Supabase
         if supabase_service.is_configured():
@@ -363,17 +365,31 @@ class DataManager:
                         p_perfs = meta.get('player_performances', []) if meta else {}
                         ai_sum = meta.get('ai_summary', '') if meta else ''
 
+                        PLAYER_ID_REMAP = {'nyan': 'hungpui'}
+                        t1 = [PLAYER_ID_REMAP.get(str(p).lower(), p) for p in m.get('team1_players', [])]
+                        t2 = [PLAYER_ID_REMAP.get(str(p).lower(), p) for p in m.get('team2_players', [])]
+
+                        cleaned_deltas = {}
+                        for dk, dv in p_deltas.items():
+                            cleaned_deltas[PLAYER_ID_REMAP.get(str(dk).lower(), dk)] = dv
+
+                        for pf in p_perfs:
+                            orig_pid = str(pf.get('player_id', '')).lower()
+                            if orig_pid in PLAYER_ID_REMAP:
+                                pf['player_id'] = PLAYER_ID_REMAP[orig_pid]
+                                pf['nickname'] = 'Nyan#Tabby'
+
                         record = {
                             'id': mid,
                             'match_index': idx,
                             'match_code': m.get('match_code', f"M-{mid}"),
                             'created_at': m.get('created_at', ''),
                             'winner': m.get('winner', 'team1'),
-                            'team1': m.get('team1_players', []),
-                            'team2': m.get('team2_players', []),
+                            'team1': t1,
+                            'team2': t2,
                             'team1_power': float(m.get('team1_power', 0.0)),
                             'team2_power': float(m.get('team2_power', 0.0)),
-                            'player_deltas': p_deltas,
+                            'player_deltas': cleaned_deltas,
                             'player_performances': p_perfs,
                             'ai_summary': ai_sum,
                             'notes': m.get('notes', ''),
@@ -431,7 +447,10 @@ class DataManager:
         player_performances: Optional[List[Dict[str, Any]]] = None,
         ai_summary: str = '',
         team1_kills: int = 0,
-        team2_kills: int = 0
+        team2_kills: int = 0,
+        match_closeness: Optional[float] = None,
+        is_stomp: Optional[bool] = None,
+        balance_rating: Optional[str] = None
     ) -> pd.DataFrame:
         """
         Ghi nhận trận đấu mới đa chiều:
@@ -443,10 +462,17 @@ class DataManager:
         # 1. Ghi vào Supabase
         if supabase_service.is_configured():
             try:
-                # Tính match_closeness từ kill score
+                # Ưu tiên dùng giá trị AI-computed, fallback tính từ kill score
                 from services.elo_service import elo_service
-                closeness, b_rating, stomp = elo_service.calc_match_closeness(team1_kills, team2_kills)
-                
+                if match_closeness is None or is_stomp is None or balance_rating is None:
+                    _closeness, _b_rating, _stomp = elo_service.calc_match_closeness(team1_kills, team2_kills)
+                    if match_closeness is None:
+                        match_closeness = _closeness
+                    if is_stomp is None:
+                        is_stomp = _stomp
+                    if balance_rating is None:
+                        balance_rating = _b_rating
+
                 ok, res = supabase_service.insert_match(
                     team1=team1,
                     team2=team2,
@@ -460,9 +486,9 @@ class DataManager:
                     ai_summary=ai_summary,
                     team1_kills=team1_kills,
                     team2_kills=team2_kills,
-                    match_closeness=closeness,
-                    is_stomp=stomp,
-                    balance_rating=b_rating
+                    match_closeness=match_closeness,
+                    is_stomp=is_stomp,
+                    balance_rating=balance_rating
                 )
                 if ok:
                     inserted_to_supabase = True
@@ -499,9 +525,16 @@ class DataManager:
 
         # 3. Lưu chi tiết cá nhân hóa vào match_details.json
         match_details = self.read_match_details()
-        # Tính closeness cho local fallback
-        from services.elo_service import elo_service as _elo_svc
-        _closeness, _b_rating, _stomp = _elo_svc.calc_match_closeness(team1_kills, team2_kills)
+        # Ưu tiên dùng giá trị AI-computed cho local fallback
+        if match_closeness is None or is_stomp is None or balance_rating is None:
+            from services.elo_service import elo_service as _elo_svc
+            _closeness, _b_rating, _stomp = _elo_svc.calc_match_closeness(team1_kills, team2_kills)
+            if match_closeness is None:
+                match_closeness = _closeness
+            if is_stomp is None:
+                is_stomp = _stomp
+            if balance_rating is None:
+                balance_rating = _b_rating
         match_record = {
             'match_index': match_idx,
             'timestamp': time.time(),
@@ -516,9 +549,9 @@ class DataManager:
             'notes': notes or '',
             'team1_kills': team1_kills,
             'team2_kills': team2_kills,
-            'match_closeness': _closeness,
-            'is_stomp': _stomp,
-            'balance_rating': _b_rating,
+            'match_closeness': match_closeness,
+            'is_stomp': is_stomp,
+            'balance_rating': balance_rating,
         }
         match_details[str(match_idx)] = match_record
         self.save_match_details(match_details)

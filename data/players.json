@@ -357,7 +357,7 @@
   },
   "nas": {
     "id": "nas",
-    "nickname": "Nas",
+    "nickname": "Rose du désert#12345",
     "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=nas",
     "skill": 1.0,
     "champion_pool": 1.0,
@@ -552,6 +552,21 @@
       "Kindred",
       "Elise"
     ],
+    "hidden_elo": 1200.0,
+    "form_score": 5.0,
+    "form_status": "neutral"
+  },
+  "yukin": {
+    "id": "yukin",
+    "nickname": "YukiN",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=yukin",
+    "skill": 5.0,
+    "champion_pool": 5.0,
+    "flex_lane": 5.0,
+    "consistency": 5.0,
+    "stats_ovr": 6.9,
+    "primary_role": "MID",
+    "favorite_champions": [],
     "hidden_elo": 1200.0,
     "form_score": 5.0,
     "form_status": "neutral"

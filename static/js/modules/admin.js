@@ -588,19 +588,32 @@ function renderAdminMatchesTable(matches) {
             ? '<span class="px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 font-bold text-[11px] border border-blue-200">Đội Xanh Thắng</span>'
             : '<span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 font-bold text-[11px] border border-rose-200">Đội Đỏ Thắng</span>';
 
-        // Render Team 1 mini avatars
+        // Helper: render ELO delta badge
+        const deltasMap = m.player_deltas || {};
+        function eloDeltaBadge(playerId) {
+            const d = deltasMap[playerId];
+            if (d === undefined || d === null) return '';
+            const val = Number(d);
+            if (val > 0) return `<span class="ml-1 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 rounded px-1 py-px leading-none">+${val}</span>`;
+            if (val < 0) return `<span class="ml-1 text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-200 rounded px-1 py-px leading-none">${val}</span>`;
+            return `<span class="ml-1 text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-200 rounded px-1 py-px leading-none">±0</span>`;
+        }
+
+        // Render Team 1 mini avatars + ELO delta
         const t1PlayersHtml = (m.team1 || []).map(p => `
             <div class="flex items-center gap-1.5 py-0.5" title="${p.nickname}">
                 <img src="${p.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.id}`}" class="w-5 h-5 rounded-md object-cover bg-slate-100 border border-slate-200 flex-shrink-0">
                 <span class="font-bold text-slate-800 text-[11px] truncate max-w-[100px]">${p.nickname}</span>
+                ${eloDeltaBadge(p.id)}
             </div>
         `).join('');
 
-        // Render Team 2 mini avatars
+        // Render Team 2 mini avatars + ELO delta
         const t2PlayersHtml = (m.team2 || []).map(p => `
             <div class="flex items-center gap-1.5 py-0.5" title="${p.nickname}">
                 <img src="${p.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.id}`}" class="w-5 h-5 rounded-md object-cover bg-slate-100 border border-slate-200 flex-shrink-0">
                 <span class="font-bold text-slate-800 text-[11px] truncate max-w-[100px]">${p.nickname}</span>
+                ${eloDeltaBadge(p.id)}
             </div>
         `).join('');
 

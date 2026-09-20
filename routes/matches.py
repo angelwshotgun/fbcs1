@@ -22,6 +22,9 @@ def api_update_match_result():
         ai_summary = data.get('ai_summary', '')
         team1_kills = int(data.get('team1_kills', 0))
         team2_kills = int(data.get('team2_kills', 0))
+        match_closeness = data.get('match_closeness')
+        is_stomp = data.get('is_stomp')
+        balance_rating = data.get('balance_rating')
 
         if not team1 or not team2 or winner not in ['team1', 'team2']:
             return jsonify({'success': False, 'error': 'Dữ liệu trận đấu không hợp lệ'}), 400
@@ -45,7 +48,10 @@ def api_update_match_result():
             player_performances=player_performances,
             ai_summary=ai_summary,
             team1_kills=team1_kills,
-            team2_kills=team2_kills
+            team2_kills=team2_kills,
+            match_closeness=match_closeness,
+            is_stomp=is_stomp,
+            balance_rating=balance_rating
         )
 
         # Tính toán lại toàn bộ metrics ngay lập tức

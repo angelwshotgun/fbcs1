@@ -254,9 +254,12 @@ class SupabaseService:
         all_cols = set(all_player_ids)
         rows_data = []
 
+        # Ánh xạ bí danh tuyển thủ đã đổi/gộp tài khoản
+        PLAYER_ID_REMAP = {'nyan': 'hungpui'}
+
         for m in matches:
-            t1 = m.get('team1_players', [])
-            t2 = m.get('team2_players', [])
+            t1 = [PLAYER_ID_REMAP.get(str(p).lower(), str(p).lower()) for p in m.get('team1_players', [])]
+            t2 = [PLAYER_ID_REMAP.get(str(p).lower(), str(p).lower()) for p in m.get('team2_players', [])]
             res = m.get('result_code', 1 if m.get('winner') == 'team1' else 2)
 
             all_cols.update(t1)

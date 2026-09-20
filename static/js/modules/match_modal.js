@@ -479,6 +479,16 @@ async function confirmSaveAiCustomMatch() {
             }
         });
 
+        // Ưu tiên dùng kills từ AI phân tích, fallback về input thủ công
+        const aiTeam1Kills = currentAiScoreboardAnalysis.team1_kills;
+        const aiTeam2Kills = currentAiScoreboardAnalysis.team2_kills;
+        const team1_kills = (aiTeam1Kills !== undefined && aiTeam1Kills !== null && aiTeam1Kills > 0)
+            ? aiTeam1Kills
+            : (parseInt(document.getElementById('input-team1-kills')?.value) || 0);
+        const team2_kills = (aiTeam2Kills !== undefined && aiTeam2Kills !== null && aiTeam2Kills > 0)
+            ? aiTeam2Kills
+            : (parseInt(document.getElementById('input-team2-kills')?.value) || 0);
+
         const res = await fetch('/api/update_match_result', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -489,8 +499,11 @@ async function confirmSaveAiCustomMatch() {
                 player_deltas: customDeltas,
                 player_performances: playersList,
                 ai_summary: currentAiScoreboardAnalysis.ai_summary,
-                team1_kills: parseInt(document.getElementById('input-team1-kills')?.value) || 0,
-                team2_kills: parseInt(document.getElementById('input-team2-kills')?.value) || 0,
+                team1_kills: team1_kills,
+                team2_kills: team2_kills,
+                match_closeness: currentAiScoreboardAnalysis.match_closeness,
+                is_stomp: currentAiScoreboardAnalysis.is_stomp,
+                balance_rating: currentAiScoreboardAnalysis.balance_rating,
                 notes: `AI Scoreboard: MVP ${currentAiScoreboardAnalysis.match_mvp || '-'}, SVP ${currentAiScoreboardAnalysis.match_svp || '-'}`
             })
         });
