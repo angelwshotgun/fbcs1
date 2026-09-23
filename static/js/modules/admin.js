@@ -543,7 +543,7 @@ function getBalanceBadgeHtml(match) {
     
     const rating = match.balance_rating || 'unknown';
     const icons = { perfect: '🟢', fair: '🟡', unbalanced: '🟠', stomp: '🔴', unknown: '⚪' };
-    const labels = { perfect: 'Sát nút', fair: 'Cân bằng', unbalanced: 'Lệch', stomp: 'Stomp', unknown: '' };
+    const labels = { perfect: 'Sát nút', fair: 'Cân bằng', unbalanced: 'Lệch kèo', stomp: 'Hủy diệt', unknown: '' };
     const colors = { perfect: 'bg-emerald-50 text-emerald-700 border-emerald-200', fair: 'bg-amber-50 text-amber-700 border-amber-200', unbalanced: 'bg-orange-50 text-orange-700 border-orange-200', stomp: 'bg-rose-50 text-rose-700 border-rose-200', unknown: 'bg-slate-50 text-slate-500 border-slate-200' };
     
     const icon = icons[rating] || '⚪';

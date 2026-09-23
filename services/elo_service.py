@@ -15,46 +15,57 @@ class EloService:
         Returns: (closeness, balance_rating, is_stomp)
         - closeness: 0.0 (stomp hoàn toàn) → 1.0 (sát nút)
         - balance_rating: 'perfect' | 'fair' | 'unbalanced' | 'stomp' | 'unknown'
-        - is_stomp: True nếu trận lệch hẳn
+        - is_stomp: True nếu trận lệch hẳn / stomp
         """
         total = team1_kills + team2_kills
         if total == 0:
             return 0.5, 'unknown', False
-        
-        diff = abs(team1_kills - team2_kills)
-        ratio = diff / total
-        closeness = round(1.0 - ratio, 2)
-        
-        # Phân loại dựa trên cả closeness và kill diff tuyệt đối
-        if diff <= 5 or closeness >= 0.85:
-            balance_rating = 'perfect'
-            is_stomp = False
-        elif diff <= 10 or closeness >= 0.60:
-            balance_rating = 'fair'
-            is_stomp = False
-        elif diff <= 15 or closeness >= 0.40:
-            balance_rating = 'unbalanced'
-            is_stomp = False
-        else:
-            balance_rating = 'stomp'
-            is_stomp = True
-        
-        return closeness, balance_rating, is_stomp
 
-    def _calc_adaptive_k(self, closeness: float, base_k: float = 32.0) -> float:
-        """
-        K-factor thích ứng theo mức độ cân bằng trận đấu.
-        - Trận sát nút (closeness >= 0.7): K giảm ~22 → Elo ít thay đổi (chia đội đã đúng)
-        - Trận bình thường (0.35-0.7): K = 32 (giữ nguyên)
-        - Trận stomp (closeness < 0.35): K tăng ~45 → Elo thay đổi mạnh (chia sai, cần sửa nhanh)
-        """
-        if closeness >= 0.7:
-            return round(base_k * 0.7, 1)  # ~22.4
-        elif closeness >= 0.35:
-            return base_k  # 32
+        max_k = max(team1_kills, team2_kills)
+        min_k = min(team1_kills, team2_kills)
+        diff = max_k - min_k
+        ratio = max_k / max(1, min_k)
+
+        # Tỉ lệ đóng góp kill của đội thắng (50% = cân bằng hoàn toàn, 100% = 1 đội ăn hết)
+        kill_share = max_k / total
+        # Closeness phi tuyến: 50% share -> 1.0; 60% share (1.5x) -> 0.65; 63% share (1.7x, 44-26) -> 0.55; 70% share (2.3x) -> 0.30
+        closeness = round(max(0.0, min(1.0, 1.0 - (kill_share - 0.5) * 3.5)), 2)
+
+        # 1. Trận Siêu Cân Bằng / Sát Nút (Perfect)
+        if diff <= 5 and ratio <= 1.25:
+            return closeness, 'perfect', False
+
+        # 2. Trận Khá Cân Bằng / Giằng co (Fair)
+        elif (diff <= 10 and ratio <= 1.45) or diff <= 6:
+            return closeness, 'fair', False
+
+        # 3. Trận Hủy Diệt / Áp Đảo Hoàn Toàn (Stomp)
+        elif diff > 18 or (ratio >= 1.85 and diff >= 12) or diff >= 24:
+            return closeness, 'stomp', True
+
+        # 4. Trận Lệch Kèo / Mất Cân Bằng (Unbalanced, ví dụ 44 - 26 có diff=18, ratio=1.69)
         else:
-            stomp_mult = 1.0 + (0.35 - closeness) * 2.0
-            return round(base_k * min(1.5, stomp_mult), 1)  # up to ~48
+            return closeness, 'unbalanced', False
+
+    def _calc_adaptive_k(self, closeness: float, balance_rating: str = 'fair', base_k: float = 32.0) -> float:
+        """
+        K-factor thích ứng theo mức độ cân bằng thực tế của trận đấu:
+        - Trận sát nút ('perfect', closeness >= 0.85): K = 24.0 (Elo ổn định, chia chuẩn)
+        - Trận cân bằng ('fair', 0.60 <= closeness < 0.85): K = 28.8
+        - Trận lệch kèo ('unbalanced', ví dụ 44-26, closeness 0.40 - 0.60): K = 40.0 (cần kéo dãn Elo nhanh)
+        - Trận stomp ('stomp', closeness < 0.40): K = 46.0 - 50.0 (chia sai nhiều, cần sửa dứt khoát)
+        """
+        if balance_rating == 'perfect' or closeness >= 0.85:
+            return round(base_k * 0.75, 1)  # ~24.0
+        elif balance_rating == 'fair' or closeness >= 0.65:
+            return round(base_k * 0.90, 1)  # ~28.8
+        elif balance_rating == 'unbalanced':
+            return round(base_k * 1.25, 1)  # ~40.0
+        elif balance_rating == 'stomp' or closeness < 0.35:
+            stomp_mult = 1.30 + (0.35 - min(0.35, closeness)) * 1.0
+            return round(base_k * min(1.56, stomp_mult), 1)  # ~45.0 - 50.0
+        else:
+            return base_k  # 32.0
 
     def calculate_all_metrics(
         self,
@@ -77,7 +88,8 @@ class EloService:
                 'pair_synergy': {},
                 'trio_synergy': {},
                 'elo_normalized': {},
-                'match_closeness_history': []
+                'match_closeness_history': [],
+                'h2h_matrix': {}
             }
 
         player_cols = [c for c in df.columns if c != 'Result']
@@ -91,6 +103,7 @@ class EloService:
 
         pair_stats: Dict[Tuple[str, str], Dict[str, int]] = {}
         trio_stats: Dict[Tuple[str, str, str], Dict[str, int]] = {}
+        h2h_stats: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
         # Track closeness history for balance report
         match_closeness_history = []
@@ -128,13 +141,13 @@ class EloService:
             t1_kills = 0
             t2_kills = 0
             if meta:
-                t1_kills = int(meta.get('team1_kills', 0))
-                t2_kills = int(meta.get('team2_kills', 0))
+                t1_kills = int(meta.get('team1_kills', 0) or 0)
+                t2_kills = int(meta.get('team2_kills', 0) or 0)
 
             # Tính closeness và adaptive K
             if t1_kills > 0 or t2_kills > 0:
                 closeness, b_rating, is_stomp = self.calc_match_closeness(t1_kills, t2_kills)
-                effective_k = self._calc_adaptive_k(closeness, self.k_factor)
+                effective_k = self._calc_adaptive_k(closeness, balance_rating=b_rating, base_k=self.k_factor)
                 match_closeness_history.append({
                     'match_idx': idx,
                     'closeness': closeness,
@@ -146,6 +159,8 @@ class EloService:
                 })
             else:
                 closeness = 0.5  # Không có dữ liệu kill → dùng K mặc định
+                b_rating = 'unknown'
+                is_stomp = False
                 effective_k = self.k_factor
 
             delta_1 = effective_k * (actual_1 - expected_1)
@@ -245,6 +260,47 @@ class EloService:
                 trio_stats[trio]['together_matches'] += 1
                 if result == 2:
                     trio_stats[trio]['together_wins'] += 1
+
+            # Ghi nhận đối kháng cá nhân (Head-to-Head - H2H) giữa từng người chơi ở 2 phe
+            kill_diff = (t1_kills - t2_kills) if (t1_kills > 0 or t2_kills > 0) else 0
+            for p1 in team1:
+                for p2 in team2:
+                    k1 = (p1, p2)
+                    k2 = (p2, p1)
+                    if k1 not in h2h_stats:
+                        h2h_stats[k1] = {
+                            'matches': 0, 'wins': 0, 'losses': 0,
+                            'kill_diff_sum': 0, 'stomp_wins': 0, 'stomp_losses': 0,
+                            'unbalanced_wins': 0, 'unbalanced_losses': 0
+                        }
+                    if k2 not in h2h_stats:
+                        h2h_stats[k2] = {
+                            'matches': 0, 'wins': 0, 'losses': 0,
+                            'kill_diff_sum': 0, 'stomp_wins': 0, 'stomp_losses': 0,
+                            'unbalanced_wins': 0, 'unbalanced_losses': 0
+                        }
+                    h2h_stats[k1]['matches'] += 1
+                    h2h_stats[k2]['matches'] += 1
+                    h2h_stats[k1]['kill_diff_sum'] += kill_diff
+                    h2h_stats[k2]['kill_diff_sum'] -= kill_diff
+                    if result == 1:
+                        h2h_stats[k1]['wins'] += 1
+                        h2h_stats[k2]['losses'] += 1
+                        if b_rating == 'stomp' or is_stomp:
+                            h2h_stats[k1]['stomp_wins'] += 1
+                            h2h_stats[k2]['stomp_losses'] += 1
+                        elif b_rating == 'unbalanced':
+                            h2h_stats[k1]['unbalanced_wins'] += 1
+                            h2h_stats[k2]['unbalanced_losses'] += 1
+                    elif result == 2:
+                        h2h_stats[k2]['wins'] += 1
+                        h2h_stats[k1]['losses'] += 1
+                        if b_rating == 'stomp' or is_stomp:
+                            h2h_stats[k2]['stomp_wins'] += 1
+                            h2h_stats[k1]['stomp_losses'] += 1
+                        elif b_rating == 'unbalanced':
+                            h2h_stats[k2]['unbalanced_wins'] += 1
+                            h2h_stats[k1]['unbalanced_losses'] += 1
 
         # ================================
         # TÍNH TOÁN PHONG ĐỘ TỰ ĐỘNG (FORM)
@@ -399,6 +455,16 @@ class EloService:
                     'synergy_score': synergy_score
                 }
 
+        # Chuẩn hóa ma trận đối đầu trực tiếp (H2H Matrix)
+        h2h_matrix: Dict[str, Dict[str, Any]] = {}
+        for (p1, p2), h_data in h2h_stats.items():
+            key = f"{p1}|{p2}"
+            h2h_matrix[key] = {
+                'p1': p1,
+                'p2': p2,
+                **h_data
+            }
+
         return {
             'elo': elo,
             'elo_normalized': elo_normalized,
@@ -406,8 +472,120 @@ class EloService:
             'stats': stats,
             'pair_synergy': pair_synergy,
             'trio_synergy': trio_synergy,
-            'match_closeness_history': match_closeness_history
+            'match_closeness_history': match_closeness_history,
+            'h2h_matrix': h2h_matrix
+        }
+
+    def evaluate_h2h_matchup(
+        self,
+        team1: Any,
+        team2: Any,
+        h2h_map: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Đánh giá lịch sử đối đầu thực tế giữa 2 đội bất kỳ (dựa trên 25 cặp đối đầu cá nhân).
+        Áp dụng linh hoạt cho MỌI tập hợp tuyển thủ (không đòi hỏi 10 người phải giống hệt nhau).
+        """
+        total_encounters = 0
+        t1_wins = 0
+        t2_wins = 0
+        t1_kill_diff_sum = 0
+        t1_stomp_wins = 0
+        t2_stomp_wins = 0
+        t1_unbalanced_wins = 0
+        t2_unbalanced_wins = 0
+        rivalries = []
+
+        for p1 in team1:
+            for p2 in team2:
+                key = f"{str(p1).lower()}|{str(p2).lower()}"
+                rec = h2h_map.get(key)
+                if rec and rec.get('matches', 0) > 0:
+                    m_cnt = rec['matches']
+                    w_cnt = rec['wins']
+                    l_cnt = rec['losses']
+                    kd = rec.get('kill_diff_sum', 0)
+                    total_encounters += m_cnt
+                    t1_wins += w_cnt
+                    t2_wins += l_cnt
+                    t1_kill_diff_sum += kd
+                    t1_stomp_wins += rec.get('stomp_wins', 0)
+                    t2_stomp_wins += rec.get('stomp_losses', 0)
+                    t1_unbalanced_wins += rec.get('unbalanced_wins', 0)
+                    t2_unbalanced_wins += rec.get('unbalanced_losses', 0)
+
+                    # Lưu các cặp kình địch đáng chú ý (áp đảo hoặc va chạm nhiều)
+                    if m_cnt >= 3 and abs(w_cnt - l_cnt) >= 2:
+                        rivalries.append({
+                            'p1': str(p1),
+                            'p2': str(p2),
+                            'matches': m_cnt,
+                            'w1': w_cnt,
+                            'w2': l_cnt,
+                            'lead': str(p1) if w_cnt > l_cnt else str(p2),
+                            'diff': abs(w_cnt - l_cnt),
+                            'avg_kill_diff': round(kd / max(1, m_cnt), 1)
+                        })
+
+        if total_encounters == 0:
+            return {
+                'has_history': False,
+                'total_encounters': 0,
+                't1_winrate': 50.0,
+                't2_winrate': 50.0,
+                'avg_kill_diff': 0.0,
+                'h2h_bias_elo': 0.0,
+                'summary': 'Chưa có dữ liệu đối đầu giữa hai bên.',
+                'rivalries': []
+            }
+
+        t1_winrate = round((t1_wins / total_encounters) * 100, 1)
+        t2_winrate = round(100.0 - t1_winrate, 1)
+        avg_kd = round(t1_kill_diff_sum / total_encounters, 1)
+        stomp_diff = t1_stomp_wins - t2_stomp_wins
+        unbal_diff = t1_unbalanced_wins - t2_unbalanced_wins
+
+        # Quy đổi độ lệch thực chiến ra điểm Elo:
+        # - Chênh tỉ lệ thắng đối đầu (+/- 25 Elo)
+        # - Chênh lệch mạng trung bình (+/- 25 Elo)
+        # - Chênh lệch số trận stomp/unbalanced (+/- 40 Elo)
+        h2h_bias_elo = round(
+            (t1_winrate - 50.0) * 0.75 +
+            avg_kd * 2.0 +
+            stomp_diff * 1.5 +
+            unbal_diff * 0.8,
+            1
+        )
+        h2h_bias_elo = max(-90.0, min(90.0, h2h_bias_elo))
+
+        # Sắp xếp các kình địch nổi bật nhất
+        rivalries.sort(key=lambda x: (x['matches'], x['diff']), reverse=True)
+
+        # Xây dựng câu tóm tắt nhận xét
+        if abs(h2h_bias_elo) <= 15.0:
+            summary_status = 'Rất cân bằng theo lịch sử đối đầu'
+        elif h2h_bias_elo > 15.0:
+            summary_status = f'Đội 1 có lợi thế đối đầu lịch sử (+{h2h_bias_elo} Elo)'
+        else:
+            summary_status = f'Đội 2 có lợi thế đối đầu lịch sử (+{abs(h2h_bias_elo)} Elo)'
+
+        summary = f"{summary_status} qua {total_encounters} lượt chạm trán (Tỉ lệ thắng: {t1_winrate}% - {t2_winrate}%)."
+
+        return {
+            'has_history': True,
+            'total_encounters': total_encounters,
+            't1_wins': t1_wins,
+            't2_wins': t2_wins,
+            't1_winrate': t1_winrate,
+            't2_winrate': t2_winrate,
+            'avg_kill_diff': avg_kd,
+            'stomp_diff': stomp_diff,
+            'unbal_diff': unbal_diff,
+            'h2h_bias_elo': h2h_bias_elo,
+            'summary': summary,
+            'rivalries': rivalries[:4]
         }
 
 
 elo_service = EloService()
+

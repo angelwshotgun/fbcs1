@@ -588,19 +588,9 @@ Note: The `players_analysis` array MUST contain all 10 players (5 for team 1, 5 
                     else:
                         t2k_ai += kills
 
-            # Tính match_closeness, is_stomp, balance_rating
-            total_kills = t1k_ai + t2k_ai
-            diff_kills = abs(t1k_ai - t2k_ai)
-            closeness = round(1.0 - diff_kills / total_kills, 4) if total_kills > 0 else 0.5
-            is_stomp = diff_kills > 15 or closeness < 0.40
-            if diff_kills <= 5 or closeness >= 0.85:
-                balance_rating = 'perfect'
-            elif diff_kills <= 10 or closeness >= 0.60:
-                balance_rating = 'fair'
-            elif diff_kills <= 15 or closeness >= 0.40:
-                balance_rating = 'unbalanced'
-            else:
-                balance_rating = 'stomp'
+            # Tính match_closeness, is_stomp, balance_rating bằng elo_service chuẩn
+            from services.elo_service import elo_service
+            closeness, balance_rating, is_stomp = elo_service.calc_match_closeness(t1k_ai, t2k_ai)
 
             return {
                 "success": True,

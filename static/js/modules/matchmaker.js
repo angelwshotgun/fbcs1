@@ -175,6 +175,43 @@ function displayTeamsResult(data) {
         poolLabel.innerText = `Đã chọn từ nhóm ${data.pool_candidates_count || 1} phương án tối ưu`;
     }
 
+    // Render H2H Balance Banner
+    const h2h = data.h2h_analysis;
+    const banner = document.getElementById('h2h-balance-banner');
+    if (banner) {
+        if (h2h && h2h.has_history && h2h.total_encounters > 0) {
+            banner.classList.remove('hidden');
+            const descEl = document.getElementById('h2h-summary-desc');
+            if (descEl) descEl.innerText = h2h.summary || '';
+            const titleEl = document.getElementById('h2h-summary-title');
+            if (titleEl) {
+                const bias = h2h.h2h_bias_elo || 0;
+                if (Math.abs(bias) <= 15) {
+                    titleEl.innerHTML = `Lịch sử đối đầu: <span class="text-emerald-700 font-bold">Cân bằng (±${Math.abs(bias)} Elo)</span>`;
+                    banner.className = "mb-6 p-4 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-50/70 border-emerald-200";
+                } else if (bias > 15) {
+                    titleEl.innerHTML = `Lịch sử đối đầu: <span class="text-blue-700 font-bold">Đội 1 có lợi thế (+${bias} Elo thực chiến)</span>`;
+                    banner.className = "mb-6 p-4 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50/70 border-blue-200";
+                } else {
+                    titleEl.innerHTML = `Lịch sử đối đầu: <span class="text-rose-700 font-bold">Đội 2 có lợi thế (+${Math.abs(bias)} Elo thực chiến)</span>`;
+                    banner.className = "mb-6 p-4 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-rose-50/70 border-rose-200";
+                }
+            }
+            const rivList = document.getElementById('h2h-rivalries-list');
+            if (rivList) {
+                rivList.innerHTML = '';
+                (h2h.rivalries || []).forEach(r => {
+                    const span = document.createElement('span');
+                    span.className = "px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold text-[10px] shadow-xs";
+                    span.innerHTML = `<b class="text-slate-900">${r.p1}</b> vs <b class="text-slate-900">${r.p2}</b>: ${r.w1}W - ${r.w2}W`;
+                    rivList.appendChild(span);
+                });
+            }
+        } else {
+            banner.classList.add('hidden');
+        }
+    }
+
     const t1PowerElem = document.getElementById('team1-power-text');
     if (t1PowerElem) t1PowerElem.innerText = totalElo1;
     const t1AvgElem = document.getElementById('team1-avg-text');

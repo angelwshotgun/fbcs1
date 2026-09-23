@@ -362,7 +362,7 @@
     "notes": "AI Scoreboard: MVP 試してみるべき薬, SVP gomen amanai",
     "team1_kills": 31,
     "team2_kills": 30,
-    "match_closeness": 0.98,
+    "match_closeness": 0.97,
     "is_stomp": false,
     "balance_rating": "perfect"
   },
@@ -558,9 +558,9 @@
     "notes": "AI Scoreboard: MVP Cấp Số Nhân, SVP LuvMis4n",
     "team1_kills": 30,
     "team2_kills": 23,
-    "match_closeness": 0.87,
+    "match_closeness": 0.77,
     "is_stomp": false,
-    "balance_rating": "perfect"
+    "balance_rating": "fair"
   },
   "9": {
     "id": 16,
@@ -722,9 +722,9 @@
     "notes": "AI Scoreboard: MVP gomen amanai#lalu4, SVP SniperTX",
     "team1_kills": 33,
     "team2_kills": 26,
-    "match_closeness": 0.88,
+    "match_closeness": 0.79,
     "is_stomp": false,
-    "balance_rating": "perfect"
+    "balance_rating": "fair"
   },
   "10": {
     "id": 17,
@@ -886,9 +886,9 @@
     "notes": "AI Scoreboard: MVP Lân Lao Lực#1811, SVP 試してみるべき薬",
     "team1_kills": 32,
     "team2_kills": 14,
-    "match_closeness": 0.61,
-    "is_stomp": false,
-    "balance_rating": "fair"
+    "match_closeness": 0.32,
+    "is_stomp": true,
+    "balance_rating": "stomp"
   },
   "11": {
     "id": 18,
@@ -1050,7 +1050,7 @@
     "notes": "AI Scoreboard: MVP Bé Kẹo, SVP Cấp Số Nhân",
     "team1_kills": 49,
     "team2_kills": 12,
-    "match_closeness": 0.39,
+    "match_closeness": 0.0,
     "is_stomp": true,
     "balance_rating": "stomp"
   },
@@ -1246,9 +1246,9 @@
     "notes": "AI Scoreboard: MVP Cấp Số Nhân, SVP gomen amanai#lalu4",
     "team1_kills": 35,
     "team2_kills": 15,
-    "match_closeness": 0.6,
-    "is_stomp": false,
-    "balance_rating": "fair"
+    "match_closeness": 0.3,
+    "is_stomp": true,
+    "balance_rating": "stomp"
   },
   "18": {
     "id": 25,
@@ -1410,9 +1410,9 @@
     "notes": "AI Scoreboard: MVP Lân Lao Lực#1811, SVP Bé Kẹo#God",
     "team1_kills": 22,
     "team2_kills": 13,
-    "match_closeness": 0.74,
+    "match_closeness": 0.55,
     "is_stomp": false,
-    "balance_rating": "fair"
+    "balance_rating": "unbalanced"
   },
   "12": {
     "id": 19,
@@ -1574,9 +1574,9 @@
     "notes": "AI Scoreboard: MVP Lân Lao Lực#1811, SVP Namonade",
     "team1_kills": 32,
     "team2_kills": 10,
-    "match_closeness": 0.48,
-    "is_stomp": false,
-    "balance_rating": "unbalanced"
+    "match_closeness": 0.08,
+    "is_stomp": true,
+    "balance_rating": "stomp"
   },
   "19": {
     "id": 26,
@@ -1758,7 +1758,7 @@
     "notes": "AI Scoreboard: MVP Zekrom On#1708, SVP Oguri Cappu#123",
     "team1_kills": 43,
     "team2_kills": 38,
-    "match_closeness": 0.94,
+    "match_closeness": 0.89,
     "is_stomp": false,
     "balance_rating": "perfect"
   },
@@ -1922,7 +1922,7 @@
     "notes": "AI Scoreboard: MVP Bé Kẹo, SVP Roochan",
     "team1_kills": 24,
     "team2_kills": 17,
-    "match_closeness": 0.83,
+    "match_closeness": 0.7,
     "is_stomp": false,
     "balance_rating": "fair"
   },
@@ -2250,9 +2250,9 @@
     "notes": "AI Scoreboard: MVP Bé Kẹo#God, SVP Lân Lao Lực#1811",
     "team1_kills": 31,
     "team2_kills": 46,
-    "match_closeness": 0.81,
+    "match_closeness": 0.66,
     "is_stomp": false,
-    "balance_rating": "fair"
+    "balance_rating": "unbalanced"
   },
   "21": {
     "id": 28,
@@ -3070,9 +3070,9 @@
     "notes": "AI Scoreboard: MVP Namonade, SVP Lân Lao Lực",
     "team1_kills": 44,
     "team2_kills": 26,
-    "match_closeness": 0.74,
-    "is_stomp": true,
-    "balance_rating": "fair"
+    "match_closeness": 0.55,
+    "is_stomp": false,
+    "balance_rating": "unbalanced"
   },
   "25": {
     "id": 32,
@@ -3102,9 +3102,9 @@
     "notes": "Lưu kết quả chuẩn (không kèm ảnh)",
     "team1_kills": 21,
     "team2_kills": 35,
-    "match_closeness": 0.75,
+    "match_closeness": 0.56,
     "is_stomp": false,
-    "balance_rating": "fair"
+    "balance_rating": "unbalanced"
   },
   "26": {
     "id": 33,
@@ -3134,9 +3134,9 @@
     "notes": "Lưu kết quả chuẩn (không kèm ảnh)",
     "team1_kills": 9,
     "team2_kills": 24,
-    "match_closeness": 0.55,
-    "is_stomp": false,
-    "balance_rating": "unbalanced"
+    "match_closeness": 0.2,
+    "is_stomp": true,
+    "balance_rating": "stomp"
   },
   "27": {
     "id": 34,
@@ -3166,7 +3166,7 @@
     "notes": "Lưu kết quả chuẩn (không kèm ảnh)",
     "team1_kills": 37,
     "team2_kills": 32,
-    "match_closeness": 0.93,
+    "match_closeness": 0.87,
     "is_stomp": false,
     "balance_rating": "perfect"
   },
@@ -3198,337 +3198,205 @@
     "notes": "Lưu kết quả chuẩn (không kèm ảnh)",
     "team1_kills": 22,
     "team2_kills": 46,
-    "match_closeness": 0.65,
-    "is_stomp": false,
-    "balance_rating": "fair"
+    "match_closeness": 0.38,
+    "is_stomp": true,
+    "balance_rating": "stomp"
   },
   "29": {
-    "id": 29,
-    "match_index": 22,
-    "match_code": "M-20260919173044",
-    "created_at": "2026-09-19T17:30:44.985873+00:00",
+    "id": 36,
+    "match_index": 29,
+    "match_code": "M-20260923152830",
+    "created_at": "2026-09-23T15:28:30.423243+00:00",
     "winner": "team2",
     "team1": [
+      "roochan",
       "candy",
-      "hoanghiep",
-      "namonade",
-      "nguoida",
-      "snipertx"
+      "cumber",
+      "lalune",
+      "bbom"
     ],
     "team2": [
-      "havu",
-      "lalune",
-      "nas",
-      "svsh",
-      "yukin"
+      "zekrom",
+      "thngem",
+      "hungpui",
+      "duygudboy",
+      "dogtung"
     ],
-    "team1_power": 6028.8,
-    "team2_power": 6020.4,
+    "team1_power": 6158.6,
+    "team2_power": 6116.3,
+    "player_deltas": {},
+    "player_performances": {},
+    "ai_summary": "",
+    "notes": "Lưu kết quả chuẩn (không kèm ảnh)",
+    "team1_kills": 15,
+    "team2_kills": 33,
+    "match_closeness": 0.34,
+    "is_stomp": true,
+    "balance_rating": "stomp"
+  },
+  "30": {
+    "id": 37,
+    "match_index": 30,
+    "match_code": "M-20260923161948",
+    "created_at": "2026-09-23T16:19:48.542828+00:00",
+    "winner": "team1",
+    "team1": [
+      "bbom",
+      "candy",
+      "dogtung",
+      "duygudboy",
+      "zekrom"
+    ],
+    "team2": [
+      "cumber",
+      "hungpui",
+      "lalune",
+      "namonade",
+      "svsh"
+    ],
+    "team1_power": 6078.4,
+    "team2_power": 6031.7,
     "player_deltas": {
-      "nas": 16,
-      "havu": 22,
-      "svsh": 4,
-      "candy": -22,
-      "yukin": 15,
-      "lalune": 27,
-      "nguoida": -14,
-      "namonade": -13,
-      "snipertx": -12,
-      "hoanghiep": -7
+      "bbom": 7,
+      "svsh": -9,
+      "candy": 18,
+      "cumber": -14,
+      "lalune": -22,
+      "zekrom": 20,
+      "dogtung": 28,
+      "hungpui": -13,
+      "namonade": -15,
+      "duygudboy": 15
     },
     "player_performances": [
       {
-        "kda": "3/12/13",
+        "kda": "2/1/9",
         "team": 1,
-        "damage": "18.5k",
-        "comment": "Mắc kẹt trong việc giữ vị trí, nằm xuống quá nhiều và trở thành điểm yếu bị khai thác.",
-        "champion": "Ezreal",
+        "damage": "9.260",
+        "comment": "Chỉ số KDA thấp với nhiều mạng nằm và lượng sát thương không cao, Picasso II được coi là người chơi được gánh trong trận đấu này.",
+        "champion": "Seraphine",
+        "nickname": "Picasso II#vn2",
+        "player_id": "bbom",
+        "performance_tag": "PASSENGER",
+        "performance_score": 4.5,
+        "recommended_delta": 7
+      },
+      {
+        "kda": "8/4/3",
+        "team": 1,
+        "damage": "11.619",
+        "comment": "Có chỉ số KDA tốt và lượng sát thương ổn, Bé Kẹo đã đóng góp đáng kể vào chiến thắng của đội.",
+        "champion": "Zed",
         "nickname": "Bé Kẹo#God",
         "player_id": "candy",
-        "performance_tag": "FEEDER",
-        "performance_score": 4.1,
-        "recommended_delta": -22
+        "performance_tag": "GREAT",
+        "performance_score": 7.8,
+        "recommended_delta": 18
       },
       {
-        "kda": "23/12/9",
+        "kda": "14/6/3",
         "team": 1,
-        "damage": "35.2k",
-        "comment": "Gánh đội cực nặng với 23 mạng hạ gục nhưng lực bất tòng tâm trước thế trận tổng thể của đối thủ.",
-        "champion": "Fizz",
-        "nickname": "試してみるべき薬",
-        "player_id": "hoanghiep",
-        "performance_tag": "SVP",
-        "performance_score": 8.5,
-        "recommended_delta": -7
+        "damage": "17.776",
+        "comment": "Với KDA ấn tượng, lượng sát thương dẫn đầu và những pha xử lý quyết đoán, DogTung xứng đáng là MVP của trận đấu.",
+        "champion": "Jax",
+        "nickname": "DogTung",
+        "player_id": "dogtung",
+        "performance_tag": "MVP",
+        "performance_score": 9.8,
+        "recommended_delta": 28
       },
       {
-        "kda": "11/10/17",
+        "kda": "4/4/6",
         "team": 1,
-        "damage": "26.3k",
-        "comment": "Tạo ra một số pha vét mạng tốt nhưng không đủ sức lật ngược thế cờ khi đội hình bị thọt.",
-        "champion": "Katarina",
-        "nickname": "Namonade",
-        "player_id": "namonade",
+        "damage": "12.482",
+        "comment": "DuyGudBoy đã có một trận đấu tròn vai với chỉ số KDA cân bằng và đóng góp sát thương ổn định.",
+        "champion": "Viktor",
+        "nickname": "DuyGudBoy",
+        "player_id": "duygudboy",
         "performance_tag": "SOLID",
-        "performance_score": 6.8,
-        "recommended_delta": -13
+        "performance_score": 7,
+        "recommended_delta": 15
       },
       {
-        "kda": "8/11/15",
+        "kda": "8/7/8",
         "team": 1,
-        "damage": "21.0k",
-        "comment": "Có nhiều nỗ lực kiến tạo giao tranh nhưng lượng chết vẫn quá cao trong các pha va chạm lớn.",
-        "champion": "Ekko",
-        "nickname": "Nibiru",
-        "player_id": "nguoida",
+        "damage": "13.793",
+        "comment": "Zekrom On đã có một màn trình diễn xuất sắc với KDA cao và lượng sát thương lớn, đóng vai trò quan trọng trong chiến thắng.",
+        "champion": "Warwick",
+        "nickname": "Zekrom On#1708",
+        "player_id": "zekrom",
+        "performance_tag": "GREAT",
+        "performance_score": 8.5,
+        "recommended_delta": 20
+      },
+      {
+        "kda": "1/4/15",
+        "team": 2,
+        "damage": "8.021",
+        "comment": "Mặc dù có nhiều hỗ trợ, Oguri Cappu vẫn có chỉ số KDA không tốt và lượng sát thương thấp, cho thấy sự khó khăn trong trận đấu.",
+        "champion": "Rakan",
+        "nickname": "Oguri Cappu#123",
+        "player_id": "cumber",
         "performance_tag": "SOLID",
         "performance_score": 5.5,
         "recommended_delta": -14
       },
       {
-        "kda": "3/4/12",
-        "team": 1,
-        "damage": "12.4k",
-        "comment": "Thi đấu tròn vai, kiểm soát chống chịu tốt nhưng không thể bù đắp lượng sát thương thiếu hụt.",
-        "champion": "Poppy",
-        "nickname": "SniperTX",
-        "player_id": "snipertx",
-        "performance_tag": "SOLID",
-        "performance_score": 6.2,
-        "recommended_delta": -12
-      },
-      {
-        "kda": "19/10/12",
+        "kda": "5/6/4",
         "team": 2,
-        "damage": "32.1k",
-        "comment": "Sĩ khí và lượng sát thương áp đảo cùng 19 điểm hạ gục, tạo tiền đề kiểm soát bản đồ.",
-        "champion": "Talon",
-        "nickname": "Cấp Số Nhân",
-        "player_id": "havu",
-        "performance_tag": "GREAT",
-        "performance_score": 9.1,
-        "recommended_delta": 22
-      },
-      {
-        "kda": "9/4/9",
-        "team": 2,
-        "damage": "29.8k",
-        "comment": "Farm cực khủng với 409 chỉ số lính và lối chơi gánh đội tinh tế giúp định đoạt ván đấu.",
-        "champion": "Yasuo",
-        "nickname": "gomen amanai#lalu4",
-        "player_id": "lalune",
-        "performance_tag": "MVP",
-        "performance_score": 9.5,
-        "recommended_delta": 27
-      },
-      {
-        "kda": "-",
-        "team": 2,
-        "damage": "-",
-        "comment": "Tròn vai theo diễn biến trận đấu",
-        "champion": "-",
-        "nickname": "Nas",
-        "player_id": "nas",
-        "performance_tag": "SOLID",
-        "performance_score": 6.5,
-        "recommended_delta": 16
-      },
-      {
-        "kda": "5/11/10",
-        "team": 2,
-        "damage": "15.2k",
-        "comment": "Nằm xuống quá nhiều và ít đóng góp cốt lõi, hưởng ké chiến thắng từ tuyến sau.",
-        "champion": "Lee Sin",
-        "nickname": "CCC EsHat#2012",
-        "player_id": "svsh",
-        "performance_tag": "PASSENGER",
-        "performance_score": 4.2,
-        "recommended_delta": 4
-      },
-      {
-        "kda": "9/14/17",
-        "team": 2,
-        "damage": "28.4k",
-        "comment": "Gây lượng sát thương diện rộng ổn định trong giao tranh nhưng chết hơi nhiều lần.",
-        "champion": "Vel'Koz",
-        "nickname": "YukiN",
-        "player_id": "yukin",
-        "performance_tag": "SOLID",
-        "performance_score": 6.1,
-        "recommended_delta": 15
-      }
-    ],
-    "ai_summary": "Trận đấu diễn ra cực kỳ căng thẳng và đẫm máu với tổng số mạng hạ gục rất cao. Dù Đội 1 có màn trình diễn xuất thần từ Fizz (hoanghiep) với KDA 23/12/9 nhưng vẫn phải ngậm ngùi thất bại trước Đội 2, nơi Yasuo (lalune) và Talon (havu) tỏa sáng rực rỡ để mang về chiến thắng chung cuộc.",
-    "notes": "AI Scoreboard: MVP Cấp Số Nhân, SVP 試してみるべき薬",
-    "team1_kills": 0,
-    "team2_kills": 0,
-    "match_closeness": 0.5,
-    "is_stomp": false,
-    "balance_rating": "unknown"
-  },
-  "30": {
-    "id": 30,
-    "match_index": 23,
-    "match_code": "M-20260920152135",
-    "created_at": "2026-09-20T15:21:35.692067+00:00",
-    "winner": "team2",
-    "team1": [
-      "a2ex",
-      "alan",
-      "hoanghiep",
-      "namonade",
-      "snipertx"
-    ],
-    "team2": [
-      "candy",
-      "cumber",
-      "hungpui",
-      "yukin",
-      "zekrom"
-    ],
-    "team1_power": 6185.7,
-    "team2_power": 6170.5,
-    "player_deltas": {
-      "a2ex": -20,
-      "alan": -12,
-      "candy": 12,
-      "yukin": 5,
-      "cumber": 20,
-      "zekrom": 28,
-      "hungpui": 15,
-      "namonade": -13,
-      "snipertx": -14,
-      "hoanghiep": -6
-    },
-    "player_performances": [
-      {
-        "kda": "16 / 8 / 13",
-        "team": 1,
-        "damage": "22.8k",
-        "comment": "Thi đấu xuất thần với 16 mạng hạ gục nhưng bất lực nhìn nhà chính nổ tung.",
-        "champion": "Talon",
-        "nickname": "試してみるべき薬",
-        "player_id": "hoanghiep",
-        "performance_tag": "SVP",
-        "performance_score": 8.8,
-        "recommended_delta": -6
-      },
-      {
-        "kda": "11 / 8 / 6",
-        "team": 1,
-        "damage": "20.7k",
-        "comment": "Có nhiều pha dồn sát thương chuẩn xác nhưng để mất thế trận giao tranh tổng cuối trận.",
-        "champion": "Syndra",
-        "nickname": "Lân Lao Lực#1811",
-        "player_id": "alan",
-        "performance_tag": "SOLID",
-        "performance_score": 6.8,
-        "recommended_delta": -12
-      },
-      {
-        "kda": "8 / 5 / 11",
-        "team": 1,
-        "damage": "19.6k",
-        "comment": "Cấu rỉa ổn định ở tuyến sau nhưng thiếu đột biến trong những pha quyết định.",
-        "champion": "Corki",
-        "nickname": "Namonade",
-        "player_id": "namonade",
-        "performance_tag": "SOLID",
-        "performance_score": 6.5,
-        "recommended_delta": -13
-      },
-      {
-        "kda": "2 / 5 / 19",
-        "team": 1,
-        "damage": "16.7k",
-        "comment": "Mở giao tranh tích cực nhưng không thể bảo vệ tuyến sau trước Lucian của Zekrom.",
-        "champion": "Maokai",
-        "nickname": "SniperTX",
-        "player_id": "snipertx",
-        "performance_tag": "SOLID",
-        "performance_score": 6.2,
-        "recommended_delta": -14
-      },
-      {
-        "kda": "1 / 10 / 22",
-        "team": 1,
-        "damage": "11.9k",
-        "comment": "Lao vào quá sâu và bị hạ gục 10 lần, tạo khoảng trống lớn cho đối thủ lật kèo.",
-        "champion": "Alistar",
-        "nickname": "A2Ex#A2Ex",
-        "player_id": "a2ex",
-        "performance_tag": "FEEDER",
-        "performance_score": 4.2,
-        "recommended_delta": -20
-      },
-      {
-        "kda": "13 / 7 / 6",
-        "team": 2,
-        "damage": "24.5k",
-        "comment": "MVP gánh đội siêu hạng, lượng sát thương vượt trội định đoạt hoàn toàn ván đấu!",
-        "champion": "Lucian",
-        "nickname": "Zekrom On#1708",
-        "player_id": "zekrom",
-        "performance_tag": "MVP",
-        "performance_score": 9.6,
-        "recommended_delta": 28
-      },
-      {
-        "kda": "6 / 4 / 12",
-        "team": 2,
-        "damage": "21.2k",
-        "comment": "Càn quét giao tranh dũng mãnh, mở đường cho Lucian xả sát thương.",
-        "champion": "Sett",
-        "nickname": "Oguri Cappu#123",
-        "player_id": "cumber",
-        "performance_tag": "GREAT",
-        "performance_score": 8.0,
-        "recommended_delta": 20
-      },
-      {
-        "kda": "8 / 8 / 5",
-        "team": 2,
-        "damage": "16.7k",
-        "comment": "Đẩy đường và khống chế then chốt ở các thời điểm giao tranh quan trọng.",
-        "champion": "Ryze",
+        "damage": "10.808",
+        "comment": "Nyan đã có một trận đấu khá với KDA tương đối cân bằng nhưng lượng sát thương chưa đủ để tạo đột biến cho đội.",
+        "champion": "Hwei",
         "nickname": "Nyan#Tabby",
         "player_id": "hungpui",
         "performance_tag": "SOLID",
-        "performance_score": 6.8,
-        "recommended_delta": 15
+        "performance_score": 6,
+        "recommended_delta": -13
       },
       {
-        "kda": "7 / 10 / 8",
+        "kda": "2/9/5",
         "team": 2,
-        "damage": "19.3k",
-        "comment": "Nỗ lực bắt lẻ tạo đột biến ở giai đoạn then chốt giúp đội lật kèo.",
-        "champion": "Qiyana",
-        "nickname": "Bé Kẹo#God",
-        "player_id": "candy",
+        "damage": "13.851",
+        "comment": "Với số mạng nằm quá nhiều và KDA tệ hại, gomen amanai là một trong những nguyên nhân chính dẫn đến thất bại của đội.",
+        "champion": "Jinx",
+        "nickname": "gomen amanai#lalu4",
+        "player_id": "lalune",
+        "performance_tag": "FEEDER",
+        "performance_score": 3,
+        "recommended_delta": -22
+      },
+      {
+        "kda": "5/5/7",
+        "team": 2,
+        "damage": "11.831",
+        "comment": "Namonade đã cố gắng nhưng không thể xoay chuyển tình thế, chỉ số KDA ở mức trung bình và sát thương không đủ sức gánh vác.",
+        "champion": "Volibear",
+        "nickname": "Namonade",
+        "player_id": "namonade",
         "performance_tag": "SOLID",
-        "performance_score": 6.3,
-        "recommended_delta": 12
+        "performance_score": 6.8,
+        "recommended_delta": -15
       },
       {
-        "kda": "2 / 9 / 16",
+        "kda": "9/12/3",
         "team": 2,
-        "damage": "14.7k",
-        "comment": "Thọt nặng giai đoạn đầu nhưng vẫn kiên trì hỗ trợ tuyến sau hưởng thành quả chiến thắng.",
-        "champion": "Illaoi",
-        "nickname": "YukiN",
-        "player_id": "yukin",
-        "performance_tag": "PASSENGER",
-        "performance_score": 5.0,
-        "recommended_delta": 5
+        "damage": "13.777",
+        "comment": "CCC EsHat đã thể hiện một tinh thần chiến đấu quả cảm với số mạng hạ gục cao nhất đội, tuy nhiên, số mạng nằm cũng khá nhiều và không đủ để cứu vãn trận thua.",
+        "champion": "Sion",
+        "nickname": "CCC EsHat#2012",
+        "player_id": "svsh",
+        "performance_tag": "SVP",
+        "performance_score": 7.5,
+        "recommended_delta": -9
       }
     ],
-    "ai_summary": "Trận đấu 47 phút cực kỳ kịch tính khi Đội 2 (Đỏ) có màn lội ngược dòng ngoạn mục nhờ sự xuất sắc của Lucian (Zekrom On) với 24.5k sát thương. Dù Talon (hoanghiep) bên phía Đội 1 (Xanh) thi đấu thăng hoa với 16 mạng hạ gục nhưng không thể ngăn cản Đội 2 giành chiến thắng chung cuộc.",
-    "notes": "AI Scoreboard: MVP Zekrom On#1708 (Team 2 - Đỏ), SVP 試してみるべき薬 (Team 1 - Xanh)",
-    "team1_kills": 38,
-    "team2_kills": 36,
-    "match_closeness": 0.95,
+    "ai_summary": "Đội 1 (Xanh) đã chiến thắng nhờ khả năng gánh đội xuất sắc của CACTUS (Jax) với chỉ số KDA vượt trội và lượng sát thương cao. Đội 2 (Đỏ) đã nỗ lực nhưng không thể chống đỡ được sức ép từ đối phương, đặc biệt là CCC EsHat (Sion) dù có chỉ số tốt nhưng vẫn không đủ để mang về chiến thắng.",
+    "notes": "AI Scoreboard: MVP CACTUS, SVP CCC EsHat",
+    "team1_kills": 36,
+    "team2_kills": 22,
+    "match_closeness": 0.58,
     "is_stomp": false,
-    "balance_rating": "perfect"
+    "balance_rating": "unbalanced"
   },
   "31": {
     "id": 31,
@@ -3690,9 +3558,9 @@
     "notes": "AI Scoreboard: MVP Namonade, SVP Lân Lao Lực",
     "team1_kills": 44,
     "team2_kills": 26,
-    "match_closeness": 0.74,
-    "is_stomp": true,
-    "balance_rating": "fair"
+    "match_closeness": 0.55,
+    "is_stomp": false,
+    "balance_rating": "unbalanced"
   },
   "32": {
     "id": 32,
@@ -3722,9 +3590,9 @@
     "notes": "Lưu kết quả chuẩn (không kèm ảnh)",
     "team1_kills": 21,
     "team2_kills": 35,
-    "match_closeness": 0.75,
+    "match_closeness": 0.56,
     "is_stomp": false,
-    "balance_rating": "fair"
+    "balance_rating": "unbalanced"
   },
   "33": {
     "id": 33,
@@ -3754,9 +3622,9 @@
     "notes": "Lưu kết quả chuẩn (không kèm ảnh)",
     "team1_kills": 9,
     "team2_kills": 24,
-    "match_closeness": 0.55,
-    "is_stomp": false,
-    "balance_rating": "unbalanced"
+    "match_closeness": 0.2,
+    "is_stomp": true,
+    "balance_rating": "stomp"
   },
   "34": {
     "id": 34,
@@ -3786,7 +3654,7 @@
     "notes": "Lưu kết quả chuẩn (không kèm ảnh)",
     "team1_kills": 37,
     "team2_kills": 32,
-    "match_closeness": 0.93,
+    "match_closeness": 0.87,
     "is_stomp": false,
     "balance_rating": "perfect"
   },
@@ -3818,8 +3686,204 @@
     "notes": "Lưu kết quả chuẩn (không kèm ảnh)",
     "team1_kills": 22,
     "team2_kills": 46,
-    "match_closeness": 0.65,
+    "match_closeness": 0.38,
+    "is_stomp": true,
+    "balance_rating": "stomp"
+  },
+  "36": {
+    "id": 36,
+    "match_index": 29,
+    "match_code": "M-20260923152830",
+    "created_at": "2026-09-23T15:28:30.423243+00:00",
+    "winner": "team2",
+    "team1": [
+      "roochan",
+      "candy",
+      "cumber",
+      "lalune",
+      "bbom"
+    ],
+    "team2": [
+      "zekrom",
+      "thngem",
+      "hungpui",
+      "duygudboy",
+      "dogtung"
+    ],
+    "team1_power": 6158.6,
+    "team2_power": 6116.3,
+    "player_deltas": {},
+    "player_performances": {},
+    "ai_summary": "",
+    "notes": "Lưu kết quả chuẩn (không kèm ảnh)",
+    "team1_kills": 15,
+    "team2_kills": 33,
+    "match_closeness": 0.34,
+    "is_stomp": true,
+    "balance_rating": "stomp"
+  },
+  "37": {
+    "id": 37,
+    "match_index": 30,
+    "match_code": "M-20260923161948",
+    "created_at": "2026-09-23T16:19:48.542828+00:00",
+    "winner": "team1",
+    "team1": [
+      "bbom",
+      "candy",
+      "dogtung",
+      "duygudboy",
+      "zekrom"
+    ],
+    "team2": [
+      "cumber",
+      "hungpui",
+      "lalune",
+      "namonade",
+      "svsh"
+    ],
+    "team1_power": 6078.4,
+    "team2_power": 6031.7,
+    "player_deltas": {
+      "bbom": 7,
+      "svsh": -9,
+      "candy": 18,
+      "cumber": -14,
+      "lalune": -22,
+      "zekrom": 20,
+      "dogtung": 28,
+      "hungpui": -13,
+      "namonade": -15,
+      "duygudboy": 15
+    },
+    "player_performances": [
+      {
+        "kda": "2/1/9",
+        "team": 1,
+        "damage": "9.260",
+        "comment": "Chỉ số KDA thấp với nhiều mạng nằm và lượng sát thương không cao, Picasso II được coi là người chơi được gánh trong trận đấu này.",
+        "champion": "Seraphine",
+        "nickname": "Picasso II#vn2",
+        "player_id": "bbom",
+        "performance_tag": "PASSENGER",
+        "performance_score": 4.5,
+        "recommended_delta": 7
+      },
+      {
+        "kda": "8/4/3",
+        "team": 1,
+        "damage": "11.619",
+        "comment": "Có chỉ số KDA tốt và lượng sát thương ổn, Bé Kẹo đã đóng góp đáng kể vào chiến thắng của đội.",
+        "champion": "Zed",
+        "nickname": "Bé Kẹo#God",
+        "player_id": "candy",
+        "performance_tag": "GREAT",
+        "performance_score": 7.8,
+        "recommended_delta": 18
+      },
+      {
+        "kda": "14/6/3",
+        "team": 1,
+        "damage": "17.776",
+        "comment": "Với KDA ấn tượng, lượng sát thương dẫn đầu và những pha xử lý quyết đoán, DogTung xứng đáng là MVP của trận đấu.",
+        "champion": "Jax",
+        "nickname": "DogTung",
+        "player_id": "dogtung",
+        "performance_tag": "MVP",
+        "performance_score": 9.8,
+        "recommended_delta": 28
+      },
+      {
+        "kda": "4/4/6",
+        "team": 1,
+        "damage": "12.482",
+        "comment": "DuyGudBoy đã có một trận đấu tròn vai với chỉ số KDA cân bằng và đóng góp sát thương ổn định.",
+        "champion": "Viktor",
+        "nickname": "DuyGudBoy",
+        "player_id": "duygudboy",
+        "performance_tag": "SOLID",
+        "performance_score": 7,
+        "recommended_delta": 15
+      },
+      {
+        "kda": "8/7/8",
+        "team": 1,
+        "damage": "13.793",
+        "comment": "Zekrom On đã có một màn trình diễn xuất sắc với KDA cao và lượng sát thương lớn, đóng vai trò quan trọng trong chiến thắng.",
+        "champion": "Warwick",
+        "nickname": "Zekrom On#1708",
+        "player_id": "zekrom",
+        "performance_tag": "GREAT",
+        "performance_score": 8.5,
+        "recommended_delta": 20
+      },
+      {
+        "kda": "1/4/15",
+        "team": 2,
+        "damage": "8.021",
+        "comment": "Mặc dù có nhiều hỗ trợ, Oguri Cappu vẫn có chỉ số KDA không tốt và lượng sát thương thấp, cho thấy sự khó khăn trong trận đấu.",
+        "champion": "Rakan",
+        "nickname": "Oguri Cappu#123",
+        "player_id": "cumber",
+        "performance_tag": "SOLID",
+        "performance_score": 5.5,
+        "recommended_delta": -14
+      },
+      {
+        "kda": "5/6/4",
+        "team": 2,
+        "damage": "10.808",
+        "comment": "Nyan đã có một trận đấu khá với KDA tương đối cân bằng nhưng lượng sát thương chưa đủ để tạo đột biến cho đội.",
+        "champion": "Hwei",
+        "nickname": "Nyan#Tabby",
+        "player_id": "hungpui",
+        "performance_tag": "SOLID",
+        "performance_score": 6,
+        "recommended_delta": -13
+      },
+      {
+        "kda": "2/9/5",
+        "team": 2,
+        "damage": "13.851",
+        "comment": "Với số mạng nằm quá nhiều và KDA tệ hại, gomen amanai là một trong những nguyên nhân chính dẫn đến thất bại của đội.",
+        "champion": "Jinx",
+        "nickname": "gomen amanai#lalu4",
+        "player_id": "lalune",
+        "performance_tag": "FEEDER",
+        "performance_score": 3,
+        "recommended_delta": -22
+      },
+      {
+        "kda": "5/5/7",
+        "team": 2,
+        "damage": "11.831",
+        "comment": "Namonade đã cố gắng nhưng không thể xoay chuyển tình thế, chỉ số KDA ở mức trung bình và sát thương không đủ sức gánh vác.",
+        "champion": "Volibear",
+        "nickname": "Namonade",
+        "player_id": "namonade",
+        "performance_tag": "SOLID",
+        "performance_score": 6.8,
+        "recommended_delta": -15
+      },
+      {
+        "kda": "9/12/3",
+        "team": 2,
+        "damage": "13.777",
+        "comment": "CCC EsHat đã thể hiện một tinh thần chiến đấu quả cảm với số mạng hạ gục cao nhất đội, tuy nhiên, số mạng nằm cũng khá nhiều và không đủ để cứu vãn trận thua.",
+        "champion": "Sion",
+        "nickname": "CCC EsHat#2012",
+        "player_id": "svsh",
+        "performance_tag": "SVP",
+        "performance_score": 7.5,
+        "recommended_delta": -9
+      }
+    ],
+    "ai_summary": "Đội 1 (Xanh) đã chiến thắng nhờ khả năng gánh đội xuất sắc của CACTUS (Jax) với chỉ số KDA vượt trội và lượng sát thương cao. Đội 2 (Đỏ) đã nỗ lực nhưng không thể chống đỡ được sức ép từ đối phương, đặc biệt là CCC EsHat (Sion) dù có chỉ số tốt nhưng vẫn không đủ để mang về chiến thắng.",
+    "notes": "AI Scoreboard: MVP CACTUS, SVP CCC EsHat",
+    "team1_kills": 36,
+    "team2_kills": 22,
+    "match_closeness": 0.58,
     "is_stomp": false,
-    "balance_rating": "fair"
+    "balance_rating": "unbalanced"
   }
 }

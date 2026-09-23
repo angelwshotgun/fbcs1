@@ -133,6 +133,22 @@
                 </div>
             </div>
 
+            <!-- Historical H2H Balance Banner -->
+            <div id="h2h-balance-banner" class="hidden mb-6 p-4 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 border-slate-200">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shrink-0">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </span>
+                    <div>
+                        <h4 class="font-bold text-slate-800" id="h2h-summary-title">Lịch sử đối đầu</h4>
+                        <p class="text-slate-500 text-[11px]" id="h2h-summary-desc">Đang tải dữ liệu đối đầu...</p>
+                    </div>
+                </div>
+                <div id="h2h-rivalries-list" class="flex flex-wrap items-center gap-1.5 shrink-0">
+                    <!-- Top rivalries rendered dynamically -->
+                </div>
+            </div>
+
             <!-- Teams Side-by-Side Comparison -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Team 1 (Blue) -->

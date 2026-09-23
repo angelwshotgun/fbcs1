@@ -4,6 +4,8 @@ import statistics
 from itertools import combinations
 from typing import List, Dict, Any, Tuple
 from services.player_service import player_service
+from services.elo_service import elo_service
+
 
 
 class MatchmakingService:
@@ -88,6 +90,77 @@ class MatchmakingService:
                 penalty = (similarity - 0.7) * 150.0  # penalty lên đến ~45 Elo points
                 max_penalty = max(max_penalty, penalty)
         return round(max_penalty, 1)
+
+    def _check_historical_matchup_balance(
+        self,
+        team1_set: set,
+        team2_set: set,
+        all_matches: List[Dict[str, Any]]
+    ) -> Tuple[float, List[Dict[str, Any]]]:
+        """
+        Kiểm tra lịch sử kết quả các trận đối đầu cũ giữa các tuyển thủ 2 phe:
+        - Nếu cấu hình 2 bên (hoặc nhóm con >= 6 người) từng tạo ra trận đấu 'unbalanced' hoặc 'stomp' (như 44-26, 32-14):
+          -> Phạt nặng (tăng diff) để hệ thống tự động tránh chia lại đội hình lệch kèo này!
+        - Nếu từng tạo nên trận 'perfect' (sát nút như 38-36, 27-27, 37-32):
+          -> Thưởng cân bằng (giảm diff) vì đội hình đã được thực tế kiểm chứng.
+        """
+        if not all_matches:
+            return 0.0, []
+
+        max_penalty = 0.0
+        bonus_reward = 0.0
+        insights = []
+
+        for m in all_matches:
+            prev_t1 = set(str(x).lower() for x in m.get('team1_players', m.get('team1', [])))
+            prev_t2 = set(str(x).lower() for x in m.get('team2_players', m.get('team2', [])))
+            if not prev_t1 or not prev_t2:
+                continue
+
+            rating = m.get('balance_rating', 'unknown')
+            is_stomp = m.get('is_stomp', False)
+            t1k = m.get('team1_kills', 0) or 0
+            t2k = m.get('team2_kills', 0) or 0
+            code = m.get('match_code', '')
+
+            # Kiểm tra 2 chiều đối đầu
+            overlap_1 = len(team1_set & prev_t1) + len(team2_set & prev_t2)
+            overlap_2 = len(team1_set & prev_t2) + len(team2_set & prev_t1)
+            best_overlap = max(overlap_1, overlap_2)
+
+            if best_overlap < 6:
+                continue
+
+            # Hệ số trọng số theo độ trùng khớp (6 -> 0.4, 8 -> 0.75, 10 -> 1.0)
+            overlap_weight = min(1.0, max(0.3, (best_overlap - 4) / 6.0))
+
+            if rating in ['stomp', 'unbalanced'] or is_stomp:
+                severity = 110.0 if (rating == 'stomp' or is_stomp) else 70.0
+                penalty = severity * overlap_weight
+                if penalty > max_penalty:
+                    max_penalty = penalty
+                    label = 'Áp đảo hoàn toàn' if (rating == 'stomp' or is_stomp) else 'Lệch kèo'
+                    insights.append({
+                        'type': 'historical_imbalance',
+                        'icon': '⚠️',
+                        'label': f'Cảnh báo lịch sử ({label})',
+                        'names': f"Trận {code} ({t1k}-{t2k}) từng {label.lower()}. Hệ thống tự động tránh chia lại.",
+                        'penalty': round(penalty, 1)
+                    })
+            elif rating == 'perfect' and (t1k > 0 or t2k > 0):
+                reward = 25.0 * overlap_weight
+                if reward > bonus_reward:
+                    bonus_reward = reward
+                    insights.append({
+                        'type': 'historical_balanced',
+                        'icon': '🎯',
+                        'label': 'Kiểm chứng sát nút',
+                        'names': f"Trận {code} ({t1k}-{t2k}) từng rất cân bằng và kịch tính.",
+                        'bonus': round(reward, 1)
+                    })
+
+        net_diff_adj = max_penalty - bonus_reward
+        return round(net_diff_adj, 1), insights
 
     def _evaluate_team(
         self,
@@ -342,16 +415,19 @@ class MatchmakingService:
 
         p_map = self._get_player_map(unique_players)
         
-        # Lấy lịch sử trận gần đây để kiểm tra anti-repeat
+        # Lấy lịch sử trận đầy đủ và trận gần đây
         try:
             from services.data_manager import data_manager
-            recent_matches = data_manager.get_matches_history()[:5]
+            all_matches = data_manager.get_matches_history()
+            recent_matches = all_matches[:5]
         except Exception:
+            all_matches = []
             recent_matches = []
-            
+
         metrics = player_service.get_metrics()
         pair_synergy = metrics.get('pair_synergy', {})
         trio_synergy = metrics.get('trio_synergy', {})
+        h2h_matrix = metrics.get('h2h_matrix', {})
 
         comb_5 = list(combinations(unique_players, 5))
         evaluated_pairs = set()
@@ -369,22 +445,60 @@ class MatchmakingService:
 
             score_1, syns_1 = self._evaluate_team(t1_tuple, p_map, pair_synergy, trio_synergy, balance_mode=balance_mode)
             score_2, syns_2 = self._evaluate_team(t2_tuple, p_map, pair_synergy, trio_synergy, balance_mode=balance_mode)
-            diff = abs(score_1 - score_2)
 
-            # Anti-repeat: Phạt nếu đội hình quá giống trận gần đây
+            # 1. Đánh giá đối kháng cá nhân (25 cặp đối đầu H2H) - Áp dụng cho MỌI tập hợp tuyển thủ
+            h2h_eval = elo_service.evaluate_h2h_matchup(t1_tuple, t2_tuple, h2h_matrix)
+            h2h_bias = h2h_eval.get('h2h_bias_elo', 0.0)
+
+            # 2. Đánh giá kiểm chứng kết quả từ lịch sử đối đầu (tránh lặp lại các kèo đấu lệch như 44-26)
+            hist_adj, hist_insights = self._check_historical_matchup_balance(
+                set(t1_tuple), set(t2_tuple), all_matches
+            )
+
+            # 3. Phạt lặp lại trận gần nhất
             repeat_penalty = self._check_recent_similarity(
                 set(t1_tuple), set(t2_tuple), recent_matches
             )
-            diff += repeat_penalty
+
+            # Tổng hợp độ chênh lệch thực chiến:
+            # Sức mạnh lý thuyết + Độ thiên lệch đối đầu cá nhân lịch sử + Phạt kèo lệch cũ + Phạt lặp trận
+            effective_diff = round(
+                abs(score_1 - score_2 + h2h_bias) + max(0.0, hist_adj) + repeat_penalty,
+                2
+            )
+
+            # Gắn các thông báo lịch sử vào danh sách synergies hiển thị nếu có
+            team1_syns = list(syns_1)
+            team2_syns = list(syns_2)
+            for hi in hist_insights:
+                if hi['type'] == 'historical_imbalance':
+                    team1_syns.append({
+                        'type': 'warning',
+                        'icon': hi['icon'],
+                        'label': hi['label'],
+                        'names': hi['names'],
+                        'bonus': -hi.get('penalty', 0)
+                    })
+                elif hi['type'] == 'historical_balanced':
+                    team1_syns.append({
+                        'type': 'chemistry',
+                        'icon': hi['icon'],
+                        'label': hi['label'],
+                        'names': hi['names'],
+                        'bonus': hi.get('bonus', 0)
+                    })
 
             candidates.append({
                 'team1': t1_tuple,
                 'team2': t2_tuple,
                 'score1': score_1,
                 'score2': score_2,
-                'diff': diff,
-                'syns1': syns_1,
-                'syns2': syns_2
+                'diff': effective_diff,
+                'raw_diff': round(abs(score_1 - score_2), 2),
+                'h2h_eval': h2h_eval,
+                'hist_insights': hist_insights,
+                'syns1': team1_syns,
+                'syns2': team2_syns
             })
 
         chosen, min_diff, pool_count = self._select_candidate_with_rng(
@@ -425,6 +539,9 @@ class MatchmakingService:
             'team1_avg_elo': round(t1_total_elo / 5.0, 1),
             'team2_avg_elo': round(t2_total_elo / 5.0, 1),
             'power_difference': round(diff, 1 if balance_mode == 'pure_elo' else 2),
+            'raw_power_diff': chosen.get('raw_diff', round(diff, 1)),
+            'h2h_analysis': chosen.get('h2h_eval', {}),
+            'historical_insights': chosen.get('hist_insights', []),
             'team1_win_prob': prob_1,
             'team2_win_prob': prob_2,
             'team1_synergies': chosen['syns1'],
@@ -455,16 +572,19 @@ class MatchmakingService:
 
         p_map = self._get_player_map(all_players)
         
-        # Lấy lịch sử trận gần đây để kiểm tra anti-repeat
+        # Lấy lịch sử trận đầy đủ và trận gần đây
         try:
             from services.data_manager import data_manager
-            recent_matches = data_manager.get_matches_history()[:5]
+            all_matches = data_manager.get_matches_history()
+            recent_matches = all_matches[:5]
         except Exception:
+            all_matches = []
             recent_matches = []
 
         metrics = player_service.get_metrics()
         pair_synergy = metrics.get('pair_synergy', {})
         trio_synergy = metrics.get('trio_synergy', {})
+        h2h_matrix = metrics.get('h2h_matrix', {})
 
         comb_4 = list(combinations(remaining_players, 4))
         candidates: List[Dict[str, Any]] = []
@@ -475,22 +595,60 @@ class MatchmakingService:
 
             score_1, syns_1 = self._evaluate_team(t1, p_map, pair_synergy, trio_synergy, balance_mode=balance_mode)
             score_2, syns_2 = self._evaluate_team(t2, p_map, pair_synergy, trio_synergy, balance_mode=balance_mode)
-            diff = abs(score_1 - score_2)
 
-            # Anti-repeat: Phạt nếu đội hình quá giống trận gần đây
+            # 1. Đánh giá đối kháng cá nhân (25 cặp đối đầu H2H) - Áp dụng cho MỌI tập hợp tuyển thủ
+            h2h_eval = elo_service.evaluate_h2h_matchup(t1, t2, h2h_matrix)
+            h2h_bias = h2h_eval.get('h2h_bias_elo', 0.0)
+
+            # 2. Đánh giá kiểm chứng kết quả từ lịch sử đối đầu (tránh lặp lại các kèo đấu lệch như 44-26)
+            hist_adj, hist_insights = self._check_historical_matchup_balance(
+                set(t1), set(t2), all_matches
+            )
+
+            # 3. Phạt lặp lại trận gần nhất
             repeat_penalty = self._check_recent_similarity(
                 set(t1), set(t2), recent_matches
             )
-            diff += repeat_penalty
+
+            # Tổng hợp độ chênh lệch thực chiến:
+            # Sức mạnh lý thuyết + Độ thiên lệch đối đầu cá nhân lịch sử + Phạt kèo lệch cũ + Phạt lặp trận
+            effective_diff = round(
+                abs(score_1 - score_2 + h2h_bias) + max(0.0, hist_adj) + repeat_penalty,
+                2
+            )
+
+            # Gắn các thông báo lịch sử vào danh sách synergies hiển thị nếu có
+            team1_syns = list(syns_1)
+            team2_syns = list(syns_2)
+            for hi in hist_insights:
+                if hi['type'] == 'historical_imbalance':
+                    team1_syns.append({
+                        'type': 'warning',
+                        'icon': hi['icon'],
+                        'label': hi['label'],
+                        'names': hi['names'],
+                        'bonus': -hi.get('penalty', 0)
+                    })
+                elif hi['type'] == 'historical_balanced':
+                    team1_syns.append({
+                        'type': 'chemistry',
+                        'icon': hi['icon'],
+                        'label': hi['label'],
+                        'names': hi['names'],
+                        'bonus': hi.get('bonus', 0)
+                    })
 
             candidates.append({
                 'team1': t1,
                 'team2': t2,
                 'score1': score_1,
                 'score2': score_2,
-                'diff': diff,
-                'syns1': syns_1,
-                'syns2': syns_2
+                'diff': effective_diff,
+                'raw_diff': round(abs(score_1 - score_2), 2),
+                'h2h_eval': h2h_eval,
+                'hist_insights': hist_insights,
+                'syns1': team1_syns,
+                'syns2': team2_syns
             })
 
         chosen, min_diff, pool_count = self._select_candidate_with_rng(
@@ -532,6 +690,9 @@ class MatchmakingService:
             'team1_avg_elo': round(t1_total_elo / 5.0, 1),
             'team2_avg_elo': round(t2_total_elo / 5.0, 1),
             'power_difference': round(diff, 1 if balance_mode == 'pure_elo' else 2),
+            'raw_power_diff': chosen.get('raw_diff', round(diff, 1)),
+            'h2h_analysis': chosen.get('h2h_eval', {}),
+            'historical_insights': chosen.get('hist_insights', []),
             'team1_win_prob': prob_1,
             'team2_win_prob': prob_2,
             'team1_synergies': chosen['syns1'],
