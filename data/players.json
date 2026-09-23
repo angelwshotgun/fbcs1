@@ -18,25 +18,6 @@
     "form_score": 5.0,
     "form_status": "neutral"
   },
-  "acetamin": {
-    "id": "acetamin",
-    "nickname": "Acetamin",
-    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=acetamin",
-    "skill": 1.0,
-    "champion_pool": 1.0,
-    "flex_lane": 1.0,
-    "consistency": 1.0,
-    "stats_ovr": 6.9,
-    "primary_role": "ADC",
-    "favorite_champions": [
-      "Ashe",
-      "Miss Fortune",
-      "Draven"
-    ],
-    "hidden_elo": 1200.0,
-    "form_score": 5.0,
-    "form_status": "neutral"
-  },
   "alan": {
     "id": "alan",
     "nickname": "Lân Lao Lực#1811",
@@ -389,6 +370,21 @@
     "form_score": 5.0,
     "form_status": "neutral"
   },
+  "paracetamon": {
+    "id": "paracetamon",
+    "nickname": "paracetamon",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=paracetamon",
+    "skill": 1.5,
+    "champion_pool": 1.5,
+    "flex_lane": 1.5,
+    "consistency": 1.5,
+    "stats_ovr": 6.9,
+    "primary_role": "MID",
+    "favorite_champions": [],
+    "hidden_elo": 1200.0,
+    "form_score": 5.0,
+    "form_status": "neutral"
+  },
   "quyt": {
     "id": "quyt",
     "nickname": "Quyt",
@@ -449,7 +445,7 @@
   "snipertx": {
     "id": "snipertx",
     "nickname": "SniperTX",
-    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=snipertx",
+    "avatar": "https://play.google.com/pc-store/games/details?id=com.bro.luckyrace&hl=vi",
     "skill": 6.0,
     "champion_pool": 3.0,
     "flex_lane": 2.0,
@@ -480,6 +476,21 @@
       "Rumble",
       "Ornn"
     ],
+    "hidden_elo": 1200.0,
+    "form_score": 5.0,
+    "form_status": "neutral"
+  },
+  "thngem": {
+    "id": "thngem",
+    "nickname": "thương em",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=thngem",
+    "skill": 5.0,
+    "champion_pool": 5.0,
+    "flex_lane": 5.0,
+    "consistency": 5.0,
+    "stats_ovr": 6.9,
+    "primary_role": "MID",
+    "favorite_champions": [],
     "hidden_elo": 1200.0,
     "form_score": 5.0,
     "form_status": "neutral"

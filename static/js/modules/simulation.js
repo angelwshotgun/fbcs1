@@ -475,6 +475,7 @@ function handleScreenshotFileSelect(e) {
     if (files && files.length > 0) {
         processScreenshotFile(files[0]);
     }
+    if (e.target) e.target.value = '';
 }
 
 async function processScreenshotFile(file) {
@@ -634,8 +635,6 @@ async function processScreenshotFile(file) {
                     ...SWAL_THEME
                 });
             }
-
-        }
     } catch (err) {
         if (spinner) spinner.classList.add('hidden');
         console.error("Lỗi OCR:", err);

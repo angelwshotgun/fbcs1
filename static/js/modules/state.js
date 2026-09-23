@@ -36,39 +36,66 @@ var SWAL_THEME = {
 // Helper nén và tối ưu hóa ảnh trước khi gửi AI Vision (giúp gửi nhanh hơn 20x và tránh timeout)
 function compressImage(file, maxWidth = 1920, maxHeight = 1080, quality = 0.85) {
     return new Promise((resolve) => {
-        if (!file || !file.type.startsWith('image/')) {
+        if (!file) {
             resolve(null);
             return;
         }
+
+        let isDone = false;
+        const timeoutHandle = setTimeout(() => {
+            if (!isDone) {
+                isDone = true;
+                resolve(null);
+            }
+        }, 6000);
+
+        const finish = (result) => {
+            if (!isDone) {
+                isDone = true;
+                clearTimeout(timeoutHandle);
+                resolve(result);
+            }
+        };
+
         const reader = new FileReader();
         reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                let width = img.width;
-                let height = img.height;
-                if (width > maxWidth || height > maxHeight) {
-                    if (width / height > maxWidth / maxHeight) {
-                        height = Math.round((height * maxWidth) / width);
-                        width = maxWidth;
-                    } else {
-                        width = Math.round((width * maxHeight) / height);
-                        height = maxHeight;
+            const rawBase64 = e.target.result;
+            const originalMime = file.type || 'image/jpeg';
+            try {
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        let width = img.width || 1280;
+                        let height = img.height || 720;
+                        if (width > maxWidth || height > maxHeight) {
+                            if (width / height > maxWidth / maxHeight) {
+                                height = Math.round((height * maxWidth) / width);
+                                width = maxWidth;
+                            } else {
+                                width = Math.round((width * maxHeight) / height);
+                                height = maxHeight;
+                            }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                        finish({ base64: compressedBase64, mimeType: 'image/jpeg' });
+                    } catch (canvasErr) {
+                        finish({ base64: rawBase64, mimeType: originalMime });
                     }
-                }
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-                resolve({ base64: compressedBase64, mimeType: 'image/jpeg' });
-            };
-            img.onerror = () => {
-                resolve({ base64: e.target.result, mimeType: file.type || 'image/jpeg' });
-            };
-            img.src = e.target.result;
+                };
+                img.onerror = () => {
+                    finish({ base64: rawBase64, mimeType: originalMime });
+                };
+                img.src = rawBase64;
+            } catch (err) {
+                finish({ base64: rawBase64, mimeType: originalMime });
+            }
         };
-        reader.onerror = () => resolve(null);
+        reader.onerror = () => finish(null);
         reader.readAsDataURL(file);
     });
 }

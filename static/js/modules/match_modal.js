@@ -188,10 +188,11 @@ function handleScoreboardFileSelect(event) {
     if (file) {
         handleScoreboardPastedFile(file);
     }
+    if (event.target) event.target.value = '';
 }
 
 async function handleScoreboardPastedFile(file) {
-    if (!file.type.startsWith('image/')) {
+    if (file.type && !file.type.startsWith('image/')) {
         Swal.fire({ icon: 'warning', title: 'Tệp không hợp lệ', text: 'Vui lòng chọn hoặc dán file ảnh.', ...SWAL_THEME });
         return;
     }
