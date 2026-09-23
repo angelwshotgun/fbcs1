@@ -481,21 +481,27 @@ async function processScreenshotFile(file) {
     const spinner = document.getElementById('ocr-loading-spinner');
     if (spinner) spinner.classList.remove('hidden');
 
-    const reader = new FileReader();
-    reader.onload = async function (evt) {
-        const base64Data = evt.target.result;
-        let apiKey = localStorage.getItem('fbcs_gemini_key') || '';
+    const compressed = await compressImage(file);
+    const base64Data = compressed ? compressed.base64 : null;
+    const mimeType = compressed ? compressed.mimeType : (file.type || 'image/jpeg');
 
-        try {
-            let res = await fetch('/api/ocr_screenshot', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    image: base64Data,
-                    mime_type: file.type || 'image/jpeg',
-                    api_key: apiKey
-                })
-            });
+    if (!base64Data) {
+        if (spinner) spinner.classList.add('hidden');
+        return;
+    }
+
+    let apiKey = localStorage.getItem('fbcs_gemini_key') || localStorage.getItem('fbcs_gemini_api_key') || '';
+
+    try {
+        let res = await fetch('/api/ocr_screenshot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                image: base64Data,
+                mime_type: mimeType,
+                api_key: apiKey
+            })
+        });
 
             let data = await res.json();
 
@@ -629,17 +635,17 @@ async function processScreenshotFile(file) {
                 });
             }
 
-        } catch (err) {
-            if (spinner) spinner.classList.add('hidden');
-            console.error("Lỗi OCR:", err);
-            Swal.fire({
-                icon: 'error',
-                title: 'Lỗi',
-                text: 'Không thể kết nối đến dịch vụ phân tích ảnh.',
-                ...SWAL_THEME
-            });
         }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+        if (spinner) spinner.classList.add('hidden');
+        console.error("Lỗi OCR:", err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi',
+            text: 'Không thể kết nối đến dịch vụ phân tích ảnh.',
+            ...SWAL_THEME
+        });
+    }
 }
+
 

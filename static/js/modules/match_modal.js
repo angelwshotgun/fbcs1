@@ -190,34 +190,33 @@ function handleScoreboardFileSelect(event) {
     }
 }
 
-function handleScoreboardPastedFile(file) {
+async function handleScoreboardPastedFile(file) {
     if (!file.type.startsWith('image/')) {
         Swal.fire({ icon: 'warning', title: 'Tệp không hợp lệ', text: 'Vui lòng chọn hoặc dán file ảnh.', ...SWAL_THEME });
         return;
     }
 
-    currentScoreboardMimeType = file.type;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        currentScoreboardImageBase64 = e.target.result;
+    const compressed = await compressImage(file);
+    if (!compressed) return;
 
-        const emptyArea = document.getElementById('scoreboard-dropzone-empty');
-        const previewContainer = document.getElementById('scoreboard-preview-container');
-        const previewImg = document.getElementById('scoreboard-preview-img');
-        const fileName = document.getElementById('scoreboard-file-name');
-        const viewFullBtn = document.getElementById('scoreboard-view-full-btn');
+    currentScoreboardImageBase64 = compressed.base64;
+    currentScoreboardMimeType = compressed.mimeType;
 
-        if (emptyArea) emptyArea.classList.add('hidden');
-        if (previewContainer) previewContainer.classList.remove('hidden');
-        if (previewImg) previewImg.src = currentScoreboardImageBase64;
-        if (fileName) fileName.innerText = file.name || 'Ảnh bảng điểm vừa dán';
-        if (viewFullBtn) viewFullBtn.href = currentScoreboardImageBase64;
+    const emptyArea = document.getElementById('scoreboard-dropzone-empty');
+    const previewContainer = document.getElementById('scoreboard-preview-container');
+    const previewImg = document.getElementById('scoreboard-preview-img');
+    const fileName = document.getElementById('scoreboard-file-name');
+    const viewFullBtn = document.getElementById('scoreboard-view-full-btn');
 
-        // Tự động kích hoạt nút phân tích
-        const runBtn = document.getElementById('btn-run-scoreboard-ai');
-        if (runBtn) runBtn.disabled = false;
-    };
-    reader.readAsDataURL(file);
+    if (emptyArea) emptyArea.classList.add('hidden');
+    if (previewContainer) previewContainer.classList.remove('hidden');
+    if (previewImg) previewImg.src = currentScoreboardImageBase64;
+    if (fileName) fileName.innerText = file.name || 'Ảnh bảng điểm vừa nạp (đã tối ưu)';
+    if (viewFullBtn) viewFullBtn.href = currentScoreboardImageBase64;
+
+    // Tự động kích hoạt nút phân tích
+    const runBtn = document.getElementById('btn-run-scoreboard-ai');
+    if (runBtn) runBtn.disabled = false;
 }
 
 function toggleScoreboardImageSize() {
@@ -295,7 +294,7 @@ async function runScoreboardAiAnalysis() {
     if (resultsContainer) resultsContainer.classList.add('hidden');
 
     try {
-        const apiKey = localStorage.getItem('fbcs_gemini_api_key') || '';
+        const apiKey = localStorage.getItem('fbcs_gemini_key') || localStorage.getItem('fbcs_gemini_api_key') || '';
         const res = await fetch('/api/analyze_match_scoreboard', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

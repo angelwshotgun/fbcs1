@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import logging
 import urllib.request
 import urllib.error
 from typing import Dict, Any, List
@@ -7,14 +9,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 CANDIDATE_MODELS = [
+    'gemini-2.5-flash-lite',
+    'gemini-3-flash-preview',
     'gemini-3.5-flash',
-    'gemini-3.8-flash',
-    'gemini-3.7-flash',
-    'gemini-3.6-flash',
-    'gemini-3.5-flash-lite'
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-flash-latest'
 ]
 
 
@@ -22,8 +27,8 @@ class GeminiService:
     def __init__(self):
         self.api_key = GEMINI_API_KEY
 
-    def _call_gemini_api(self, payload: Dict[str, Any], custom_key: str = None, timeout: int = 25) -> Dict[str, Any]:
-        """Gọi Gemini API với cơ chế tự động thử nhiều model khả dụng khi gặp lỗi 404/503."""
+    def _call_gemini_api(self, payload: Dict[str, Any], custom_key: str = None, timeout: int = 45) -> Dict[str, Any]:
+        """Gọi Gemini API với cơ chế tự động thử nhiều model khả dụng khi gặp lỗi 404/503/Timeout."""
         key = custom_key or self.api_key
         if not key:
             raise ValueError('Chưa cấu hình Gemini API Key. Vui lòng dán API Key vào ô nhập hoặc mục Cài Đặt.')
@@ -31,6 +36,7 @@ class GeminiService:
         last_error = None
         for model_name in CANDIDATE_MODELS:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
+            t0 = time.time()
             try:
                 req = urllib.request.Request(
                     url,
@@ -39,20 +45,24 @@ class GeminiService:
                     method='POST'
                 )
                 with urllib.request.urlopen(req, timeout=timeout) as response:
-                    return json.loads(response.read().decode('utf-8'))
+                    res_body = json.loads(response.read().decode('utf-8'))
+                    elapsed = time.time() - t0
+                    logger.info(f"[Gemini API] Model {model_name} thành công trong {round(elapsed, 2)}s")
+                    return res_body
             except urllib.error.HTTPError as e:
                 err_msg = e.read().decode('utf-8', errors='ignore')
                 last_error = f"Model {model_name} HTTP {e.code}: {err_msg}"
-                # Thử model tiếp theo nếu 404 (model deprecated) hoặc 503 (quá tải)
+                logger.warning(f"[Gemini API] {last_error}. Đang thử model kế tiếp...")
                 if e.code in [404, 503, 429]:
                     continue
                 else:
                     raise Exception(last_error)
             except Exception as e:
                 last_error = f"Model {model_name} error: {str(e)}"
+                logger.warning(f"[Gemini API] {last_error}. Đang thử model kế tiếp...")
                 continue
 
-        raise Exception(last_error or 'Không thể kết nối đến bất kỳ model Gemini nào khả dụng.')
+        raise Exception(f"Không thể kết nối đến bất kỳ model Gemini nào khả dụng. Chi tiết: {last_error}")
 
     def analyze_matchup(self, team1_data: List[Dict[str, Any]], team2_data: List[Dict[str, Any]], custom_key: str = None) -> Dict[str, Any]:
         """Phân tích kèo đấu và chiến thuật bằng Gemini AI hoặc phân tích heuristic thông minh."""
@@ -104,7 +114,7 @@ Use clear markdown headings and bullet points for maximum readability.
         }
 
         try:
-            res_data = self._call_gemini_api(payload, custom_key=key, timeout=15)
+            res_data = self._call_gemini_api(payload, custom_key=key, timeout=25)
             ai_text = res_data['candidates'][0]['content']['parts'][0]['text']
             return {
                 'source': 'gemini',
@@ -222,7 +232,7 @@ RETURN ONLY A VALID JSON OBJECT (no markdown backticks, no extra text):
         }
 
         try:
-            res_data = self._call_gemini_api(payload, custom_key=key, timeout=25)
+            res_data = self._call_gemini_api(payload, custom_key=key, timeout=45)
             raw_text = res_data['candidates'][0]['content']['parts'][0]['text'].strip()
 
             if raw_text.startswith('```json'):
@@ -439,7 +449,7 @@ Note: The `players_analysis` array MUST contain all 10 players (5 for team 1, 5 
         }
 
         try:
-            res_data = self._call_gemini_api(payload, custom_key=key, timeout=30)
+            res_data = self._call_gemini_api(payload, custom_key=key, timeout=60)
             raw_text = res_data['candidates'][0]['content']['parts'][0]['text'].strip()
 
             if raw_text.startswith('```json'):
