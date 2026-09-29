@@ -89,6 +89,8 @@ def api_update_match(match_id: int):
         player_deltas = data.get('player_deltas')
         team1_kills = int(data.get('team1_kills', 0))
         team2_kills = int(data.get('team2_kills', 0))
+        player_performances = data.get('player_performances')
+        ai_summary = data.get('ai_summary')
 
         if len(team1) != 5 or len(team2) != 5:
             return jsonify({'success': False, 'error': 'Mỗi đội phải có chính xác 5 tuyển thủ'}), 400
@@ -108,7 +110,9 @@ def api_update_match(match_id: int):
             notes=notes,
             player_deltas=player_deltas,
             team1_kills=team1_kills,
-            team2_kills=team2_kills
+            team2_kills=team2_kills,
+            player_performances=player_performances,
+            ai_summary=ai_summary
         )
 
         if not ok:

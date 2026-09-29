@@ -350,26 +350,39 @@ RETURN ONLY A VALID JSON OBJECT (no markdown backticks, no extra text):
         t1_lines = [format_player_line(p) for p in team1_players]
         t2_lines = [format_player_line(p) for p in team2_players]
 
-        winning_team_label = "Team 1 (Blue Side / Đội 1 Xanh)" if winner == 'team1' else "Team 2 (Red Side / Đội 2 Đỏ)"
-        losing_team_label = "Team 2 (Red Side / Đội 2 Đỏ)" if winner == 'team1' else "Team 1 (Blue Side / Đội 1 Xanh)"
+        winning_team_label = "Team 1 (Đội 1 Xanh / Blue Side)" if winner == 'team1' else "Team 2 (Đội 2 Đỏ / Red Side)"
+        losing_team_label = "Team 2 (Đội 2 Đỏ / Red Side)" if winner == 'team1' else "Team 1 (Đội 1 Xanh / Blue Side)"
 
         prompt = f"""
 You are a world-class eSports analyst (League of Legends, Dota 2, Valorant) and a competitive Elo rating mathematician.
 Task: Analyze the attached post-game scoreboard screenshot (End-Game Scoreboard) with utmost precision.
 
-MATCH CONTEXT:
-- {winning_team_label} is the WINNER.
-- {losing_team_label} is the LOSER.
+MATCH CONTEXT & RESULT (GROUND TRUTH):
+- {winning_team_label} is the WINNER. All players on this team MUST receive a POSITIVE Elo delta (+3 to +28).
+- {losing_team_label} is the LOSER. All players on this team MUST receive a NEGATIVE Elo delta (-5 to -26).
 
-CRITICAL INSTRUCTION ON SCREENSHOT LAYOUT & TEAM ORIENTATION:
-- In the League of Legends client end-game screen, the screenshot taker's team is ALWAYS displayed on the TOP panel, regardless of whether they were Blue side or Red side!
-- Therefore, the TOP panel is NOT necessarily Team 1 (Blue Side)! If a player from Team 2 (Red Side) captured the screenshot, Team 2 will be shown at the top.
-- You MUST cross-reference each player's in-game name and champion against the roster below to accurately map each player to [TEAM 1 (BLUE SIDE)] or [TEAM 2 (RED SIDE)].
+SCREENSHOT LAYOUT IN LEAGUE OF LEGENDS:
+- The TOP panel shows 'ĐỘI 1' (Team 1, Blue Side).
+- The BOTTOM panel shows 'ĐỘI 2' (Team 2, Red Side).
+- Map each of the 10 players from the scoreboard to their exact player_id in the roster below.
+- CRITICAL: Do NOT duplicate stats or champions across players. Each player has their own row.
 
-STRICT ELO DELTA SIGN RULES:
-- Winning team players ({winning_team_label}) MUST RECEIVE A POSITIVE Elo delta (+) ranging from +3 to +28 (MVP, GREAT, SOLID, PASSENGER).
-- Losing team players ({losing_team_label}) MUST RECEIVE A NEGATIVE Elo delta (-) ranging from -5 to -26 (SVP, SOLID, FEEDER).
-- UNDER NO CIRCUMSTANCES should a winning player receive a negative delta, or a losing player receive a positive delta!
+CRITICAL INSTRUCTIONS ON MVP & SVP:
+- WINNING TEAM MVP: Awarded ONLY to the single best player on the WINNING team ({winning_team_label}). Tag: "MVP", Delta: +24 to +28.
+- LOSING TEAM SVP: Awarded ONLY to the standout best player on the LOSING team ({losing_team_label}). Tag: "SVP", Delta: -5 to -9 (they valiantly tried to carry, so they lose the LEAST Elo).
+- STRICT RULE: MVP and SVP MUST BE ON OPPOSITE TEAMS! (MVP on the winning team, SVP on the losing team).
+- NEVER give MVP to a player on the losing team, and NEVER give SVP to a player on the winning team!
+
+STRICT RULES ON ELO DELTA DIRECTION:
+- WINNING TEAM PLAYERS ({winning_team_label}) MUST HAVE POSITIVE (+) DELTAS:
+  * [MVP] Primary Carry (best on winning team): Score: 9.0 - 10.0 -> Delta: +24 to +28. Tag: "MVP".
+  * [GREAT] Major Contributor / High damage/KP: Score: 7.5 - 8.9 -> Delta: +18 to +22. Tag: "GREAT".
+  * [SOLID] Reliable / Role Player: Score: 6.0 - 7.4 -> Delta: +12 to +16. Tag: "SOLID".
+  * [PASSENGER] Carried / High deaths / Burden: Score: 2.5 - 4.9 -> Delta: ONLY +3 to +7. Tag: "PASSENGER". (Lowest gain on winning team!).
+- LOSING TEAM PLAYERS ({losing_team_label}) MUST HAVE NEGATIVE (-) DELTAS:
+  * [SVP] Standout Effort / Valiant Carry: Score: 7.5 - 9.5 -> Delta: ONLY -5 to -9. Tag: "SVP". (Smallest loss on losing team!).
+  * [SOLID] Fair / Decent effort: Score: 5.0 - 6.9 -> Delta: -12 to -16. Tag: "SOLID".
+  * [FEEDER] Underperforming / Feeder (high deaths, 0 kills): Score: 1.0 - 4.4 -> Delta: -20 to -26. Tag: "FEEDER". (Biggest loss on losing team!).
 
 10 PARTICIPATING PLAYERS ROSTER:
 [TEAM 1 (BLUE SIDE)]:
@@ -378,43 +391,27 @@ STRICT ELO DELTA SIGN RULES:
 [TEAM 2 (RED SIDE)]:
 {chr(10).join(t2_lines)}
 
-DATA EXTRACTION & ELO CALCULATION GUIDELINES:
+DATA EXTRACTION:
 1. Extract stats for all 10 players from the scoreboard:
-   - In-game summoner name and champion played (matched with the 10 players listed above).
-   - KDA (Kills / Deaths / Assists, e.g., "13/7/6").
-   - Secondary metrics: Damage (e.g., "24.5k"), Gold, CS, MVP, SVP/ACE badges.
-   - Total team kills: `team1_kills` and `team2_kills` (sum of individual kills per team, or read from team kill totals).
-
-2. CRITICAL DISTINCTION: "CARRY / PLAYMAKER" VS "PASSENGER / CARRIED":
-   - Winning team players with poor contributions (e.g., negative KDA like 1/7/2, 0/5/3, 2/9/4, bottom-tier damage, excessive deaths) are "PASSENGERS" who were merely carried by their teammates.
-   - Passengers MUST NOT receive high Elo gains! Award them only a nominal +3 to +7 Elo (Tag: "PASSENGER").
-   - Conversely, primary Carries / MVPs with dominant KDA and top damage must be handsomely rewarded (+24 to +28 Elo, Tag: "MVP").
-
-3. DETAILED PERFORMANCE CATEGORIES & DELTA RANGES:
-   - WINNING TEAM:
-     * [MVP] Primary Carry: Dominant KDA, top-tier damage, clutch playmaking. Score: 9.0 - 10.0 -> Delta: +24 to +28. Tag: "MVP".
-     * [GREAT] Major Contributor / Pillar: Solid KDA, high teamfight participation. Score: 7.5 - 8.9 -> Delta: +18 to +22. Tag: "GREAT".
-     * [SOLID] Reliable / Role Player: Won lane or held even, balanced KDA. Score: 6.0 - 7.4 -> Delta: +14 to +16. Tag: "SOLID".
-     * [PASSENGER] Carried / Burden: Heavily negative KDA, lowest damage, repeatedly caught out, won only due to stellar teammates. Score: 2.5 - 4.9 -> Delta: ONLY +3 to +7. Tag: "PASSENGER".
-   - LOSING TEAM:
-     * [SVP] Valiant Effort / Bright Spot: Strong KDA and high damage despite defeat. Score: 7.5 - 8.9 -> Delta: ONLY -5 to -9 (protect standout performance). Tag: "SVP".
-     * [SOLID] Fair / Decent: Tried their best but unable to turn the tide. Score: 5.0 - 6.9 -> Delta: -12 to -15. Tag: "SOLID".
-     * [FEEDER] Underperforming / Feeder: Excessive deaths, negative momentum, dragged team down. Score: 1.0 - 4.4 -> Delta: -20 to -26. Tag: "FEEDER".
+   - In-game summoner name and champion played.
+   - KDA (Kills / Deaths / Assists, e.g. "13/7/6").
+   - Secondary metrics: Damage (e.g. "24.5k"), Gold, CS.
+   - Total team kills: `team1_kills` must be the total kills of Team 1, and `team2_kills` must be total kills of Team 2.
 
 RETURN ONLY A VALID JSON OBJECT (no markdown backticks, no extra text):
 {{
   "winner": "{winner}",
-  "match_mvp": "Player name of the MVP",
-  "match_svp": "Player name of the SVP",
+  "match_mvp": "Player name of the MVP (MUST be from {winning_team_label})",
+  "match_svp": "Player name of the SVP (MUST be from {losing_team_label})",
   "team1_kills": 0,
   "team2_kills": 0,
-  "ai_summary": "A concise 2-3 sentence match summary in Vietnamese highlighting the tactical turning points, key carries, and decisive plays.",
+  "ai_summary": "A concise 2-3 sentence match summary in Vietnamese highlighting key carries and decisive plays.",
   "players_analysis": [
     {{
       "player_id": "exact_id_from_roster",
       "nickname": "Player nickname",
       "team": 1,
-      "champion": "Champion name (e.g. Lucian)",
+      "champion": "Champion name (e.g. Smolder)",
       "kda": "13/7/6",
       "damage": "24.5k",
       "performance_score": 9.2,
@@ -425,7 +422,6 @@ RETURN ONLY A VALID JSON OBJECT (no markdown backticks, no extra text):
   ]
 }}
 Note: The `players_analysis` array MUST contain all 10 players (5 for team 1, 5 for team 2) with their exact `player_id`.
-`team1_kills` and `team2_kills` are the total kills for Team 1 and Team 2 respectively.
 """
         clean_base64 = image_data
         if ',' in image_data:
@@ -489,20 +485,49 @@ Note: The `players_analysis` array MUST contain all 10 players (5 for team 1, 5 
                     (analysis_by_nick.get('nyan') if p_id == 'hungpui' else None)
                 )
 
+            def normalize_delta_and_tag(raw_delta: float, raw_tag: str, is_winner: bool, score: float = 6.0) -> Tuple[float, str]:
+                tag = str(raw_tag or 'SOLID').upper().strip()
+                raw_abs = abs(raw_delta) if raw_delta != 0 else 16.0
+
+                if is_winner:
+                    if tag in ['MVP', 'CARRY']:
+                        final_tag = 'MVP'
+                        final_delta = max(22.0, min(28.0, raw_abs if raw_abs >= 20.0 else 24.0))
+                    elif tag == 'GREAT':
+                        final_tag = 'GREAT'
+                        final_delta = max(17.0, min(22.0, raw_abs if 16.0 <= raw_abs <= 24.0 else 20.0))
+                    elif tag in ['PASSENGER', 'CARRIED', 'FEEDER']:
+                        final_tag = 'PASSENGER'
+                        final_delta = max(3.0, min(8.0, raw_abs if raw_abs <= 10.0 else 6.0))
+                    else:
+                        final_tag = 'SOLID'
+                        final_delta = max(11.0, min(16.0, raw_abs if 10.0 <= raw_abs <= 18.0 else 14.0))
+                    return round(final_delta, 1), final_tag
+                else:
+                    if tag in ['SVP', 'MVP', 'CARRY']:
+                        final_tag = 'SVP'
+                        final_delta = -max(5.0, min(9.0, raw_abs if raw_abs <= 10.0 else 6.0))
+                    elif tag == 'GREAT':
+                        final_tag = 'GREAT'
+                        final_delta = -max(7.0, min(10.0, raw_abs if raw_abs <= 12.0 else 8.0))
+                    elif tag in ['FEEDER', 'PASSENGER', 'CARRIED']:
+                        final_tag = 'FEEDER'
+                        final_delta = -max(18.0, min(26.0, raw_abs if raw_abs >= 16.0 else 20.0))
+                    else:
+                        final_tag = 'SOLID'
+                        final_delta = -max(11.0, min(16.0, raw_abs if 10.0 <= raw_abs <= 18.0 else 14.0))
+                    return round(final_delta, 1), final_tag
+
             normalized_list = []
             for p in team1_players:
                 found = find_analysis_for_player(p)
-                default_delta = 16.0 if winner == 'team1' else -16.0
+                is_win = (winner == 'team1')
+                default_delta = 16.0 if is_win else -16.0
                 if found:
                     raw_delta = float(found.get('recommended_delta', default_delta))
                     raw_tag = str(found.get('performance_tag', 'SOLID')).upper()
-                    # Bảo đảm dấu điểm Elo luôn chuẩn xác theo kết quả thắng/thua
-                    if winner == 'team1':
-                        delta = abs(raw_delta) if raw_delta != 0 else 16.0
-                        tag = 'MVP' if raw_tag in ['MVP', 'SVP'] else ('GREAT' if raw_tag == 'GREAT' else ('PASSENGER' if raw_tag == 'FEEDER' else raw_tag))
-                    else:
-                        delta = -abs(raw_delta) if raw_delta != 0 else -16.0
-                        tag = 'SVP' if raw_tag in ['MVP', 'SVP'] else ('FEEDER' if raw_tag in ['FEEDER', 'PASSENGER'] else 'SOLID')
+                    perf_score = float(found.get('performance_score', 6.0))
+                    delta, tag = normalize_delta_and_tag(raw_delta, raw_tag, is_win, perf_score)
 
                     normalized_list.append({
                         "player_id": p['id'],
@@ -511,9 +536,9 @@ Note: The `players_analysis` array MUST contain all 10 players (5 for team 1, 5 
                         "champion": found.get('champion', '-'),
                         "kda": found.get('kda', '-'),
                         "damage": found.get('damage', '-'),
-                        "performance_score": float(found.get('performance_score', 6.0)),
+                        "performance_score": perf_score,
                         "performance_tag": tag,
-                        "recommended_delta": round(delta, 1),
+                        "recommended_delta": delta,
                         "comment": found.get('comment', 'Thi đấu tròn vai')
                     })
                 else:
@@ -524,7 +549,7 @@ Note: The `players_analysis` array MUST contain all 10 players (5 for team 1, 5 
                         "champion": '-',
                         "kda": '-',
                         "damage": '-',
-                        "performance_score": 6.5 if winner == 'team1' else 5.0,
+                        "performance_score": 6.5 if is_win else 5.0,
                         "performance_tag": 'SOLID',
                         "recommended_delta": default_delta,
                         "comment": 'Tròn vai theo diễn biến trận đấu'
@@ -532,17 +557,13 @@ Note: The `players_analysis` array MUST contain all 10 players (5 for team 1, 5 
 
             for p in team2_players:
                 found = find_analysis_for_player(p)
-                default_delta = 16.0 if winner == 'team2' else -16.0
+                is_win = (winner == 'team2')
+                default_delta = 16.0 if is_win else -16.0
                 if found:
                     raw_delta = float(found.get('recommended_delta', default_delta))
                     raw_tag = str(found.get('performance_tag', 'SOLID')).upper()
-                    # Bảo đảm dấu điểm Elo luôn chuẩn xác theo kết quả thắng/thua
-                    if winner == 'team2':
-                        delta = abs(raw_delta) if raw_delta != 0 else 16.0
-                        tag = 'MVP' if raw_tag in ['MVP', 'SVP'] else ('GREAT' if raw_tag == 'GREAT' else ('PASSENGER' if raw_tag == 'FEEDER' else raw_tag))
-                    else:
-                        delta = -abs(raw_delta) if raw_delta != 0 else -16.0
-                        tag = 'SVP' if raw_tag in ['MVP', 'SVP'] else ('FEEDER' if raw_tag in ['FEEDER', 'PASSENGER'] else 'SOLID')
+                    perf_score = float(found.get('performance_score', 6.0))
+                    delta, tag = normalize_delta_and_tag(raw_delta, raw_tag, is_win, perf_score)
 
                     normalized_list.append({
                         "player_id": p['id'],
@@ -551,9 +572,9 @@ Note: The `players_analysis` array MUST contain all 10 players (5 for team 1, 5 
                         "champion": found.get('champion', '-'),
                         "kda": found.get('kda', '-'),
                         "damage": found.get('damage', '-'),
-                        "performance_score": float(found.get('performance_score', 6.0)),
+                        "performance_score": perf_score,
                         "performance_tag": tag,
-                        "recommended_delta": round(delta, 1),
+                        "recommended_delta": delta,
                         "comment": found.get('comment', 'Thi đấu tròn vai')
                     })
                 else:
@@ -564,42 +585,93 @@ Note: The `players_analysis` array MUST contain all 10 players (5 for team 1, 5 
                         "champion": '-',
                         "kda": '-',
                         "damage": '-',
-                        "performance_score": 6.5 if winner == 'team2' else 5.0,
+                        "performance_score": 6.5 if is_win else 5.0,
                         "performance_tag": 'SOLID',
                         "recommended_delta": default_delta,
                         "comment": 'Tròn vai theo diễn biến trận đấu'
                     })
 
-            # Tính tổng mạng hạ gục từ AI hoặc suy ra từ KDA cá nhân
-            t1k_ai = int(parsed.get('team1_kills', 0) or 0)
-            t2k_ai = int(parsed.get('team2_kills', 0) or 0)
+            # Tính tổng mạng hạ gục trực tiếp từ KDA cá nhân của từng đội để tránh nhầm lẫn giữa nhãn hiển thị và phe đấu
+            t1_kills_sum = 0
+            t2_kills_sum = 0
+            for item in normalized_list:
+                kda_str = str(item.get('kda', '-')).replace(' ', '').split('/')
+                try:
+                    k = int(kda_str[0])
+                except Exception:
+                    k = 0
+                if item.get('team') == 1:
+                    t1_kills_sum += k
+                else:
+                    t2_kills_sum += k
 
-            if t1k_ai == 0 and t2k_ai == 0:
-                # Fallback: tính từ cột Kills cá nhân trong normalized_list
-                for item in normalized_list:
-                    kda_str = item.get('kda', '-')
-                    parts = str(kda_str).replace(' ', '').split('/')
-                    try:
-                        kills = int(parts[0])
-                    except Exception:
-                        kills = 0
-                    if item.get('team') == 1:
-                        t1k_ai += kills
-                    else:
-                        t2k_ai += kills
+            # Luôn ưu tiên dùng tổng kill tính chính xác từ từng tuyển thủ
+            if t1_kills_sum > 0 or t2_kills_sum > 0:
+                final_t1_kills = t1_kills_sum
+                final_t2_kills = t2_kills_sum
+            else:
+                final_t1_kills = int(parsed.get('team1_kills', 0) or 0)
+                final_t2_kills = int(parsed.get('team2_kills', 0) or 0)
+
+            winning_team_num = 1 if winner == 'team1' else 2
+            losing_team_num = 2 if winner == 'team1' else 1
+
+            winning_players = [p for p in normalized_list if p.get('team') == winning_team_num]
+            losing_players = [p for p in normalized_list if p.get('team') == losing_team_num]
+
+            def player_kda_tuple(p):
+                kda_parts = str(p.get('kda', '0/0/0')).replace(' ', '').split('/')
+                k = int(kda_parts[0]) if len(kda_parts) > 0 and kda_parts[0].isdigit() else 0
+                d = int(kda_parts[1]) if len(kda_parts) > 1 and kda_parts[1].isdigit() else 1
+                a = int(kda_parts[2]) if len(kda_parts) > 2 and kda_parts[2].isdigit() else 0
+                return (float(p.get('performance_score', 0)), (k + a) / max(1, d), k)
+
+            # Sanity check: đảm bảo MVP thuộc về đội thắng
+            calculated_mvp_name = parsed.get('match_mvp', '')
+            if winning_players:
+                best_winner = max(winning_players, key=lambda p: (
+                    1 if p.get('performance_tag') == 'MVP' else 0,
+                    player_kda_tuple(p)[0],
+                    player_kda_tuple(p)[1]
+                ))
+                for p in winning_players:
+                    if p == best_winner:
+                        p['performance_tag'] = 'MVP'
+                        p['recommended_delta'] = max(24.0, p['recommended_delta'])
+                    elif p.get('performance_tag') == 'MVP':
+                        p['performance_tag'] = 'GREAT'
+                        p['recommended_delta'] = min(20.0, p['recommended_delta'])
+                calculated_mvp_name = best_winner.get('nickname', calculated_mvp_name)
+
+            # Sanity check: đảm bảo SVP thuộc về đội thua (không bao giờ gán cho người feeder / 0 kill)
+            calculated_svp_name = parsed.get('match_svp', '')
+            if losing_players:
+                best_loser = max(losing_players, key=lambda p: (
+                    1 if p.get('performance_tag') == 'SVP' else 0,
+                    player_kda_tuple(p)[0],
+                    player_kda_tuple(p)[1]
+                ))
+                for p in losing_players:
+                    if p == best_loser:
+                        p['performance_tag'] = 'SVP'
+                        p['recommended_delta'] = max(-9.0, min(-5.0, p['recommended_delta']))
+                    elif p.get('performance_tag') == 'SVP':
+                        p['performance_tag'] = 'SOLID'
+                        p['recommended_delta'] = -13.0
+                calculated_svp_name = best_loser.get('nickname', calculated_svp_name)
 
             # Tính match_closeness, is_stomp, balance_rating bằng elo_service chuẩn
             from services.elo_service import elo_service
-            closeness, balance_rating, is_stomp = elo_service.calc_match_closeness(t1k_ai, t2k_ai)
+            closeness, balance_rating, is_stomp = elo_service.calc_match_closeness(final_t1_kills, final_t2_kills)
 
             return {
                 "success": True,
                 "winner": winner,
                 "match_mvp": parsed.get('match_mvp', ''),
-                "match_svp": parsed.get('match_svp', ''),
+                "match_svp": calculated_svp_name,
                 "ai_summary": parsed.get('ai_summary', 'Đã phân tích thông số trận đấu thành công.'),
-                "team1_kills": t1k_ai,
-                "team2_kills": t2k_ai,
+                "team1_kills": final_t1_kills,
+                "team2_kills": final_t2_kills,
                 "match_closeness": closeness,
                 "is_stomp": is_stomp,
                 "balance_rating": balance_rating,

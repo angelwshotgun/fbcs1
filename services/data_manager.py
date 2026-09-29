@@ -669,7 +669,9 @@ class DataManager:
         notes: str = '',
         player_deltas: Optional[Dict[str, float]] = None,
         team1_kills: int = 0,
-        team2_kills: int = 0
+        team2_kills: int = 0,
+        player_performances: Optional[List[Dict[str, Any]]] = None,
+        ai_summary: Optional[str] = None
     ) -> Tuple[bool, str]:
         """Cập nhật kết quả hoặc người chơi trong một trận đấu (Supabase + Local)."""
         all_players_map = self.read_players_data()
@@ -695,8 +697,8 @@ class DataManager:
                 syn_payload = {}
                 meta_payload = {
                     'player_deltas': player_deltas if player_deltas is not None else old_record.get('player_deltas', {}),
-                    'player_performances': old_record.get('player_performances', []),
-                    'ai_summary': old_record.get('ai_summary', '')
+                    'player_performances': player_performances if player_performances is not None else old_record.get('player_performances', []),
+                    'ai_summary': ai_summary if ai_summary is not None else old_record.get('ai_summary', '')
                 }
                 syn_payload['metadata'] = meta_payload
 
