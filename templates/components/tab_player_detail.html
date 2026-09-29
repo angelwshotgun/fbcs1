@@ -1,0 +1,377 @@
+<!-- ============================================== -->
+<!-- TAB CHI TIẾT TUYỂN THỦ (PLAYER DETAILS PAGE) -->
+<!-- ============================================== -->
+<section id="tab-content-player-detail" class="tab-pane hidden space-y-6">
+    <!-- Top Action & Navigation Bar -->
+    <div class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <button type="button" onclick="closePlayerDetail()" class="px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 transition-all font-bold text-xs font-heading flex items-center gap-2 shadow-2xs group cursor-pointer">
+                <i class="fa-solid fa-arrow-left text-slate-500 group-hover:-translate-x-0.5 transition-transform"></i>
+                <span>Quay Lại Bảng Xếp Hạng</span>
+            </button>
+            
+            <div class="h-6 w-px bg-slate-200 hidden sm:block"></div>
+
+            <!-- Quick Player Switcher -->
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400 font-bold hidden sm:inline">Chọn tuyển thủ:</span>
+                <select id="player-detail-select" onchange="openPlayerDetail(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition cursor-pointer">
+                    <!-- Options populated dynamically -->
+                </select>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 ml-auto">
+            <button type="button" id="btn-reanalyze-ai" onclick="reanalyzeCurrentPlayerAI()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white font-bold text-xs font-heading transition-all shadow-xs flex items-center gap-1.5 cursor-pointer">
+                <i id="icon-reanalyze-ai" class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+                <span id="text-reanalyze-ai">AI Phân Tích Lại</span>
+            </button>
+            <button type="button" onclick="refreshCurrentPlayerDetail()" class="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition shadow-2xs" title="Làm mới số liệu">
+                <i class="fa-solid fa-arrows-rotate text-xs"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading State Container -->
+    <div id="player-detail-loading" class="hidden bg-white p-16 rounded-3xl border border-slate-200 text-center space-y-3">
+        <div class="inline-block p-4 rounded-full bg-indigo-50 text-indigo-600 animate-spin">
+            <i class="fa-solid fa-circle-notch text-2xl"></i>
+        </div>
+        <h4 class="font-black font-heading text-slate-800 text-base">Đang tải hồ sơ & phân tích AI tuyển thủ...</h4>
+        <p class="text-xs text-slate-400">Hệ thống đang đồng bộ dữ liệu thi đấu, biểu đồ năng lực và nhận định cá nhân hóa.</p>
+    </div>
+
+    <!-- Main Content Container -->
+    <div id="player-detail-content" class="space-y-6">
+        <!-- 1. HERO PLAYER PROFILE BANNER -->
+        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs relative overflow-hidden">
+            <!-- Background Decorative Glow -->
+            <div class="absolute -right-20 -top-20 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute right-40 -bottom-20 w-60 h-60 bg-purple-500/5 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
+                <!-- Avatar & Core Identity -->
+                <div class="flex items-start sm:items-center gap-5">
+                    <div class="relative group">
+                        <img id="detail-avatar" src="" alt="Avatar" class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-slate-100 border-2 border-indigo-200/70 object-cover shadow-md transition-transform group-hover:scale-105">
+                        <div id="detail-form-status-indicator" class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-xs border border-slate-200 text-xs">
+                            🔥
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h1 id="detail-nickname" class="text-2xl sm:text-3xl font-black font-heading text-slate-900 tracking-tight">
+                                Tuyển thủ
+                            </h1>
+                            <span id="detail-rank-badge" class="px-2.5 py-0.5 rounded-full text-xs font-black font-heading bg-amber-400 text-slate-950 shadow-2xs">
+                                #1 Server
+                            </span>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                            <span id="detail-id" class="font-mono text-slate-400">@id</span>
+                            <span>•</span>
+                            <span id="detail-tier-badge" class="px-2 py-0.5 rounded-lg text-xs font-bold border inline-flex items-center gap-1 shadow-2xs">
+                                👑 Tier S
+                            </span>
+                            <span id="detail-role-badge" class="px-2 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                Vị trí: ALL
+                            </span>
+                        </div>
+
+                        <!-- AI Persona Title Banner -->
+                        <div class="pt-1">
+                            <div id="detail-ai-title" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border border-indigo-100 text-indigo-900 text-xs font-extrabold font-heading shadow-2xs">
+                                <i class="fa-solid fa-crown text-amber-500"></i>
+                                <span>Đang nạp danh hiệu...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Metric Badges Box -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full lg:w-auto">
+                    <div class="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-center">
+                        <span class="text-[10px] text-indigo-700 font-bold uppercase tracking-wider block">Thực Lực RAPM</span>
+                        <span id="detail-power-score" class="text-2xl font-black font-heading text-indigo-700">--</span>
+                        <span id="detail-rapm-sub" class="text-[10px] text-indigo-500 block font-mono">0.0 (100%)</span>
+                    </div>
+
+                    <div class="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100 text-center">
+                        <span class="text-[10px] text-emerald-700 font-bold uppercase tracking-wider block">Tỷ Lệ Thắng</span>
+                        <span id="detail-winrate" class="text-2xl font-black font-heading text-emerald-700">--%</span>
+                        <span id="detail-record-sub" class="text-[10px] text-emerald-600 block font-medium">0W / 0L</span>
+                    </div>
+
+                    <div class="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-100 text-center">
+                        <span class="text-[10px] text-amber-700 font-bold uppercase tracking-wider block">Tổng Trận Đấu</span>
+                        <span id="detail-matches-count" class="text-2xl font-black font-heading text-amber-700">--</span>
+                        <span id="detail-effective-sub" class="text-[10px] text-amber-600 block font-mono">H.Dụng: --</span>
+                    </div>
+
+                    <div class="p-3.5 rounded-2xl bg-purple-50/60 border border-purple-100 text-center">
+                        <span class="text-[10px] text-purple-700 font-bold uppercase tracking-wider block">Phong Độ Gần Đây</span>
+                        <div id="detail-recent-5" class="flex items-center justify-center gap-1 my-1">
+                            <!-- 5 W/L badges -->
+                        </div>
+                        <span id="detail-streak-badge" class="text-[10px] text-purple-600 font-bold block">Chuỗi: --</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Badges & Titles Carousel / Grid -->
+            <div class="mt-6 pt-5 border-t border-slate-100">
+                <div class="flex items-center justify-between gap-2 mb-2.5">
+                    <span class="text-xs font-bold font-heading text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-medal text-amber-500"></i>
+                        <span>Bộ Sưu Tập Huy Hiệu &amp; Danh Hiệu</span>
+                    </span>
+                    <span id="detail-badge-count" class="text-[11px] text-slate-400 font-medium">-- danh hiệu</span>
+                </div>
+                <div id="detail-badges-container" class="flex flex-wrap items-center gap-2">
+                    <!-- Badges rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. AI INTELLIGENCE & PERSONALIZATION CARD -->
+        <div class="bg-gradient-to-br from-indigo-900 via-slate-900 to-purple-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+            <!-- Background Glow & Grid -->
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(168,85,247,0.15),transparent_50%)] pointer-events-none"></div>
+
+            <div class="relative z-10 space-y-6">
+                <!-- Header -->
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 to-indigo-500 flex items-center justify-center text-slate-950 font-black text-lg shadow-md shadow-indigo-500/20">
+                            <i class="fa-solid fa-brain"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-lg font-black font-heading tracking-tight text-white">Đánh Giá Cá Nhân Hóa Từ HLV AI</h3>
+                                <span id="detail-ai-source-badge" class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/30 text-indigo-300 border border-indigo-400/30">
+                                    Gemini AI Pro
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-300">Phân tích hành vi, lối đánh và tiềm năng chiến thuật dựa trên dữ liệu thi đấu thực chiến</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid of AI Insights -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Left: Playstyle & Coach Commentary (7 cols) -->
+                    <div class="lg:col-span-7 space-y-4">
+                        <!-- Playstyle -->
+                        <div class="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-1.5 backdrop-blur-md">
+                            <span class="text-[11px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5 font-heading">
+                                <i class="fa-solid fa-gamepad"></i>
+                                <span>Phong Cách Thi Đấu Chủ Đạo</span>
+                            </span>
+                            <p id="detail-ai-playstyle" class="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                                Đang cập nhật nhận định phong cách chơi...
+                            </p>
+                        </div>
+
+                        <!-- Coach Commentary -->
+                        <div class="bg-gradient-to-br from-white/10 to-white/5 border border-indigo-400/20 rounded-2xl p-5 space-y-2 backdrop-blur-md relative">
+                            <div class="flex items-center gap-2 text-indigo-300 text-xs font-bold font-heading">
+                                <i class="fa-solid fa-quote-left text-amber-400 text-sm"></i>
+                                <span>Lời Nhận Xét Của HLV Trưởng AI</span>
+                            </div>
+                            <p id="detail-ai-commentary" class="text-xs sm:text-sm text-slate-100 italic leading-relaxed pl-2 border-l-2 border-indigo-400/50">
+                                Đang tổng hợp phân tích từ ban huấn luyện...
+                            </p>
+                        </div>
+
+                        <!-- Tactical Advice for Captains -->
+                        <div class="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-start gap-3 text-xs text-slate-300">
+                            <i class="fa-solid fa-lightbulb text-amber-400 text-base mt-0.5"></i>
+                            <div>
+                                <b class="text-white block font-heading font-bold mb-0.5">Mẹo Chọn Đội (Draft Strategy):</b>
+                                <span id="detail-ai-tactical">Đang cập nhật gợi ý đội hình...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Strengths, Weaknesses, AI Custom Badges (5 cols) -->
+                    <div class="lg:col-span-5 space-y-4">
+                        <!-- Strengths -->
+                        <div class="bg-white/5 border border-emerald-500/20 rounded-2xl p-4 space-y-2">
+                            <span class="text-[11px] font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5 font-heading">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <span>Điểm Mạnh Nổi Bật</span>
+                            </span>
+                            <ul id="detail-ai-strengths" class="space-y-1.5 text-xs text-slate-200">
+                                <!-- Populated dynamically -->
+                            </ul>
+                        </div>
+
+                        <!-- Weaknesses / Growth -->
+                        <div class="bg-white/5 border border-amber-500/20 rounded-2xl p-4 space-y-2">
+                            <span class="text-[11px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5 font-heading">
+                                <i class="fa-solid fa-compass"></i>
+                                <span>Gợi Ý Cải Thiện</span>
+                            </span>
+                            <ul id="detail-ai-weaknesses" class="space-y-1.5 text-xs text-slate-200">
+                                <!-- Populated dynamically -->
+                            </ul>
+                        </div>
+
+                        <!-- AI Custom Badges Awarded -->
+                        <div class="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
+                            <span class="text-[11px] font-black uppercase tracking-wider text-purple-300 flex items-center gap-1.5 font-heading">
+                                <i class="fa-solid fa-award"></i>
+                                <span>Huy Hiệu Cá Nhân Hóa AI Trao Tặng</span>
+                            </span>
+                            <div id="detail-ai-custom-badges" class="flex flex-wrap gap-2 pt-1">
+                                <!-- Badges -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. MULTI-DIMENSIONAL CHARTS SECTION (CHART.JS) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Radar Chart: Multi-Attribute Profile (5 cols) -->
+            <div class="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-black font-heading text-slate-900 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-indigo-600"></i>
+                            <span>Biểu Đồ Năng Lực Đa Chiều</span>
+                        </h4>
+                        <span class="text-[10px] text-slate-400 font-mono">Thang điểm 0 - 100</span>
+                    </div>
+                    <div class="relative w-full aspect-square max-h-[320px] mx-auto flex items-center justify-center">
+                        <canvas id="chart-player-radar"></canvas>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center pt-4 border-t border-slate-100 text-[11px]">
+                    <div class="p-1.5 rounded-xl bg-slate-50">
+                        <span class="text-slate-400 block text-[9px] uppercase font-bold">Thực Lực</span>
+                        <b id="radar-val-power" class="text-indigo-600 font-bold">--</b>
+                    </div>
+                    <div class="p-1.5 rounded-xl bg-slate-50">
+                        <span class="text-slate-400 block text-[9px] uppercase font-bold">Tỷ Lệ Thắng</span>
+                        <b id="radar-val-wr" class="text-emerald-600 font-bold">--</b>
+                    </div>
+                    <div class="p-1.5 rounded-xl bg-slate-50">
+                        <span class="text-slate-400 block text-[9px] uppercase font-bold">Ăn Ý Đồng Đội</span>
+                        <b id="radar-val-synergy" class="text-amber-600 font-bold">--</b>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trend Line Chart: Performance Over Recent Matches (7 cols) -->
+            <div class="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 class="font-black font-heading text-slate-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-chart-line text-indigo-600"></i>
+                                <span>Diễn Biến Tỷ Lệ Thắng Qua Các Trận Gần Nhất</span>
+                            </h4>
+                            <p class="text-xs text-slate-400 mt-0.5">Xu hướng phong độ lũy kế qua chuỗi 15 trận đấu gần đây</p>
+                        </div>
+                        <span id="trend-status-badge" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            Ổn định
+                        </span>
+                    </div>
+                    <div class="relative w-full h-[240px]">
+                        <canvas id="chart-player-trend"></canvas>
+                    </div>
+                </div>
+
+                <!-- Side Stats Breakdown (Blue vs Red Side) -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-4 border-t border-slate-100 text-center text-xs">
+                    <div class="p-2 rounded-xl bg-blue-50/70 border border-blue-100">
+                        <span class="text-[10px] text-blue-700 font-bold uppercase block">Đội Xanh (Blue)</span>
+                        <b id="side-blue-wr" class="text-sm font-black text-blue-900 font-heading">--%</b>
+                        <span id="side-blue-record" class="text-[10px] text-blue-600 block">0W - 0L</span>
+                    </div>
+                    <div class="p-2 rounded-xl bg-rose-50/70 border border-rose-100">
+                        <span class="text-[10px] text-rose-700 font-bold uppercase block">Đội Đỏ (Red)</span>
+                        <b id="side-red-wr" class="text-sm font-black text-rose-900 font-heading">--%</b>
+                        <span id="side-red-record" class="text-[10px] text-rose-600 block">0W - 0L</span>
+                    </div>
+                    <div class="p-2 rounded-xl bg-emerald-50/70 border border-emerald-100">
+                        <span class="text-[10px] text-emerald-700 font-bold uppercase block">Chuỗi Thắng Max</span>
+                        <b id="streak-max-win" class="text-sm font-black text-emerald-900 font-heading">0 trận</b>
+                        <span class="text-[10px] text-emerald-600 block">Đỉnh cao sự nghiệp</span>
+                    </div>
+                    <div class="p-2 rounded-xl bg-slate-100/70 border border-slate-200">
+                        <span class="text-[10px] text-slate-700 font-bold uppercase block">Trận Cân Não</span>
+                        <b id="stat-close-matches" class="text-sm font-black text-slate-900 font-heading">0 trận</b>
+                        <span id="stat-close-winrate" class="text-[10px] text-slate-500 block">0% thắng</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. SYNERGIES & RIVALS SECTION -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Best Partners (Đồng Đội Hợp Cạ) -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h4 class="font-black font-heading text-slate-900 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-handshake text-emerald-500"></i>
+                        <span>Đồng Đội Ăn Ý Nhất (Cặp Đôi Vàng)</span>
+                    </h4>
+                    <span class="text-[11px] text-slate-400 font-medium">Tối thiểu 2 trận chung team</span>
+                </div>
+                <div id="detail-teammates-list" class="space-y-2.5 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+                    <!-- Teammate cards -->
+                </div>
+            </div>
+
+            <!-- Rivals / Nemesis (Đối Thủ Duyên Nợ) -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h4 class="font-black font-heading text-slate-900 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-skull-crossbones text-rose-500"></i>
+                        <span>Đối Thủ Duyên Nợ (Nemesis)</span>
+                    </h4>
+                    <span class="text-[11px] text-slate-400 font-medium">Chạm trán nhiều nhất</span>
+                </div>
+                <div id="detail-rivals-list" class="space-y-2.5 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+                    <!-- Rivals cards -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. MATCH HISTORY SECTION -->
+        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-5">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                    <h3 class="font-black font-heading text-slate-900 text-lg flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i>
+                        <span>Lịch Sử Thi Đấu Chi Tiết</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Danh sách các trận đấu tuyển thủ đã tham gia cùng đội hình 2 bên và kết quả</p>
+                </div>
+
+                <!-- Match Filter Buttons -->
+                <div class="flex items-center p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-bold font-heading">
+                    <button type="button" onclick="filterPlayerMatches('all')" id="btn-match-filter-all" class="px-3 py-1.5 rounded-xl bg-white text-indigo-700 shadow-2xs transition">
+                        Tất Cả (<span id="count-matches-all">0</span>)
+                    </button>
+                    <button type="button" onclick="filterPlayerMatches('win')" id="btn-match-filter-win" class="px-3 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition">
+                        Thắng (<span id="count-matches-win">0</span>)
+                    </button>
+                    <button type="button" onclick="filterPlayerMatches('loss')" id="btn-match-filter-loss" class="px-3 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition">
+                        Thua (<span id="count-matches-loss">0</span>)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Matches List Container -->
+            <div id="player-matches-container" class="space-y-3">
+                <!-- Matches rendered dynamically via JS -->
+            </div>
+        </div>
+    </div>
+</section>

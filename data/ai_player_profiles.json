@@ -1,0 +1,38 @@
+{
+  "cumber": {
+    "persona_title": "🐎 'Oguri Cappu' - Vua Tốc Độ & Thần Mã Xanh Thẳm",
+    "playstyle_evaluation": "Sở hữu chỉ số RAPM ấn tượng 0.421 cùng vị thế Top 2 Thách Đấu, cumber là một cỗ máy giao tranh tổng thực thụ với khả năng đọc nhịp trận đấu cực kỳ nhạy bén. Phong độ gần đây vô cùng ổn định (thắng 4/5 trận), cho thấy cái đầu lạnh và khả năng kết liễu trận đấu chuẩn xác dưới áp lực cao.",
+    "strengths": [
+      "Khả năng gánh đội cực mạnh từ Blue Side với tỷ lệ thắng phi thực tế lên tới 90.0% qua 10 trận.",
+      "Ăn ý tuyệt đối khi ghép cặp với cácạ thủ chiến lược như Lân Lao Lực và Cactus (đạt chuỗi 100% Winrate).",
+      "Chỉ số tác động thực tế (RAPM 0.421) khẳng định giá trị vượt trội trong từng pha di chuyển và giao tranh mục tiêu."
+    ],
+    "weaknesses": [
+      "Hiệu suất thi đấu sụt giảm đáng kể khi bị đẩy sang Red Side (tỷ lệ thắng giảm còn 51.9%).",
+      "Cần cẩn trọng trước các đối thủ sừng sỏ quen mặt như Lân Lao Lực hay Bé Kẹo#God trong những kèo đấu cân não."
+    ],
+    "coach_commentary": "Này Oguri Cappu#123, vị trí #2 Server và điểm thực lực 92.4 không phải tự nhiên mà có, đó là mồ hôi và đẳng cấp. Tuy nhiên, để vượt qua đỉnh cao, cậu cần san lấp khoảng cách hiệu suất giữa Red Side và Blue Side. Hãy giữ vững cái đầu nóng và đôi tay lạnh này, chiếc vương miện #1 đang ở rất gần rồi!",
+    "custom_badges": [
+      {
+        "icon": "🔵",
+        "label": "Bá Chủ Xanh Thẳm",
+        "desc": "Tỷ lệ thắng 90.0% trên Blue Side, biến mọi lợi thế cấm chọn thành chiến thắng.",
+        "badge_class": "bg-blue-100 text-blue-800 border-blue-300"
+      },
+      {
+        "icon": "🤝",
+        "label": "Cạ Cứng Hoàn Hảo",
+        "desc": "Duy trì chuỗi bất bại 100% khi đánh cặp cùng Lân Lao Lực và Cactus.",
+        "badge_class": "bg-emerald-100 text-emerald-800 border-emerald-300"
+      },
+      {
+        "icon": "⚡",
+        "label": "Phong Độ Hủy Diệt",
+        "desc": "Chuỗi thắng liên tiếp gần đây khẳng định sự thăng hoa tột đỉnh của kỹ năng.",
+        "badge_class": "bg-amber-100 text-amber-800 border-amber-300"
+      }
+    ],
+    "tactical_tips": "Ưu tiên dành lượt chọn ưu tiên hoặc xây dựng chiến thuật phòng thủ chủ động khi cumber phải thi đấu ở Red Side để tối ưu hóa tỷ lệ thắng.",
+    "source": "gemini"
+  }
+}

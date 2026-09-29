@@ -37,6 +37,37 @@ def api_get_player_detail(player_id: str):
     return jsonify({'success': False, 'error': 'Không tìm thấy người chơi'}), 404
 
 
+@players_bp.route('/api/players/<player_id>/details', methods=['GET'])
+def api_get_player_full_details(player_id: str):
+    """Lấy toàn bộ hồ sơ thống kê chi tiết, biểu đồ, lịch sử đấu và phân tích AI của tuyển thủ."""
+    try:
+        force_ai = request.args.get('refresh_ai', '').lower() in ['1', 'true', 'yes']
+        custom_key = request.args.get('api_key', '')
+        details = player_service.get_player_details(player_id, force_ai_refresh=force_ai, custom_key=custom_key)
+        if details:
+            return jsonify({'success': True, **details}), 200
+        return jsonify({'success': False, 'error': 'Không tìm thấy tuyển thủ'}), 404
+    except Exception as e:
+        current_app.logger.error(f"Error in api_get_player_full_details: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@players_bp.route('/api/players/<player_id>/ai_analysis', methods=['POST'])
+def api_regenerate_player_ai(player_id: str):
+    """Tạo lại hoặc làm mới phân tích AI cá nhân hóa và danh hiệu cho tuyển thủ."""
+    try:
+        data = request.json or {}
+        custom_key = data.get('api_key', '')
+        details = player_service.get_player_details(player_id, force_ai_refresh=True, custom_key=custom_key)
+        if details:
+            return jsonify({'success': True, 'ai_analysis': details.get('ai_analysis', {}), 'player': details.get('player')}), 200
+        return jsonify({'success': False, 'error': 'Không tìm thấy tuyển thủ'}), 404
+    except Exception as e:
+        current_app.logger.error(f"Error in api_regenerate_player_ai: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+
 @players_bp.route('/api/players/<player_id>', methods=['PUT'])
 def api_update_player(player_id: str):
     """Cập nhật thông tin người chơi (Phong độ & Elo ẩn tự động được bảo vệ)."""

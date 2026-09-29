@@ -13,8 +13,12 @@ def serve_index():
 
 
 @pages_bp.route('/player')
-def serve_player():
-    return send_from_directory(os.getcwd(), 'index2.html')
+@pages_bp.route('/player/<player_id>')
+def serve_player(player_id=None):
+    template_path = os.path.join(os.getcwd(), 'templates', 'index.html')
+    if os.path.exists(template_path):
+        return render_template('index.html', initial_player_id=player_id or '')
+    return send_from_directory(os.getcwd(), 'index.html')
 
 
 @pages_bp.route('/pair')

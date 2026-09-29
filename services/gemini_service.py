@@ -14,20 +14,22 @@ logger = logging.getLogger(__name__)
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 CANDIDATE_MODELS = [
+    'gemini-3.8-flash',
     'gemini-2.5-flash-lite',
-    'gemini-3-flash-preview',
+    'gemini-flash-latest',
     'gemini-3.5-flash',
-    'gemini-3.5-flash-lite',
-    'gemini-3.1-flash-lite',
-    'gemini-flash-latest'
+    'gemini-3-flash-preview'
 ]
+
+
 
 
 class GeminiService:
     def __init__(self):
         self.api_key = GEMINI_API_KEY
 
-    def _call_gemini_api(self, payload: Dict[str, Any], custom_key: str = None, timeout: int = 45) -> Dict[str, Any]:
+    def _call_gemini_api(self, payload: Dict[str, Any], custom_key: str = None, timeout: int = 15) -> Dict[str, Any]:
+
         """Gọi Gemini API với cơ chế tự động thử nhiều model khả dụng khi gặp lỗi 404/503/Timeout."""
         key = custom_key or self.api_key
         if not key:
@@ -684,6 +686,191 @@ Note: The `players_analysis` array MUST contain all 10 players (5 for team 1, 5 
                 "error": f"Lỗi phân tích bảng điểm từ Gemini: {str(e)}"
             }
 
+    def analyze_player_profile(
+        self,
+        player_data: Dict[str, Any],
+        stats_data: Dict[str, Any],
+        custom_key: str = None
+    ) -> Dict[str, Any]:
+        """
+        Phân tích chuyên sâu hồ sơ tuyển thủ bằng Gemini AI để tạo danh hiệu độc nhất,
+        phong cách thi đấu, đánh giá điểm mạnh / điểm yếu và lời bình luận cá nhân hóa từ HLV AI.
+        Nếu không có key hoặc gặp lỗi kết nối, tự động chuyển sang heuristic phân tích thông minh.
+        """
+        key = custom_key or self.api_key
+        nickname = player_data.get('nickname', player_data.get('id', 'Tuyển thủ'))
+        pid = player_data.get('id', '')
+        power_score = player_data.get('power_score', 50.0)
+        winrate = player_data.get('winrate', 50.0)
+        matches = player_data.get('matches', 0)
+        wins = player_data.get('wins', 0)
+        losses = player_data.get('losses', 0)
+        tier_name = player_data.get('tier_name', 'Tier B')
+        rank = player_data.get('rank', 'N/A')
+        rapm = player_data.get('rapm', 0.0)
+        form = player_data.get('form', {})
+        recent_5 = form.get('recent_5', [])
+        streak = stats_data.get('current_streak', {})
+        streak_str = f"{streak.get('type', 'W')}{streak.get('count', 1)}" if streak.get('count', 0) > 0 else "N/A"
+        side_stats = stats_data.get('side_stats', {})
+        b_stats = side_stats.get('team1', {})
+        r_stats = side_stats.get('team2', {})
+        best_teammates = stats_data.get('best_teammates', [])
+        rivals = stats_data.get('rivals', [])
+
+        best_tm_str = ", ".join([f"{t.get('nickname')} ({t.get('winrate')}% WR qua {t.get('matches')} trận)" for t in best_teammates[:3]]) or "Chưa đủ dữ liệu"
+        rivals_str = ", ".join([f"{r.get('nickname')} ({r.get('matches')} trận đối đầu, thắng {r.get('wins_against')})" for r in rivals[:3]]) or "Chưa có đối thủ duyên nợ lớn"
+
+        # Heuristic fallback builder
+        def build_heuristic_profile():
+            if power_score >= 75:
+                persona_title = "👑 Trụ Cột Gánh Kèo Tối Thượng"
+                playstyle = f"Tuyển thủ có khả năng định đoạt cục diện trận đấu vượt trội ({power_score} điểm thực lực). Thường xuyên là mũi nhọn gánh vác đội hình trong các pha giao tranh then chốt và giữ phong độ rất ổn định."
+                badge1 = {"icon": "👑", "label": "Gánh Kèo Tối Thượng", "desc": "Khả năng gánh team xuất sắc", "badge_class": "bg-amber-100 text-amber-800 border-amber-300"}
+            elif power_score >= 62:
+                persona_title = "⚔️ Chiến Binh Tiên Phong Sắc Bén"
+                playstyle = f"Lối chơi xông xáo, giàu tính đột biến. Là mắt xích quan trọng kết nối đồng đội với tỷ lệ thắng {winrate}%, luôn sẵn sàng lao vào điểm nóng của trận đấu."
+                badge1 = {"icon": "⚔️", "label": "Mũi Giáo Đột Biến", "desc": "Tạo áp lực giao tranh mạnh mẽ", "badge_class": "bg-indigo-100 text-indigo-800 border-indigo-300"}
+            elif winrate >= 55:
+                persona_title = "🛡️ Chốt Chặn Vững Chắc & Kỷ Luật"
+                playstyle = f"Đóng vai trò nền tảng vững vàng trong đội hình, ưu tiên thi đấu kỷ luật và bọc lót cho đồng đội, giúp đội kiểm soát tốt nhịp độ."
+                badge1 = {"icon": "🛡️", "label": "Bức Tường Thép", "desc": "Thi đấu kỷ luật, ít mắc sai lầm", "badge_class": "bg-emerald-100 text-emerald-800 border-emerald-300"}
+            else:
+                persona_title = "🌱 Mầm Non Triển Vọng Phục Thù"
+                playstyle = f"Thi đấu nhiệt huyết, không ngại thử nghiệm và va chạm. Tiềm năng bùng nổ rất cao khi tìm được những người đồng đội hỗ trợ ăn ý."
+                badge1 = {"icon": "🌱", "label": "Ý Chí Phục Thù", "desc": "Không ngại thử thách, sẵn sàng bứt phá", "badge_class": "bg-blue-100 text-blue-800 border-blue-300"}
+
+            strengths = []
+            if winrate >= 50:
+                strengths.append(f"Tỷ lệ thắng tích cực {winrate}% qua {matches} trận đấu thực tế.")
+            else:
+                strengths.append(f"Kinh nghiệm cọ xát dày dạn với {matches} trận thực chiến trên server.")
+
+            if b_stats.get('winrate', 0) > r_stats.get('winrate', 0) + 10:
+                strengths.append(f"Đặc biệt thăng hoa khi thi đấu ở Đội Xanh (Team 1) với tỷ lệ thắng {b_stats.get('winrate')}%.")
+            elif r_stats.get('winrate', 0) > b_stats.get('winrate', 0) + 10:
+                strengths.append(f"Khả năng thích ứng xuất sắc bên Đội Đỏ (Team 2) với tỷ lệ thắng {r_stats.get('winrate')}%.")
+            else:
+                strengths.append("Khả năng thi đấu cân bằng giữa hai phe Xanh và Đỏ.")
+
+            if best_teammates:
+                top_tm = best_teammates[0]
+                strengths.append(f"Phối hợp cực kỳ ăn ý với {top_tm.get('nickname')} ({top_tm.get('winrate')}% tỷ lệ thắng khi cùng phe).")
+            else:
+                strengths.append("Sẵn sàng thích nghi với nhiều kiểu đội hình khác nhau.")
+
+            weaknesses = []
+            if losses > wins:
+                weaknesses.append("Cần cải thiện khả năng giữ lợi thế ở giai đoạn giữa trận để chuyển hóa thành chiến thắng chung cuộc.")
+            else:
+                weaknesses.append("Chú ý tránh bị cuốn vào các pha giao tranh không cần thiết khi đối phương cử người bắt lẻ.")
+
+            if rivals:
+                top_rival = rivals[0]
+                weaknesses.append(f"Cần thận trọng và có phương án khắc chế khi đối đầu trực diện với {top_rival.get('nickname')}.")
+            else:
+                weaknesses.append("Cần tiếp tục mở rộng bể tướng và phong cách đánh để tránh bị đối phương bắt bài cấm chọn.")
+
+            if streak.get('type') == 'W' and streak.get('count', 0) >= 2:
+                badge2 = {"icon": "🔥", "label": f"Chuỗi Thắng x{streak.get('count')}", "desc": "Đang trong trạng thái hưng phấn cao độ", "badge_class": "bg-rose-100 text-rose-800 border-rose-300"}
+            else:
+                badge2 = {"icon": "🎯", "label": "Chuyên Gia Chiến Thuật", "desc": "Khả năng đọc bản đồ và phối hợp tốt", "badge_class": "bg-purple-100 text-purple-800 border-purple-300"}
+
+            coach_commentary = (
+                f"Chào {nickname}! Thống kê cho thấy bạn đang là một nhân tố rất đáng gờm tại FBCS. "
+                f"Với {matches} trận đấu và điểm thực lực {power_score}, bạn mang lại giá trị chiến thuật rõ rệt cho bất kỳ đội hình nào. "
+                f"{'Hãy tiếp tục duy trì đà hưng phấn này để thống trị bảng xếp hạng!' if winrate >= 50 else 'Chỉ cần một vài điều chỉnh nhỏ trong việc phối hợp với đồng đội ruột, bạn hoàn toàn có thể bứt phá lên nhóm đầu!'}"
+            )
+
+            tactical_tips = f"Đội trưởng nên ưu tiên ghép {nickname} cùng những người đồng đội có thiên hướng bảo kê hoặc mở giao tranh để tối ưu hóa sức mạnh."
+
+            return {
+                "source": "heuristic",
+                "persona_title": persona_title,
+                "playstyle_evaluation": playstyle,
+                "strengths": strengths[:3],
+                "weaknesses": weaknesses[:2],
+                "coach_commentary": coach_commentary,
+                "custom_badges": [badge1, badge2],
+                "tactical_tips": tactical_tips
+            }
+
+        if not key:
+            return build_heuristic_profile()
+
+        prompt = f"""
+You are an elite eSports Head Coach and strategic analyst (League of Legends / Dota 2).
+Analyze the competitive statistics of the player below and create a sharp, insightful, and deeply personalized player profile card in Vietnamese.
+
+=== PLAYER COMPETITIVE DOSSIER ===
+- ID: {pid}
+- Nickname: {nickname}
+- Current Server Rank: #{rank}
+- Tier Division: {tier_name} (Điểm Thực Lực: {power_score}/100)
+- RAPM Score: {rapm}
+- Match Record: {matches} Matches ({wins} Wins - {losses} Losses | Winrate: {winrate}%)
+- Recent 5 Matches Form: {'-'.join(recent_5) if recent_5 else 'N/A'} (Current Streak: {streak_str})
+- Blue Side Winrate: {b_stats.get('winrate', 'N/A')}% ({b_stats.get('matches', 0)} matches)
+- Red Side Winrate: {r_stats.get('winrate', 'N/A')}% ({r_stats.get('matches', 0)} matches)
+- Top Synergies (Teammates): {best_tm_str}
+- Notable Nemesis (Opponents): {rivals_str}
+
+=== REQUIRED OUTPUT STRUCTURE (JSON ONLY) ===
+Generate a JSON object with these exact keys:
+{{
+  "persona_title": "A catchy, prestigious, or badass title with an emoji (e.g., '👑 Linh Hồn Giao Tranh & Ngòi Nổ Đột Biến')",
+  "playstyle_evaluation": "2-3 insightful sentences evaluating their real playstyle, mentality, and combat tendencies based on the numbers above (in Vietnamese)",
+  "strengths": [
+    "3 distinct, concrete strengths highlighting specific aspects of their stats/teammates/sides (in Vietnamese)"
+  ],
+  "weaknesses": [
+    "2 constructive tactical tips / areas for improvement to elevate their game (in Vietnamese)"
+  ],
+  "coach_commentary": "A witty, motivating, personalized paragraph from the AI Coach talking directly to {nickname} (in Vietnamese)",
+  "custom_badges": [
+    {{
+      "icon": "Emoji icon",
+      "label": "Badge Title",
+      "desc": "Short description of why they earned this badge",
+      "badge_class": "bg-indigo-100 text-indigo-800 border-indigo-300"
+    }}
+  ],
+  "tactical_tips": "1-2 tactical recommendation sentences for captains drafting or playing alongside this player (in Vietnamese)"
+}}
+
+CRITICAL: Return ONLY valid JSON, without markdown formatting or code fences.
+"""
+
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }],
+            "generationConfig": {
+                "response_mime_type": "application/json"
+            }
+        }
+
+        try:
+            res_data = self._call_gemini_api(payload, custom_key=key, timeout=40)
+            raw_text = res_data['candidates'][0]['content']['parts'][0]['text'].strip()
+
+            if raw_text.startswith('```json'):
+                raw_text = raw_text[7:]
+            if raw_text.startswith('```'):
+                raw_text = raw_text[3:]
+            if raw_text.endswith('```'):
+                raw_text = raw_text[:-3]
+
+            parsed = json.loads(raw_text.strip())
+            parsed['source'] = 'gemini'
+            return parsed
+        except Exception as e:
+            logger.warning(f"Error calling Gemini for player profile: {e}. Using intelligent heuristic fallback.")
+            res = build_heuristic_profile()
+            res['source'] = 'heuristic_fallback'
+            return res
+
 
 gemini_service = GeminiService()
+
 

@@ -105,7 +105,7 @@ function renderLeaderboard() {
     if (rankedPlayers.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-12 text-slate-400">
+                <td colspan="9" class="text-center py-12 text-slate-400">
                     <div class="flex flex-col items-center justify-center gap-2">
                         <i class="fa-solid fa-filter text-slate-300 text-3xl"></i>
                         <span class="font-bold text-slate-600 text-sm">Không có tuyển thủ nào khớp với bộ lọc này</span>
@@ -167,11 +167,11 @@ function renderLeaderboard() {
         tr.innerHTML = `
             <td class="py-3.5 px-4 text-center">${rankBadge}${rankSubtext}</td>
             <td class="py-3.5 px-4">
-                <div class="flex items-center gap-3">
-                    <img src="${p.avatar}" class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 object-cover" alt="${p.nickname}">
+                <div class="flex items-center gap-3 cursor-pointer group" onclick="openPlayerDetail('${p.id}')" title="Bấm để xem chi tiết hồ sơ & phân tích AI tuyển thủ">
+                    <img src="${p.avatar}" class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 object-cover group-hover:scale-105 transition-transform" alt="${p.nickname}">
                     <div>
-                        <span class="font-bold text-slate-900 block">${p.nickname}</span>
-                        <span class="text-xs text-slate-400">@${p.id}</span>
+                        <span class="font-bold text-slate-900 block group-hover:text-indigo-600 transition-colors">${p.nickname}</span>
+                        <span class="text-xs text-slate-400 font-mono">@${p.id}</span>
                     </div>
                 </div>
             </td>
@@ -209,10 +209,17 @@ function renderLeaderboard() {
                     ${recentBadges || '<span class="text-slate-400 text-xs">-</span>'}
                 </div>
             </td>
+            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                <button type="button" onclick="openPlayerDetail('${p.id}')" class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200/80 hover:border-indigo-600 transition-all font-bold text-xs font-heading inline-flex items-center gap-1.5 shadow-2xs group cursor-pointer" title="Xem chi tiết thông số, biểu đồ, lịch sử & AI phân tích">
+                    <i class="fa-solid fa-chart-line text-indigo-500 group-hover:text-white transition"></i>
+                    <span>Chi tiết</span>
+                </button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
 }
+
 
 function loadLeaderboard() {
     loadAllPlayers();
