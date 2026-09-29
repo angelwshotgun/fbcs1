@@ -16,6 +16,34 @@
         </button>
     </div>
 
+    <!-- Leaderboard View Mode Switcher: Active (Default) vs All-Time Server -->
+    <div class="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/80 w-full sm:w-auto">
+            <button type="button" onclick="switchLeaderboardMode('active')" id="btn-leaderboard-mode-active" class="flex-1 sm:flex-initial px-4 sm:px-5 py-2.5 rounded-xl font-bold font-heading text-xs sm:text-sm transition-all shadow-xs bg-indigo-600 text-white flex items-center justify-center gap-2">
+                <i class="fa-solid fa-fire text-amber-300"></i>
+                <span>Thường Xuyên &amp; Gần Đây</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-400 text-slate-950 font-black tracking-tight uppercase">Mặc định</span>
+                <span id="badge-active-count" class="px-2 py-0.5 rounded-full text-[11px] bg-white/20 text-white font-mono">19</span>
+            </button>
+            <button type="button" onclick="switchLeaderboardMode('all')" id="btn-leaderboard-mode-all" class="flex-1 sm:flex-initial px-4 sm:px-5 py-2.5 rounded-xl font-bold font-heading text-xs sm:text-sm transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-earth-americas text-slate-400"></i>
+                <span>Bảng Xếp Hạng Tổng</span>
+                <span id="badge-all-count" class="px-2 py-0.5 rounded-full text-[11px] bg-slate-200 text-slate-700 font-mono">30</span>
+            </button>
+        </div>
+
+        <div class="text-xs text-slate-500 flex items-center gap-2">
+            <div id="leaderboard-mode-desc-active" class="flex items-center gap-1.5 text-slate-700 bg-indigo-50/70 border border-indigo-100 px-3 py-1.5 rounded-xl">
+                <i class="fa-solid fa-circle-check text-indigo-600"></i>
+                <span>Đang hiển thị <b>tuyển thủ thường xuyên</b> (&ge;5 trận &amp; có trận gần đây). Dễ theo dõi phong độ thực tế, không bị lẫn khách mời.</span>
+            </div>
+            <div id="leaderboard-mode-desc-all" class="hidden flex items-center gap-1.5 text-slate-700 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                <i class="fa-solid fa-circle-info text-slate-400"></i>
+                <span>Đang hiển thị <b>toàn bộ tuyển thủ</b> từng thi đấu trong lịch sử server (kể cả 1–2 trận).</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Badge Filter Toolbar -->
     <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-1.5 text-xs font-bold font-heading">
