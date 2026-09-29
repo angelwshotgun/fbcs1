@@ -2,7 +2,7 @@
 <!-- MODAL: THÊM / SỬA TUYỂN THỦ -->
 <!-- ============================================== -->
 <div id="player-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden flex items-center justify-center p-4">
-    <div class="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 custom-scrollbar max-h-[90vh] overflow-y-auto">
+    <div class="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 custom-scrollbar max-h-[90vh] overflow-y-auto">
         <!-- Modal Header -->
         <div class="flex items-center justify-between border-b border-slate-100 pb-4">
             <h3 id="modal-player-title" class="text-lg font-black font-heading text-slate-900 flex items-center gap-2">
@@ -37,69 +37,36 @@
                 <div class="flex items-center gap-3">
                     <img id="form-avatar-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=preview" class="w-11 h-11 rounded-2xl bg-slate-100 border border-slate-200 object-cover shadow-xs" alt="Preview">
                     <input type="text" id="form-avatar" oninput="updateAvatarPreview(this.value)" placeholder="Dán link ảnh hoặc để mặc định bottts..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
-                    <button type="button" onclick="randomizeAvatar()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl transition text-xs font-bold">
+                    <button type="button" onclick="randomizeAvatar()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl transition text-xs font-bold" title="Tạo avatar ngẫu nhiên">
                         <i class="fa-solid fa-dice text-sm"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- STATS SLIDERS (THANG ĐIỂM 1 - 10) -->
-            <div class="p-4.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3.5">
-                <h4 class="font-bold font-heading text-slate-800 uppercase tracking-wider text-[11px] flex items-center justify-between">
-                    <span>Chỉ Số Đánh Giá (Thang Điểm 1 - 10)</span>
-                    <span class="text-slate-400 font-normal">Kéo thanh trượt để điều chỉnh</span>
-                </h4>
-
-                <!-- 1. Kỹ năng cá nhân -->
-                <div>
-                    <div class="flex justify-between font-semibold mb-1">
-                        <span class="text-slate-700">🎯 Kỹ Năng Cá Nhân (Skill):</span>
-                        <b id="val-skill" class="text-amber-600 font-bold">5.0</b>
-                    </div>
-                    <input type="range" id="form-skill" min="1.0" max="10.0" step="0.5" value="5.0" oninput="document.getElementById('val-skill').innerText = this.value" class="w-full accent-amber-500 cursor-pointer">
-                </div>
-
-                <!-- 2. Bể tướng -->
-                <div>
-                    <div class="flex justify-between font-semibold mb-1">
-                        <span class="text-slate-700">⚔️ Bể Tướng (Champion Pool):</span>
-                        <b id="val-pool" class="text-blue-600 font-bold">5.0</b>
-                    </div>
-                    <input type="range" id="form-pool" min="1.0" max="10.0" step="0.5" value="5.0" oninput="document.getElementById('val-pool').innerText = this.value" class="w-full accent-blue-500 cursor-pointer">
-                </div>
-
-                <!-- 3. Flex lane -->
-                <div>
-                    <div class="flex justify-between font-semibold mb-1">
-                        <span class="text-slate-700">🔄 Flex Lane (Độ Linh Hoạt Vị Trí):</span>
-                        <b id="val-flex" class="text-purple-600 font-bold">5.0</b>
-                    </div>
-                    <input type="range" id="form-flex" min="1.0" max="10.0" step="0.5" value="5.0" oninput="document.getElementById('val-flex').innerText = this.value" class="w-full accent-purple-500 cursor-pointer">
-                </div>
-
-                <!-- 4. Tính ổn định -->
-                <div>
-                    <div class="flex justify-between font-semibold mb-1">
-                        <span class="text-slate-700">🛡️ Tính Ổn Định (Consistency):</span>
-                        <b id="val-consist" class="text-emerald-600 font-bold">5.0</b>
-                    </div>
-                    <input type="range" id="form-consist" min="1.0" max="10.0" step="0.5" value="5.0" oninput="document.getElementById('val-consist').innerText = this.value" class="w-full accent-emerald-500 cursor-pointer">
-                </div>
-            </div>
-
-            <!-- READONLY FIELD: PHONG ĐỘ & ELO TỰ ĐỘNG -->
-            <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 space-y-1">
+            <!-- THỰC LỰC & PHÂN BẬC (TỰ ĐỘNG TÍNH TOÁN KHÁCH QUAN) -->
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/70 to-purple-50/50 border border-indigo-100 space-y-2.5">
                 <div class="flex items-center justify-between">
-                    <span class="font-bold text-amber-800 text-xs flex items-center gap-1.5">
-                        <i class="fa-solid fa-lock text-[10px]"></i>
-                        <span>Phong Độ & Elo Ẩn: TỰ ĐỘNG CẬP NHẬT</span>
+                    <span class="font-bold text-indigo-900 text-xs flex items-center gap-1.5 font-heading">
+                        <i class="fa-solid fa-shield-halved text-indigo-600"></i>
+                        <span>Thực Lực & Phân Bậc (Tự Động)</span>
                     </span>
-                    <span id="form-display-badge" class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-200">
-                        🌱 Tân Binh (Read-only)
+                    <span id="form-display-badge" class="px-2.5 py-1 rounded-xl bg-white text-indigo-700 font-bold text-[11px] border border-indigo-200 shadow-2xs">
+                        🌱 Tân Binh
                     </span>
                 </div>
-                <p class="text-[11px] text-slate-500">
-                    Chỉ số Phong độ được hệ thống tính tự động từ chuỗi thắng/thua các trận đấu mới được ghi nhận, không cho phép can thiệp thủ công.
+                <div class="grid grid-cols-2 gap-2 text-center pt-1">
+                    <div class="p-2.5 rounded-xl bg-white/80 border border-indigo-100">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Điểm Thực Lực</span>
+                        <b id="form-display-power" class="text-base font-black font-heading text-indigo-600">50.0</b>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-white/80 border border-indigo-100">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Trận Đấu (W/L)</span>
+                        <b id="form-display-record" class="text-base font-black font-heading text-slate-800">0 (0/0)</b>
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-relaxed pt-1">
+                    <i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i>
+                    Hệ thống tính toán 100% khách quan từ dữ liệu kết quả thắng/thua bằng mô hình Ridge Regression (RAPM). Không sử dụng điểm kỹ năng hay vị trí cảm tính.
                 </p>
             </div>
 

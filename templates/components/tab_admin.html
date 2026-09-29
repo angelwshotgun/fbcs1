@@ -24,7 +24,7 @@
                     <span id="total-players-badge" class="text-xs px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-bold">36 Tuyển Thủ</span>
                 </h2>
                 <p class="text-sm text-slate-500 mt-1">
-                    Chỉnh sửa Nickname, Avatar và các chỉ số (thang điểm 1 - 10). Phong độ và Elo ẩn được bảo vệ và tự động cập nhật.
+                    Quản lý danh sách tuyển thủ. Điểm Thực Lực (0 - 100) và Phân Bậc Tier được tính toán hoàn toàn tự động từ kết quả thi đấu thực tế.
                 </p>
             </div>
             <div>
@@ -43,17 +43,18 @@
                     <input type="text" id="admin-player-search" oninput="filterAdminPlayers()" placeholder="Tìm theo tên hoặc nickname..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
                 </div>
                 <select id="admin-sort-by" onchange="filterAdminPlayers()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-bold focus:outline-none focus:border-indigo-500">
-                    <option value="skill">Sắp xếp: Kỹ năng cá nhân</option>
-                    <option value="elo">Sắp xếp: Elo Ẩn cao nhất</option>
-                    <option value="form">Sắp xếp: Phong độ cao nhất</option>
+                    <option value="power" selected>Sắp xếp: Điểm Thực Lực (0-100)</option>
+                    <option value="tier">Sắp xếp: Phân Bậc Tier</option>
                     <option value="winrate">Sắp xếp: Tỷ lệ thắng %</option>
+                    <option value="matches">Sắp xếp: Số trận thi đấu</option>
                     <option value="name">Sắp xếp: Tên A-Z</option>
                 </select>
             </div>
             <div class="text-xs text-slate-500 font-medium flex items-center gap-4">
-                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 🔥 On fire</span>
-                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> ⚡ Phong độ tốt</span>
-                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block"></span> 🌱 Tân binh</span>
+                <span class="flex items-center gap-1 font-bold text-amber-700">👑 Tier S (&ge;80)</span>
+                <span class="flex items-center gap-1 font-bold text-purple-700">⚔️ Tier A (65-79)</span>
+                <span class="flex items-center gap-1 font-bold text-blue-700">🛡️ Tier B (50-64)</span>
+                <span class="flex items-center gap-1 font-bold text-slate-600">🌱 Tier C (&lt;50)</span>
             </div>
         </div>
 

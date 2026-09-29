@@ -16,12 +16,9 @@
             </p>
         </div>
         <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-            <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 shadow-2xs">
-                <span class="text-xs text-slate-500 font-semibold hidden sm:inline"><i class="fa-solid fa-sliders text-indigo-500 mr-1"></i>Chế độ:</span>
-                <select id="matchmaking-mode" class="bg-transparent text-xs text-slate-800 font-bold focus:outline-none cursor-pointer">
-                    <option value="pure_elo" selected>🎯 Chuẩn Elo Ẩn (Thống Nhất)</option>
-                    <option value="composite">⚡ Toàn Diện (Elo + Stats)</option>
-                </select>
+            <div class="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl px-3 py-2 text-xs font-bold shadow-2xs">
+                <i class="fa-solid fa-scale-balanced"></i>
+                <span>Thuật Toán SVD (Đối Xứng)</span>
             </div>
             <button onclick="clearSelectedPlayers()" class="px-3.5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition shadow-xs">
                 <i class="fa-solid fa-rotate-left mr-1.5 text-slate-400"></i> Bỏ chọn
@@ -106,19 +103,22 @@
                         <span class="px-3.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-xs font-bold font-heading uppercase tracking-wider">
                             ✨ KẾT QUẢ PHÂN CHIA ĐỘI HÌNH
                         </span>
-                        <span id="res-mode-badge" class="px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold font-heading flex items-center gap-1.5">
-                            <i class="fa-solid fa-bolt"></i> <span>Chế độ: Toàn diện</span>
+                        <span id="res-mode-badge" class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold font-heading flex items-center gap-1.5">
+                            <i class="fa-solid fa-scale-balanced"></i> <span>Thuật Toán: SVD Đối Xứng</span>
                         </span>
                         <span id="res-rng-badge" class="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold font-heading flex items-center gap-1.5">
-                            <i class="fa-solid fa-dice"></i> <span>RNG Cân Bằng: Sai số ±0.5</span>
+                            <i class="fa-solid fa-crown"></i> <span>Carry #1 vs #2 Chia Đôi</span>
+                        </span>
+                        <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold font-heading flex items-center gap-1.5">
+                            <i class="fa-solid fa-shield"></i> <span>Anchor #9 vs #10 Chia Đôi</span>
                         </span>
                     </div>
                     <div class="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-500 font-medium">
-                        <span>Chênh lệch: <b id="res-power-diff" class="text-slate-900 text-sm font-bold font-heading">0 Elo</b></span>
+                        <span>Chênh lệch: <b id="res-power-diff" class="text-slate-900 text-sm font-bold font-heading">0 điểm</b></span>
                         <span>•</span>
-                        <span class="text-indigo-600 font-bold">Tỷ lệ dự đoán: <span id="res-win-prob-label">50% - 50%</span></span>
+                        <span class="text-indigo-600 font-bold">Dự đoán thắng: <span id="res-win-prob-label">50% - 50%</span></span>
                         <span class="hidden sm:inline">•</span>
-                        <span id="res-pool-count-label" class="text-slate-500">Đã chọn từ nhóm phương án tối ưu</span>
+                        <span id="res-pool-count-label" class="text-slate-500">Cực kỳ cân bằng</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-2 w-full sm:w-auto">
@@ -159,7 +159,7 @@
                                 <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white text-base shadow-xs">1</div>
                                 <div>
                                     <h3 class="font-black font-heading text-blue-900 text-lg">ĐỘI XANH (TEAM 1)</h3>
-                                    <p class="text-xs text-slate-500 font-medium">Tổng Elo: <b id="team1-power-text" class="text-blue-700 font-bold">0</b> • TB: <b id="team1-avg-text" class="text-slate-700 font-bold">0</b></p>
+                                    <p class="text-xs text-slate-500 font-medium">Điểm Thực Lực: <b id="team1-power-text" class="text-blue-700 font-bold">0</b> • TB: <b id="team1-avg-text" class="text-slate-700 font-bold">0</b></p>
                                 </div>
                             </div>
                             <div class="text-right">
@@ -194,7 +194,7 @@
                                 <div class="w-9 h-9 rounded-xl bg-rose-600 flex items-center justify-center font-bold text-white text-base shadow-xs">2</div>
                                 <div>
                                     <h3 class="font-black font-heading text-rose-900 text-lg">ĐỘI ĐỎ (TEAM 2)</h3>
-                                    <p class="text-xs text-slate-500 font-medium">Tổng Elo: <b id="team2-power-text" class="text-rose-700 font-bold">0</b> • TB: <b id="team2-avg-text" class="text-slate-700 font-bold">0</b></p>
+                                    <p class="text-xs text-slate-500 font-medium">Điểm Thực Lực: <b id="team2-power-text" class="text-rose-700 font-bold">0</b> • TB: <b id="team2-avg-text" class="text-slate-700 font-bold">0</b></p>
                                 </div>
                             </div>
                             <div class="text-right">

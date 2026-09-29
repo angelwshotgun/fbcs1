@@ -40,12 +40,12 @@ function renderMatchmakerPlayers() {
             ` : ''}
             <div class="relative mb-2">
                 <img src="${p.avatar}" alt="${p.nickname}" class="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-200">
-                <span class="absolute -bottom-1 -right-1 text-xs" title="${p.form?.label || ''}">${formIcon}</span>
+                <span class="absolute -bottom-1 -right-1 text-xs" title="${p.tier_desc || ''}">${p.tier_icon || '🛡️'}</span>
             </div>
             <h4 class="font-bold font-heading text-xs text-slate-900 truncate max-w-[100px]">${p.nickname}</h4>
-            <div class="flex items-center justify-center gap-1.5 mt-1.5">
-                <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
-                    Elo ${Math.round(p.hidden_elo)}
+            <div class="flex items-center justify-center gap-1 mt-1.5">
+                <span class="text-[10px] px-2 py-0.5 rounded-full ${p.tier_badge_class || 'bg-indigo-50 text-indigo-700'} font-bold">
+                    ${p.tier_icon || '🛡️'} ${p.power_score}
                 </span>
             </div>
         `;
@@ -139,14 +139,14 @@ function displayTeamsResult(data) {
     const section = document.getElementById('teams-result-section');
     section.classList.remove('hidden');
 
-    const totalElo1 = data.team1_total_elo || Math.round(data.team1_power);
-    const totalElo2 = data.team2_total_elo || Math.round(data.team2_power);
-    const avgElo1 = data.team1_avg_elo || Math.round(totalElo1 / 5);
-    const avgElo2 = data.team2_avg_elo || Math.round(totalElo2 / 5);
-    const diffElo = Math.abs(totalElo1 - totalElo2);
+    const totalPower1 = data.team1_power;
+    const totalPower2 = data.team2_power;
+    const avgPower1 = data.team1_avg_elo || Math.round(totalPower1 / 5);
+    const avgPower2 = data.team2_avg_elo || Math.round(totalPower2 / 5);
+    const diffPower = data.power_difference;
 
     const diffElem = document.getElementById('res-power-diff');
-    if (diffElem) diffElem.innerText = `${diffElo} Elo`;
+    if (diffElem) diffElem.innerText = `${diffPower} điểm`;
 
     const probElem = document.getElementById('res-win-prob-label');
     if (probElem) probElem.innerText = `${data.team1_win_prob}% - ${data.team2_win_prob}%`;
@@ -154,8 +154,8 @@ function displayTeamsResult(data) {
     // Mode badge
     const modeBadge = document.getElementById('res-mode-badge');
     if (modeBadge) {
-        modeBadge.innerHTML = `<i class="fa-solid fa-crosshairs"></i> <span>Chế độ: Chuẩn Elo Ẩn</span>`;
-        modeBadge.className = "px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold font-heading flex items-center gap-1.5";
+        modeBadge.innerHTML = `<i class="fa-solid fa-scale-balanced"></i> <span>Thuật Toán: SVD Đối Xứng</span>`;
+        modeBadge.className = "px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold font-heading flex items-center gap-1.5";
     }
 
     // RNG info badge
@@ -318,19 +318,21 @@ function createTeamPlayerCard(p, teamColor) {
     div.innerHTML = `
         <div class="flex items-center gap-3">
             <div class="relative">
-                <img src="${p.avatar}" class="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 object-cover" alt="${p.nickname}">
-                <span class="absolute -bottom-1 -right-1 text-[10px]">${p.form?.icon || '🌱'}</span>
+                <img src="${p.avatar}" class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 object-cover" alt="${p.nickname}">
+                <span class="absolute -bottom-1 -right-1 text-xs">${p.tier_icon || '🛡️'}</span>
             </div>
             <div>
                 <h5 class="font-bold font-heading text-xs text-slate-900">${p.nickname}</h5>
-                <span class="text-[10px] text-slate-500">Elo Ẩn: <b class="text-indigo-600 font-bold">${Math.round(p.hidden_elo)}</b></span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-md ${p.tier_badge_class || 'bg-slate-100 text-slate-700'} font-bold">
+                    ${p.tier_icon || '🛡️'} ${p.tier_name || 'Tier B'}
+                </span>
             </div>
         </div>
         <div class="text-right">
-            <span class="text-xs font-black ${teamColor === 'blue' ? 'text-blue-700' : 'text-rose-700'}">
-                Elo ${Math.round(p.hidden_elo)}
+            <span class="text-xs font-black font-heading ${teamColor === 'blue' ? 'text-blue-700' : 'text-rose-700'}">
+                ${p.power_score} pts
             </span>
-            <div class="text-[10px] text-slate-400">${p.form?.label?.split(' ')[0] || ''}</div>
+            <div class="text-[10px] text-slate-400 font-medium">WR: ${p.winrate}% (${p.matches} trận)</div>
         </div>
     `;
     return div;

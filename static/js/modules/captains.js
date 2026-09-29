@@ -36,7 +36,9 @@ function renderCaptainPlayers() {
             ` : ''}
             <img src="${p.avatar}" class="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 object-cover mb-1.5">
             <h4 class="font-bold font-heading text-xs text-slate-900 truncate max-w-[100px]">${p.nickname}</h4>
-            <span class="text-[10px] text-slate-500 mt-0.5">Elo: ${Math.round(p.hidden_elo)}</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full ${p.tier_badge_class || 'bg-amber-50 text-amber-700'} font-bold mt-1">
+                ${p.tier_icon || '🛡️'} ${p.power_score}
+            </span>
         `;
         grid.appendChild(card);
     });

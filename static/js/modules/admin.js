@@ -6,14 +6,17 @@ function renderAdminPlayers() {
     container.innerHTML = '';
 
     const query = (document.getElementById('admin-player-search')?.value || '').toLowerCase().trim();
-    const sortBy = document.getElementById('admin-sort-by')?.value || 'skill';
+    const sortBy = document.getElementById('admin-sort-by')?.value || 'power';
 
     let list = [...allPlayers];
 
-    if (sortBy === 'elo') list.sort((a, b) => b.hidden_elo - a.hidden_elo);
-    if (sortBy === 'skill') list.sort((a, b) => b.skill - a.skill);
-    if (sortBy === 'form') list.sort((a, b) => (b.form?.score || 0) - (a.form?.score || 0));
+    if (sortBy === 'power' || sortBy === 'elo') list.sort((a, b) => b.power_score - a.power_score);
+    if (sortBy === 'tier') {
+        const tierRank = { 'S': 4, 'A': 3, 'B': 2, 'C': 1, 'NEW': 0 };
+        list.sort((a, b) => (tierRank[b.tier] || 0) - (tierRank[a.tier] || 0) || b.power_score - a.power_score);
+    }
     if (sortBy === 'winrate') list.sort((a, b) => b.winrate - a.winrate);
+    if (sortBy === 'matches') list.sort((a, b) => b.matches - a.matches);
     if (sortBy === 'name') list.sort((a, b) => a.nickname.localeCompare(b.nickname));
 
     list.forEach(p => {
@@ -22,11 +25,12 @@ function renderAdminPlayers() {
         }
 
         const card = document.createElement('div');
-        card.className = "bg-white border border-slate-200 hover:border-slate-300 p-4 rounded-2xl flex flex-col justify-between space-y-4 transition shadow-xs hover:shadow-sm";
+        card.className = "bg-white border border-slate-200 hover:border-slate-300 p-4 rounded-2xl flex flex-col justify-between space-y-3.5 transition shadow-xs hover:shadow-sm";
 
-        const formLabel = p.form?.label || 'Tân binh';
-        const formIcon = p.form?.icon || '🌱';
-        const formScore = p.form?.score || 5.0;
+        const recentBadges = (p.recent_5 || []).map(r => {
+            if (r === 'W') return `<span class="w-4 h-4 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold inline-flex items-center justify-center">W</span>`;
+            return `<span class="w-4 h-4 rounded bg-rose-100 text-rose-800 text-[10px] font-bold inline-flex items-center justify-center">L</span>`;
+        }).join('');
 
         card.innerHTML = `
             <div>
@@ -39,45 +43,30 @@ function renderAdminPlayers() {
                         </div>
                     </div>
                     <div class="text-right">
-                        <span class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-black text-xs border border-indigo-200">
-                            Elo ${Math.round(p.hidden_elo)}
+                        <span class="px-2.5 py-0.5 rounded-full ${p.tier_badge_class || 'bg-slate-100 text-slate-700'} text-xs font-bold shadow-2xs">
+                            ${p.tier_icon || '🛡️'} ${p.tier_name || 'Tier B'}
                         </span>
                     </div>
                 </div>
 
-                <!-- 4 Stats Sliders Display (1 - 10) -->
-                <div class="grid grid-cols-2 gap-2 mt-4 text-[11px]">
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span class="text-slate-500">Kỹ năng:</span>
-                        <b class="text-amber-600 ml-1 font-bold">${p.skill}/10</b>
-                    </div>
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span class="text-slate-500">Bể tướng:</span>
-                        <b class="text-blue-600 ml-1 font-bold">${p.champion_pool}/10</b>
-                    </div>
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span class="text-slate-500">Flex lane:</span>
-                        <b class="text-purple-600 ml-1 font-bold">${p.flex_lane}/10</b>
-                    </div>
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span class="text-slate-500">Ổn định:</span>
-                        <b class="text-emerald-600 ml-1 font-bold">${p.consistency}/10</b>
-                    </div>
-                </div>
-
-                <!-- Form Display (Auto) -->
-                <div class="mt-3 p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
-                    <span class="text-slate-500">Phong độ:</span>
-                    <span class="font-bold text-indigo-700 flex items-center gap-1">
-                        <span>${formIcon}</span>
-                        <span>${formScore}/10 (${formLabel})</span>
+                <!-- Power Score Box -->
+                <div class="mt-3.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                    <span class="text-slate-500 font-medium">Điểm Thực Lực:</span>
+                    <span class="font-black text-indigo-700 font-heading text-sm">
+                        ${p.power_score} <span class="text-[10px] font-normal text-slate-400">/ 100</span>
                     </span>
                 </div>
 
                 <!-- Match Stats -->
                 <div class="flex items-center justify-between text-[11px] text-slate-500 mt-2 px-1">
-                    <span>Số trận: <b class="text-slate-800">${p.matches}</b></span>
-                    <span>Tỷ lệ thắng: <b class="text-emerald-600">${p.winrate}%</b></span>
+                    <span>Trận: <b class="text-slate-800">${p.matches}</b> (<b class="text-emerald-600">${p.wins}W</b> / <b class="text-rose-600">${p.losses}L</b>)</span>
+                    <span>Tỷ lệ thắng: <b class="${p.winrate >= 50 ? 'text-emerald-600' : 'text-slate-600'} font-bold">${p.winrate}%</b></span>
+                </div>
+
+                <!-- Recent 5 matches -->
+                <div class="flex items-center justify-between text-[10px] text-slate-400 mt-2 px-1 pt-2 border-t border-slate-100">
+                    <span>Gần nhất:</span>
+                    <div class="flex items-center gap-1">${recentBadges || '<span class="text-slate-300">Chưa đấu</span>'}</div>
                 </div>
             </div>
 
@@ -117,15 +106,9 @@ function openPlayerModal(mode, playerId = null) {
         document.getElementById('form-nickname').value = '';
         document.getElementById('form-avatar').value = '';
         document.getElementById('form-avatar-preview').src = 'https://api.dicebear.com/7.x/bottts/svg?seed=new';
-        document.getElementById('form-skill').value = 5.0;
-        document.getElementById('val-skill').innerText = '5.0';
-        document.getElementById('form-pool').value = 5.0;
-        document.getElementById('val-pool').innerText = '5.0';
-        document.getElementById('form-flex').value = 5.0;
-        document.getElementById('val-flex').innerText = '5.0';
-        document.getElementById('form-consist').value = 5.0;
-        document.getElementById('val-consist').innerText = '5.0';
-        document.getElementById('form-display-badge').innerText = '🌱 Tân Binh (Auto)';
+        document.getElementById('form-display-badge').innerText = '🌱 Tân Binh';
+        document.getElementById('form-display-power').innerText = '50.0';
+        document.getElementById('form-display-record').innerText = '0 (0/0)';
     } else {
         title.innerHTML = '<i class="fa-solid fa-user-pen text-indigo-600"></i><span>Chỉnh Sửa Tuyển Thủ</span>';
         idInput.disabled = true;
@@ -137,22 +120,9 @@ function openPlayerModal(mode, playerId = null) {
         document.getElementById('form-avatar').value = p.avatar;
         document.getElementById('form-avatar-preview').src = p.avatar;
 
-        document.getElementById('form-skill').value = p.skill;
-        document.getElementById('val-skill').innerText = p.skill;
-
-        document.getElementById('form-pool').value = p.champion_pool;
-        document.getElementById('val-pool').innerText = p.champion_pool;
-
-        document.getElementById('form-flex').value = p.flex_lane;
-        document.getElementById('val-flex').innerText = p.flex_lane;
-
-        document.getElementById('form-consist').value = p.consistency;
-        document.getElementById('val-consist').innerText = p.consistency;
-
-        const formLabel = p.form?.label || 'Tân binh';
-        const formIcon = p.form?.icon || '🌱';
-        const formScore = p.form?.score || 5.0;
-        document.getElementById('form-display-badge').innerText = `${formIcon} ${formScore}/10 (${formLabel})`;
+        document.getElementById('form-display-badge').innerText = `${p.tier_icon || '🛡️'} ${p.tier_name || 'Tier B'}`;
+        document.getElementById('form-display-power').innerText = `${p.power_score || 50.0}`;
+        document.getElementById('form-display-record').innerText = `${p.matches || 0} (${p.wins || 0}W / ${p.losses || 0}L)`;
     }
 }
 
@@ -183,10 +153,6 @@ async function handleSavePlayer(e) {
     const id = document.getElementById('form-id').value.trim().toLowerCase();
     const nickname = document.getElementById('form-nickname').value.trim();
     const avatar = document.getElementById('form-avatar').value.trim() || `https://api.dicebear.com/7.x/bottts/svg?seed=${id}`;
-    const skill = parseFloat(document.getElementById('form-skill').value);
-    const champion_pool = parseFloat(document.getElementById('form-pool').value);
-    const flex_lane = parseFloat(document.getElementById('form-flex').value);
-    const consistency = parseFloat(document.getElementById('form-consist').value);
 
     if (!id) {
         Swal.fire({
@@ -201,11 +167,7 @@ async function handleSavePlayer(e) {
     const payload = {
         id,
         nickname: nickname || id.toUpperCase(),
-        avatar,
-        skill,
-        champion_pool,
-        flex_lane,
-        consistency
+        avatar
     };
 
     const saveBtn = document.getElementById('btn-save-player') || document.querySelector('#player-form button[type="submit"]');

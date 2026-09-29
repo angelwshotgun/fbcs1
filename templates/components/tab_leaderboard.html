@@ -2,41 +2,44 @@
 <!-- TAB 4: BẢNG XẾP HẠNG CHUNG (LEADERBOARD) -->
 <!-- ============================================== -->
 <section id="tab-content-leaderboard" class="tab-pane hidden space-y-6">
-    <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+    <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
             <h2 class="text-2xl font-black font-heading text-slate-900 flex items-center gap-3">
                 <span>🏆 Bảng Xếp Hạng Tuyển Thủ</span>
             </h2>
             <p class="text-sm text-slate-500 mt-1">
-                Xếp hạng các tuyển thủ đã thi đấu theo Elo ẩn thực chiến, Phong độ tự động và các chỉ số Stats (thang 1 - 10).
+                Xếp hạng khách quan theo <b>Điểm Thực Lực (RAPM 0-100)</b>, phân bậc <b>Tier S, A, B, C</b> và thống kê thành tích thi đấu thực tế.
             </p>
         </div>
-        <button onclick="loadLeaderboard()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold font-heading transition shadow-xs">
-            <i class="fa-solid fa-arrows-rotate mr-1.5 text-slate-400"></i> Làm mới
+        <button onclick="loadLeaderboard()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold font-heading transition shadow-xs flex items-center gap-1.5">
+            <i class="fa-solid fa-arrows-rotate text-slate-400"></i> Làm mới
         </button>
     </div>
 
     <!-- Badge Filter Toolbar -->
     <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-1.5 text-xs font-bold font-heading">
-            <span class="text-slate-400 text-[11px] uppercase tracking-wider mr-1">Bộ Lọc Danh Hiệu:</span>
+            <span class="text-slate-400 text-[11px] uppercase tracking-wider mr-1">Bộ Lọc Phân Bậc:</span>
             <button type="button" onclick="setLeaderboardBadgeFilter('all')" id="btn-badge-filter-all" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white shadow-xs transition">
                 Tất Cả
             </button>
-            <button type="button" onclick="setLeaderboardBadgeFilter('top1_podium')" id="btn-badge-filter-top1_podium" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
-                <span>👑</span> <span>Top 3 BXH</span>
+            <button type="button" onclick="setLeaderboardBadgeFilter('tier_s')" id="btn-badge-filter-tier_s" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>👑</span> <span>Tier S (&ge;80)</span>
             </button>
-            <button type="button" onclick="setLeaderboardBadgeFilter('mvp')" id="btn-badge-filter-mvp" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
-                <span>🏆</span> <span>Vua MVP</span>
+            <button type="button" onclick="setLeaderboardBadgeFilter('tier_a')" id="btn-badge-filter-tier_a" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>⚔️</span> <span>Tier A (65-79)</span>
             </button>
-            <button type="button" onclick="setLeaderboardBadgeFilter('svp')" id="btn-badge-filter-svp" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
-                <span>🛡️</span> <span>Chúa Tể SVP</span>
+            <button type="button" onclick="setLeaderboardBadgeFilter('tier_b')" id="btn-badge-filter-tier_b" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>🛡️</span> <span>Tier B (50-64)</span>
             </button>
-            <button type="button" onclick="setLeaderboardBadgeFilter('clutch_stomp')" id="btn-badge-filter-clutch_stomp" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
-                <span>🥊</span> <span>Lội Ngược Dòng & Hủy Diệt</span>
+            <button type="button" onclick="setLeaderboardBadgeFilter('tier_c')" id="btn-badge-filter-tier_c" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>🌱</span> <span>Tier C (&lt;50)</span>
             </button>
-            <button type="button" onclick="setLeaderboardBadgeFilter('high_wr_vet')" id="btn-badge-filter-high_wr_vet" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
-                <span>💎</span> <span>Tỷ Lệ Thắng Cao & Chiến Tướng</span>
+            <button type="button" onclick="setLeaderboardBadgeFilter('top3')" id="btn-badge-filter-top3" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>🏆</span> <span>Top 3 Server</span>
+            </button>
+            <button type="button" onclick="setLeaderboardBadgeFilter('streak')" id="btn-badge-filter-streak" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1">
+                <span>🔥</span> <span>Chuỗi Thắng</span>
             </button>
         </div>
         <div id="leaderboard-filtered-count" class="text-xs text-slate-400 font-medium">
@@ -52,11 +55,10 @@
                     <tr class="border-b border-slate-200/80 bg-slate-50/80 text-xs text-slate-500 uppercase tracking-wider font-bold font-heading">
                         <th class="py-4 px-4 text-center w-16">Hạng</th>
                         <th class="py-4 px-4">Tuyển Thủ</th>
-                        <th class="py-4 px-4 text-center">Elo Ẩn</th>
-                        <th class="py-4 px-4 text-center">Stats OVR</th>
-                        <th class="py-4 px-4 text-center">Phong Độ (1-10)</th>
+                        <th class="py-4 px-4 text-center">Phân Bậc Tier</th>
+                        <th class="py-4 px-4 text-center">Điểm Thực Lực (0-100)</th>
                         <th class="py-4 px-4 text-center">Tỷ Lệ Thắng</th>
-                        <th class="py-4 px-4 text-center">Vai Trò & Danh Hiệu</th>
+                        <th class="py-4 px-4 text-center">Danh Hiệu Thành Tích</th>
                         <th class="py-4 px-4 text-center">Trận (W / L)</th>
                         <th class="py-4 px-4 text-center">Gần Nhất</th>
                     </tr>

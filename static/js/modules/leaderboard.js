@@ -6,7 +6,7 @@ function setLeaderboardBadgeFilter(filterKey) {
     currentLeaderboardBadgeFilter = filterKey;
 
     const filterBtns = [
-        'all', 'top1_podium', 'mvp', 'svp', 'clutch_stomp', 'high_wr_vet'
+        'all', 'tier_s', 'tier_a', 'tier_b', 'tier_c', 'top3', 'streak'
     ];
 
     filterBtns.forEach(key => {
@@ -30,26 +30,22 @@ function renderLeaderboard() {
     // Chỉ hiển thị tuyển thủ đã thi đấu ít nhất 1 trận (loại bỏ người chơi chưa đánh trận nào)
     let rankedPlayers = allPlayers
         .filter(p => (p.matches || 0) > 0)
-        .sort((a, b) => b.hidden_elo - a.hidden_elo);
+        .sort((a, b) => b.power_score - a.power_score);
 
-    // Áp dụng bộ lọc danh hiệu nếu có
+    // Áp dụng bộ lọc phân bậc
     if (currentLeaderboardBadgeFilter !== 'all') {
         rankedPlayers = rankedPlayers.filter(p => {
-            const bKeys = (p.badges || []).map(b => b.key);
-            if (currentLeaderboardBadgeFilter === 'top1_podium') {
-                return bKeys.includes('top1') || bKeys.includes('podium');
+            if (currentLeaderboardBadgeFilter === 'tier_s') return p.tier === 'S';
+            if (currentLeaderboardBadgeFilter === 'tier_a') return p.tier === 'A';
+            if (currentLeaderboardBadgeFilter === 'tier_b') return p.tier === 'B';
+            if (currentLeaderboardBadgeFilter === 'tier_c') return p.tier === 'C';
+            if (currentLeaderboardBadgeFilter === 'top3') {
+                const bKeys = (p.badges || []).map(b => b.key);
+                return bKeys.includes('top1') || bKeys.includes('top2') || bKeys.includes('top3');
             }
-            if (currentLeaderboardBadgeFilter === 'mvp') {
-                return bKeys.includes('mvp');
-            }
-            if (currentLeaderboardBadgeFilter === 'svp') {
-                return bKeys.includes('svp');
-            }
-            if (currentLeaderboardBadgeFilter === 'clutch_stomp') {
-                return bKeys.includes('clutch') || bKeys.includes('stomp');
-            }
-            if (currentLeaderboardBadgeFilter === 'high_wr_vet') {
-                return bKeys.includes('high_wr') || bKeys.includes('veteran');
+            if (currentLeaderboardBadgeFilter === 'streak') {
+                const bKeys = (p.badges || []).map(b => b.key);
+                return bKeys.includes('streak');
             }
             return true;
         });
@@ -67,12 +63,12 @@ function renderLeaderboard() {
     if (rankedPlayers.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="text-center py-12 text-slate-400">
+                <td colspan="8" class="text-center py-12 text-slate-400">
                     <div class="flex flex-col items-center justify-center gap-2">
                         <i class="fa-solid fa-filter text-slate-300 text-3xl"></i>
-                        <span class="font-bold text-slate-600 text-sm">Không có tuyển thủ nào khớp với bộ lọc danh hiệu này</span>
+                        <span class="font-bold text-slate-600 text-sm">Không có tuyển thủ nào khớp với bộ lọc này</span>
                         <p class="text-xs text-slate-400 max-w-md">
-                            Hãy thử chọn danh hiệu khác hoặc bấm "Tất Cả" để xem toàn bộ bảng xếp hạng!
+                            Hãy thử chọn bậc khác hoặc bấm "Tất Cả" để xem toàn bộ bảng xếp hạng!
                         </p>
                     </div>
                 </td>
@@ -88,20 +84,20 @@ function renderLeaderboard() {
         if (rank === 2) rankBadge = `<span class="w-7 h-7 rounded-full bg-slate-300 text-slate-900 font-black flex items-center justify-center mx-auto shadow-xs">2</span>`;
         if (rank === 3) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-700 text-white font-black flex items-center justify-center mx-auto shadow-xs">3</span>`;
 
-        const recentBadges = (p.form?.recent_5 || []).map(r => {
+        const recentBadges = (p.recent_5 || p.form?.recent_5 || []).map(r => {
             if (r === 'W') return `<span class="w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold inline-flex items-center justify-center">W</span>`;
             return `<span class="w-5 h-5 rounded-md bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold inline-flex items-center justify-center">L</span>`;
         }).join('');
 
-        // Render Impact Role (Chính)
-        const roleBadgeHtml = `
-            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${p.impact_role?.badge || 'bg-slate-100 text-slate-700 border-slate-200'}" title="${p.impact_role?.desc || ''}">
-                <span>${p.impact_role?.icon || '⚖️'}</span>
-                <span>${p.impact_role?.label || 'Tròn vai'}</span>
+        // Tier Badge with stars
+        const tierBadgeHtml = `
+            <span class="px-2.5 py-1 rounded-xl text-xs font-bold border inline-flex items-center gap-1.5 shadow-2xs ${p.tier_badge_class || 'bg-slate-100 text-slate-700 border-slate-200'}" title="${p.tier_desc || ''}">
+                <span>${p.tier_icon || '🛡️'}</span>
+                <span>${p.tier_name || 'Tier B'}</span>
             </span>
         `;
 
-        // Render Các Danh Hiệu Đa Dạng Kèm Tooltip
+        // Render Các Danh Hiệu Thực Chiến
         const extraBadgesHtml = (p.badges || []).map(b => `
             <span class="px-2 py-0.5 rounded-full text-[10px] inline-flex items-center gap-1 border shadow-2xs transition hover:scale-105 cursor-help ${b.badge_class || 'bg-slate-100 text-slate-700 border-slate-200'}" title="${b.desc || b.label}">
                 <span>${b.icon}</span>
@@ -122,17 +118,15 @@ function renderLeaderboard() {
                     </div>
                 </div>
             </td>
-            <td class="py-3.5 px-4 text-center font-extrabold text-indigo-600 text-sm">
-                ${Math.round(p.hidden_elo)}
+            <td class="py-3.5 px-4 text-center">
+                ${tierBadgeHtml}
             </td>
             <td class="py-3.5 px-4 text-center">
-                <span class="px-2.5 py-0.5 rounded-lg bg-slate-100 font-bold text-amber-700 border border-slate-200 text-xs">
-                    ${p.stats_ovr || p.skill}
+                <span class="text-sm font-black font-heading text-indigo-700">
+                    ${p.power_score}
                 </span>
-            </td>
-            <td class="py-3.5 px-4 text-center">
-                <span class="font-bold text-slate-800 text-xs">
-                    ${p.form?.icon || '🌱'} ${p.form?.score || 5.0}
+                <span class="text-[10px] text-slate-400 block font-mono">
+                    RAPM: ${p.rapm > 0 ? '+' : ''}${p.rapm}
                 </span>
             </td>
             <td class="py-3.5 px-4 text-center font-bold text-xs ${p.winrate >= 50 ? 'text-emerald-600' : 'text-slate-500'}">
@@ -140,12 +134,11 @@ function renderLeaderboard() {
             </td>
             <td class="py-3.5 px-4">
                 <div class="flex flex-wrap items-center justify-center gap-1.5 max-w-[320px] mx-auto">
-                    ${roleBadgeHtml}
-                    ${extraBadgesHtml}
+                    ${extraBadgesHtml || '<span class="text-slate-400 text-xs">-</span>'}
                 </div>
             </td>
             <td class="py-3.5 px-4 text-center text-xs text-slate-500 whitespace-nowrap">
-                ${p.matches} (<span class="text-emerald-600 font-bold">${p.wins}</span> / <span class="text-rose-600 font-bold">${p.losses}</span>)
+                ${p.matches} (<span class="text-emerald-600 font-bold">${p.wins}W</span> / <span class="text-rose-600 font-bold">${p.losses}L</span>)
             </td>
             <td class="py-3.5 px-4 text-center whitespace-nowrap">
                 <div class="flex items-center justify-center gap-1">
