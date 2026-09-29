@@ -125,8 +125,8 @@ function renderLeaderboard() {
                 <span class="text-sm font-black font-heading text-indigo-700">
                     ${p.power_score}
                 </span>
-                <span class="text-[10px] text-slate-400 block font-mono">
-                    RAPM: ${p.rapm > 0 ? '+' : ''}${p.rapm}
+                <span class="text-[10px] text-slate-400 block font-mono" title="Chỉ số RAPM và Hệ số tin cậy mẫu">
+                    RAPM: ${p.rapm > 0 ? '+' : ''}${p.rapm}${p.confidence !== undefined ? ` (${Math.round(p.confidence * 100)}%)` : ''}
                 </span>
             </td>
             <td class="py-3.5 px-4 text-center font-bold text-xs ${p.winrate >= 50 ? 'text-emerald-600' : 'text-slate-500'}">
@@ -138,7 +138,14 @@ function renderLeaderboard() {
                 </div>
             </td>
             <td class="py-3.5 px-4 text-center text-xs text-slate-500 whitespace-nowrap">
-                ${p.matches} (<span class="text-emerald-600 font-bold">${p.wins}W</span> / <span class="text-rose-600 font-bold">${p.losses}L</span>)
+                <span title="Số trận thực tế: ${p.matches} | Trận hiệu dụng: ${p.effective_matches !== undefined ? p.effective_matches : p.matches}">
+                    ${p.matches} (<span class="text-emerald-600 font-bold">${p.wins}W</span> / <span class="text-rose-600 font-bold">${p.losses}L</span>)
+                </span>
+                ${p.effective_matches !== undefined ? `
+                    <span class="text-[10px] text-slate-400 block font-mono" title="Số trận hiệu dụng sau khi trừ phân rã thời gian (Exponential Recency Decay)">
+                        H.Dụng: ${p.effective_matches}
+                    </span>
+                ` : ''}
             </td>
             <td class="py-3.5 px-4 text-center whitespace-nowrap">
                 <div class="flex items-center justify-center gap-1">

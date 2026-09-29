@@ -112,6 +112,17 @@ class PlayerService:
                     'desc': f'Đang có chuỗi thắng {cur_streak} trận liên tiếp!'
                 })
 
+            # 4. Badge Ít thi đấu gần đây (áp dụng cho người có trận quá khứ nhưng lâu không đánh)
+            eff_matches = p_rating.get('effective_matches', 0.0)
+            if m_count >= 1 and eff_matches < 1.8:
+                badges.append({
+                    'key': 'inactive',
+                    'label': f'Hao Mòn Thời Gian ({eff_matches:.1f} trận H.D)',
+                    'icon': '⏳',
+                    'badge_class': 'bg-amber-50 text-amber-700 border-amber-200 font-medium',
+                    'desc': f'Ít thi đấu các trận gần đây (số trận hiệu dụng: {eff_matches:.1f}), điểm thực lực được co cụm về mức chuẩn'
+                })
+
             form_info = {
                 'score': round(power_score / 10.0, 1),
                 'multiplier': 1.0,
@@ -143,6 +154,8 @@ class PlayerService:
                 'tier_badge_class': tier_badge_class,
                 'tier_desc': tier_desc,
                 'rapm': p_rating.get('rapm', 0.0),
+                'confidence': p_rating.get('confidence', 0.0),
+                'effective_matches': eff_matches,
                 'matches': m_count,
                 'wins': wins,
                 'losses': losses,

@@ -15,8 +15,9 @@ import pandas as pd
 
 
 class RatingService:
-    def __init__(self, lambda_reg: float = 3.0):
+    def __init__(self, lambda_reg: float = 3.0, half_life: float = 20.0):
         self.lambda_reg = lambda_reg
+        self.half_life = half_life
         self._cached_ratings: Optional[Dict[str, Any]] = None
 
     def invalidate_cache(self):
@@ -48,9 +49,18 @@ class RatingService:
             }
 
         player_cols = [c for c in df.columns if c != 'Result']
-        valid_df = df[df['Result'].isin([1, 2])].copy()
+        valid_df = df[df['Result'].isin([1, 2])].copy().reset_index(drop=True)
+        N = len(valid_df)
 
-        # Thống kê số trận, số trận thắng, chuỗi trận gần đây
+        # Tính trọng số thời gian (Exponential Match Recency Decay) cho từng trận
+        # Trận mới nhất (k = N - 1) có weight = 1.0, các trận cũ suy giảm dần theo chu kỳ bán rã half_life.
+        # max(0.15, ...) đảm bảo các trận quá khứ vẫn giữ lại giá trị tham chiếu nền tối thiểu.
+        if N > 0:
+            weights = [max(0.15, (0.5) ** (((N - 1) - k) / self.half_life)) for k in range(N)]
+        else:
+            weights = []
+
+        # Thống kê số trận, số trận hiệu dụng, số trận thắng, chuỗi trận gần đây
         stats: Dict[str, Dict[str, Any]] = {}
         for p in player_cols:
             p_lower = str(p).lower()
@@ -58,6 +68,9 @@ class RatingService:
             m = len(p_matches)
             if m == 0:
                 continue
+
+            # Số trận hiệu dụng (tổng trọng số các trận đã tham gia sau khi phân rã theo thời gian)
+            eff_m = float(sum(weights[idx] for idx in p_matches.index)) if weights else 0.0
 
             w1 = len(valid_df[(valid_df[p] == 1) & (valid_df['Result'] == 1)])
             w2 = len(valid_df[(valid_df[p] == 2) & (valid_df['Result'] == 2)])
@@ -74,17 +87,19 @@ class RatingService:
             stats[p_lower] = {
                 'original_col': p,
                 'matches': m,
+                'effective_matches': round(eff_m, 1),
                 'wins': w,
                 'losses': m - w,
                 'winrate': wr,
                 'recent_5': recent_5,
-                'rapm': 0.0
+                'rapm': 0.0,
+                'confidence': 1.0
             }
 
         active_players = list(stats.keys())
 
         # Nếu có ít nhất 1 trận đấu hợp lệ và có người chơi tham gia
-        if len(valid_df) > 0 and len(active_players) > 0:
+        if N > 0 and len(active_players) > 0:
             X_rows, y_vals = [], []
             for _, row in valid_df.iterrows():
                 res = row['Result']
@@ -104,25 +119,31 @@ class RatingService:
             X = np.array(X_rows, dtype=float)
             y = np.array(y_vals, dtype=float)
 
-            # Ridge Regression: beta = (X^T X + lambda * I)^(-1) X^T y
-            # lambda = 3.0 giúp shrinkage các tuyển thủ đánh ít trận về mức trung bình,
-            # cô lập chính xác ảnh hưởng độc lập của từng tuyển thủ lên kết quả đội nhà.
+            # Weighted Ridge Regression:
+            # W = diag(w_0, ..., w_{N-1})
+            # A = X^T W X + lambda * I
+            # b = X^T W y
+            # beta = A^(-1) b
+            # Các trận mới có trọng số cao hơn, phản ánh chính xác phong độ thực tế hiện tại.
+            W = np.diag(weights)
             I = np.eye(X.shape[1])
             try:
-                beta = np.linalg.inv(X.T @ X + self.lambda_reg * I) @ X.T @ y
+                A = X.T @ W @ X + self.lambda_reg * I
+                b = X.T @ W @ y
+                beta = np.linalg.inv(A) @ b
             except Exception:
                 beta = np.zeros(X.shape[1])
 
             for i, p_id in enumerate(active_players):
                 stats[p_id]['rapm'] = float(beta[i])
 
-            # Tính toán min và max của RAPM để chuẩn hóa thang điểm 15 - 100
-            rapm_vals = [s['rapm'] for s in stats.values()]
-            min_rapm = min(rapm_vals) if rapm_vals else 0.0
-            max_rapm = max(rapm_vals) if rapm_vals else 0.0
-            span = max(0.001, max_rapm - min_rapm)
+            # Tính toán cực trị beta dương và âm để chuẩn hóa đối xứng qua mốc beta = 0.0 (50.0 điểm)
+            max_pos_beta = max(max((s['rapm'] for s in stats.values()), default=0.0), 0.01)
+            max_neg_beta = abs(min((s['rapm'] for s in stats.values()), default=0.0))
+            if max_neg_beta < 0.01:
+                max_neg_beta = 0.01
         else:
-            min_rapm, max_rapm, span = 0.0, 0.0, 1.0
+            max_pos_beta, max_neg_beta = 1.0, 1.0
 
         # Tính toán Pair Synergy (Duo) và Trio Synergy thuần kết quả
         pair_synergy: Dict[str, Dict[str, Any]] = {}
@@ -168,19 +189,32 @@ class RatingService:
             if pid in stats:
                 st = stats[pid]
                 m = st['matches']
+                eff_m = st['effective_matches']
                 w = st['wins']
                 l = st['losses']
                 wr = st['winrate']
                 rec5 = st['recent_5']
                 rapm = st['rapm']
 
-                # Chuẩn hóa ra thang 15.0 - 100.0
-                power_score = round(15.0 + 85.0 * ((rapm - min_rapm) / span), 1)
+                # Chuẩn hóa đối xứng qua trục beta = 0.0 (50.0 điểm thực lực)
+                if rapm >= 0:
+                    raw_power = 50.0 + 50.0 * (rapm / max_pos_beta)
+                else:
+                    raw_power = 50.0 - 35.0 * (abs(rapm) / max_neg_beta)
+
+                # Sample Size & Recency Reliability Shrinkage:
+                # Tuyển thủ ít trận hoặc chỉ đánh trận từ rất lâu trong quá khứ sẽ có eff_m thấp -> conf thấp -> kéo về 50.0.
+                # Tuyển thủ cày ải nhiều trận và phong độ gần đây tốt sẽ có conf tiệm cận 1.0 (phát huy 100% điểm thực lực).
+                conf = min(1.0, (eff_m / (eff_m + 3.0)) * 1.25)
+                power_score = round(50.0 + (raw_power - 50.0) * conf, 1)
+                st['confidence'] = round(conf, 2)
             else:
                 # Tân binh chưa có trận đấu
                 m, w, l, wr = 0, 0, 0, 0.0
+                eff_m = 0.0
                 rec5 = []
                 rapm = 0.0
+                conf = 0.0
                 power_score = 50.0
 
             # Phân Bậc Tier
@@ -192,6 +226,8 @@ class RatingService:
                 'avatar': avatar,
                 'power_score': power_score,
                 'rapm': round(rapm, 3),
+                'confidence': round(conf, 2),
+                'effective_matches': round(eff_m, 1),
                 'tier': tier_info['tier'],
                 'tier_name': tier_info['name'],
                 'tier_icon': tier_info['icon'],
@@ -213,8 +249,10 @@ class RatingService:
             'players': final_players,
             'pair_synergy': pair_synergy,
             'trio_synergy': trio_synergy,
-            'min_rapm': min_rapm,
-            'max_rapm': max_rapm
+            'min_rapm': -round(max_neg_beta, 3),
+            'max_rapm': round(max_pos_beta, 3),
+            'max_pos_beta': round(max_pos_beta, 3),
+            'max_neg_beta': round(max_neg_beta, 3)
         }
 
     def _get_tier_info(self, power_score: float, matches: int) -> Dict[str, Any]:
@@ -275,6 +313,8 @@ class RatingService:
             'avatar': avatar,
             'power_score': 50.0,
             'rapm': 0.0,
+            'confidence': 0.0,
+            'effective_matches': 0.0,
             'tier': tier_info['tier'],
             'tier_name': tier_info['name'],
             'tier_icon': tier_info['icon'],
