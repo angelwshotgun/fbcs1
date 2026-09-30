@@ -24,7 +24,7 @@ class RatingService:
         """Xóa cache để hệ thống tính toán lại khi có trận mới hoặc cập nhật dữ liệu."""
         self._cached_ratings = None
 
-    def calculate_ratings(self, df: pd.DataFrame, profiles: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def calculate_ratings(self, df: pd.DataFrame, profiles: Optional[Dict[str, Any]] = None, is_prev: bool = False) -> Dict[str, Any]:
         """
         Tính toán Điểm Thực Lực (Power Score 0-100) và Phân Bậc (Tier S, A, B, C)
         hoàn toàn dựa trên ma trận Ridge Regression RAPM từ kết quả thắng/thua.
@@ -245,6 +245,77 @@ class RatingService:
                 'combined_power': power_score
             }
 
+        # Tính toán biến động thứ hạng & điểm thực lực sau trận gần nhất
+        if not is_prev and N >= 2:
+            prev_df = valid_df.iloc[:-1]
+            prev_result = self.calculate_ratings(prev_df, profiles, is_prev=True)
+            prev_players = prev_result.get('players', {})
+
+            # 1. Toàn bộ bảng xếp hạng trước và hiện tại (All-Time)
+            cur_all_ranked = sorted(
+                [p for p in final_players.values() if p.get('matches', 0) > 0],
+                key=lambda x: x['power_score'],
+                reverse=True
+            )
+            prev_all_ranked = sorted(
+                [p for p in prev_players.values() if p.get('matches', 0) > 0],
+                key=lambda x: x['power_score'],
+                reverse=True
+            )
+
+            cur_global_ranks = {p['id']: idx + 1 for idx, p in enumerate(cur_all_ranked)}
+            prev_global_ranks = {p['id']: idx + 1 for idx, p in enumerate(prev_all_ranked)}
+
+            # 2. Bảng xếp hạng thường xuyên (Active: matches >= 5 & effective_matches >= 2.0)
+            cur_active_ranked = [
+                p for p in cur_all_ranked
+                if p.get('matches', 0) >= 5 and p.get('effective_matches', 0) >= 2.0
+            ]
+            prev_active_ranked = [
+                p for p in prev_all_ranked
+                if p.get('matches', 0) >= 5 and p.get('effective_matches', 0) >= 2.0
+            ]
+
+            cur_active_ranks = {p['id']: idx + 1 for idx, p in enumerate(cur_active_ranked)}
+            prev_active_ranks = {p['id']: idx + 1 for idx, p in enumerate(prev_active_ranked)}
+
+            for pid, p in final_players.items():
+                cur_gr = cur_global_ranks.get(pid)
+                prev_gr = prev_global_ranks.get(pid)
+                if cur_gr is not None and prev_gr is not None:
+                    p['rank_change'] = prev_gr - cur_gr
+                elif cur_gr is not None and prev_gr is None:
+                    p['rank_change'] = None  # Mới vào BXH
+                else:
+                    p['rank_change'] = 0
+                p['prev_global_rank'] = prev_gr
+
+                cur_ar = cur_active_ranks.get(pid)
+                prev_ar = prev_active_ranks.get(pid)
+                if cur_ar is not None and prev_ar is not None:
+                    p['active_rank_change'] = prev_ar - cur_ar
+                elif cur_ar is not None and prev_ar is None:
+                    p['active_rank_change'] = None  # Mới đạt chuẩn Active
+                else:
+                    p['active_rank_change'] = 0
+                p['prev_active_rank'] = prev_ar
+
+                if pid in prev_players and prev_players[pid].get('matches', 0) > 0:
+                    prev_pw = prev_players[pid].get('power_score')
+                    p['prev_power_score'] = prev_pw
+                    p['power_delta'] = round(p['power_score'] - prev_pw, 1)
+                else:
+                    p['prev_power_score'] = None
+                    p['power_delta'] = 0.0
+        else:
+            for pid, p in final_players.items():
+                p['rank_change'] = 0
+                p['active_rank_change'] = 0
+                p['prev_global_rank'] = None
+                p['prev_active_rank'] = None
+                p['prev_power_score'] = None
+                p['power_delta'] = 0.0
+
         return {
             'players': final_players,
             'pair_synergy': pair_synergy,
@@ -326,6 +397,12 @@ class RatingService:
             'losses': 0,
             'winrate': 0.0,
             'recent_5': [],
+            'rank_change': 0,
+            'active_rank_change': 0,
+            'prev_global_rank': None,
+            'prev_active_rank': None,
+            'prev_power_score': None,
+            'power_delta': 0.0,
             'hidden_elo': 1200.0,
             'effective_power': 50.0,
             'combined_power': 50.0

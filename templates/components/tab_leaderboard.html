@@ -70,8 +70,16 @@
                 <span>🔥</span> <span>Chuỗi Thắng</span>
             </button>
         </div>
-        <div id="leaderboard-filtered-count" class="text-xs text-slate-400 font-medium">
-            Hiển thị toàn bộ tuyển thủ
+        <div class="flex items-center gap-3">
+            <span class="hidden md:inline-flex items-center gap-1.5 text-[11px] text-slate-500 bg-slate-50 border border-slate-200/80 px-2.5 py-1 rounded-xl">
+                <span>Sau trận gần nhất:</span>
+                <span class="text-emerald-600 font-bold inline-flex items-center gap-0.5"><i class="fa-solid fa-arrow-up text-[9px]"></i> Tăng</span>
+                <span class="text-slate-300">•</span>
+                <span class="text-rose-600 font-bold inline-flex items-center gap-0.5"><i class="fa-solid fa-arrow-down text-[9px]"></i> Giảm</span>
+            </span>
+            <div id="leaderboard-filtered-count" class="text-xs text-slate-400 font-medium">
+                Hiển thị toàn bộ tuyển thủ
+            </div>
         </div>
     </div>
 
@@ -81,7 +89,7 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="border-b border-slate-200/80 bg-slate-50/80 text-xs text-slate-500 uppercase tracking-wider font-bold font-heading">
-                        <th class="py-4 px-4 text-center w-16">Hạng</th>
+                        <th class="py-4 px-3 text-center w-28" title="Thứ hạng & Biến động sau trận gần nhất">Hạng</th>
                         <th class="py-4 px-4">Tuyển Thủ</th>
                         <th class="py-4 px-4 text-center">Phân Bậc Tier</th>
                         <th class="py-4 px-4 text-center">Điểm Thực Lực (0-100)</th>

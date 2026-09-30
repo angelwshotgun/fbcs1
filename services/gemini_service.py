@@ -1,10 +1,11 @@
+from __future__ import annotations
 import os
 import json
 import time
 import logging
 import urllib.request
 import urllib.error
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple, Union
 from dotenv import load_dotenv
 
 load_dotenv()

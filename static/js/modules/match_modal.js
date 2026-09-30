@@ -2,8 +2,13 @@
 // MATCH RESULT MODAL (THUẦN KẾT QUẢ THẮNG/THUA - TỨC THÌ)
 // ==========================================
 
-let currentMatchModalWinner = 'team1';
-let isSubmittingMatch = false;
+// Trạng thái modal (currentMatchModalWinner, isSubmittingMatch) được quản lý tập trung tại state.js
+if (typeof currentMatchModalWinner === 'undefined') {
+    var currentMatchModalWinner = 'team1';
+}
+if (typeof isSubmittingMatch === 'undefined') {
+    var isSubmittingMatch = false;
+}
 
 function openMatchResultModal(winningTeam) {
     setMatchModalWinner(winningTeam || 'team1');

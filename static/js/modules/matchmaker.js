@@ -338,8 +338,6 @@ function createTeamPlayerCard(p, teamColor) {
     return div;
 }
 
-let isSubmittingMatch = false;
-
 function transferMatchmakerResultToSimulation() {
     if (!currentTeamsResult || !currentTeamsResult.team1 || !currentTeamsResult.team2) {
         Swal.fire({

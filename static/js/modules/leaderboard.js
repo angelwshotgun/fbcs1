@@ -125,10 +125,50 @@ function renderLeaderboard() {
         // Ở chế độ tổng: hạng tuyệt đối trên toàn server
         const displayRank = (currentLeaderboardMode === 'active') ? (idx + 1) : p.globalRank;
 
-        let rankBadge = `<span class="font-bold text-slate-500">#${displayRank}</span>`;
-        if (displayRank === 1) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-400 text-slate-900 font-black flex items-center justify-center mx-auto shadow-xs">1</span>`;
-        if (displayRank === 2) rankBadge = `<span class="w-7 h-7 rounded-full bg-slate-300 text-slate-900 font-black flex items-center justify-center mx-auto shadow-xs">2</span>`;
-        if (displayRank === 3) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-700 text-white font-black flex items-center justify-center mx-auto shadow-xs">3</span>`;
+        // Biến động thứ hạng sau trận gần nhất
+        const rankChange = (currentLeaderboardMode === 'active') ? p.active_rank_change : p.rank_change;
+        const prevRank = (currentLeaderboardMode === 'active') ? p.prev_active_rank : p.prev_global_rank;
+
+        let changeHtml = '';
+        if (typeof rankChange === 'number') {
+            if (rankChange > 0) {
+                changeHtml = `
+                    <span class="inline-flex items-center text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200/90 px-1.5 py-0.5 rounded-lg gap-0.5 shadow-2xs" 
+                          title="Tăng ${rankChange} bậc sau trận gần nhất (từ hạng #${prevRank || '?'})">
+                        <i class="fa-solid fa-arrow-up text-[9px] text-emerald-600"></i>
+                        <span>${rankChange}</span>
+                    </span>
+                `;
+            } else if (rankChange < 0) {
+                changeHtml = `
+                    <span class="inline-flex items-center text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200/90 px-1.5 py-0.5 rounded-lg gap-0.5 shadow-2xs" 
+                          title="Giảm ${Math.abs(rankChange)} bậc sau trận gần nhất (từ hạng #${prevRank || '?'})">
+                        <i class="fa-solid fa-arrow-down text-[9px] text-rose-600"></i>
+                        <span>${Math.abs(rankChange)}</span>
+                    </span>
+                `;
+            } else {
+                changeHtml = `
+                    <span class="inline-flex items-center text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200/80 px-1.5 py-0.5 rounded-lg" 
+                          title="Thứ hạng không đổi sau trận gần nhất">
+                        <i class="fa-solid fa-minus text-[8px]"></i>
+                    </span>
+                `;
+            }
+        } else {
+            changeHtml = `
+                <span class="inline-flex items-center text-[9px] font-black text-blue-700 bg-blue-50 border border-blue-200/90 px-1.5 py-0.5 rounded-lg gap-0.5" 
+                      title="Tân binh mới tham gia bảng xếp hạng">
+                    <i class="fa-solid fa-star text-[8px] text-amber-500"></i>
+                    <span>MỚI</span>
+                </span>
+            `;
+        }
+
+        let rankBadge = `<span class="font-bold text-slate-700 text-sm">#${displayRank}</span>`;
+        if (displayRank === 1) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-400 text-slate-900 font-black flex items-center justify-center shadow-xs">1</span>`;
+        if (displayRank === 2) rankBadge = `<span class="w-7 h-7 rounded-full bg-slate-300 text-slate-900 font-black flex items-center justify-center shadow-xs">2</span>`;
+        if (displayRank === 3) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-700 text-white font-black flex items-center justify-center shadow-xs">3</span>`;
 
         let rankSubtext = '';
         if (currentLeaderboardMode === 'active' && p.globalRank !== displayRank) {
@@ -162,10 +202,24 @@ function renderLeaderboard() {
             </span>
         `).join('');
 
+        let powerDeltaHtml = '';
+        if (p.power_delta !== undefined && p.power_delta !== null && p.power_delta !== 0) {
+            const isPos = p.power_delta > 0;
+            const deltaColor = isPos ? 'text-emerald-600' : 'text-rose-600';
+            const deltaSign = isPos ? '+' : '';
+            powerDeltaHtml = `<span class="${deltaColor} font-bold text-[10px] ml-1" title="Biến động điểm sau trận gần nhất">(${deltaSign}${p.power_delta})</span>`;
+        }
+
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition";
         tr.innerHTML = `
-            <td class="py-3.5 px-4 text-center">${rankBadge}${rankSubtext}</td>
+            <td class="py-3.5 px-3 text-center whitespace-nowrap">
+                <div class="flex items-center justify-center gap-1.5">
+                    ${rankBadge}
+                    ${changeHtml}
+                </div>
+                ${rankSubtext}
+            </td>
             <td class="py-3.5 px-4">
                 <div class="flex items-center gap-3 cursor-pointer group" onclick="openPlayerDetail('${p.id}')" title="Bấm để xem chi tiết hồ sơ & phân tích AI tuyển thủ">
                     <img src="${p.avatar}" class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 object-cover group-hover:scale-105 transition-transform" alt="${p.nickname}">
@@ -179,9 +233,12 @@ function renderLeaderboard() {
                 ${tierBadgeHtml}
             </td>
             <td class="py-3.5 px-4 text-center">
-                <span class="text-sm font-black font-heading text-indigo-700">
-                    ${p.power_score}
-                </span>
+                <div class="flex items-center justify-center">
+                    <span class="text-sm font-black font-heading text-indigo-700">
+                        ${p.power_score}
+                    </span>
+                    ${powerDeltaHtml}
+                </div>
                 <span class="text-[10px] text-slate-400 block font-mono" title="Chỉ số RAPM và Hệ số tin cậy mẫu">
                     RAPM: ${p.rapm > 0 ? '+' : ''}${p.rapm}${p.confidence !== undefined ? ` (${Math.round(p.confidence * 100)}%)` : ''}
                 </span>

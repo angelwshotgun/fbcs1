@@ -16,6 +16,7 @@ var pendingSlotAssignment = null;
 var lastOcrResult = null;
 
 // Trạng thái cho Ghi Nhận Kết Quả & AI Scoreboard Modal
+var isSubmittingMatch = false;
 var isSubmittingSimulationMatch = false;
 var currentMatchModalWinner = 'team1';
 var currentScoreboardImageBase64 = null;
