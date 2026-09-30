@@ -36,6 +36,9 @@ function switchTab(tabId) {
     if (tabId === 'captains') renderCaptainPlayers();
     if (tabId === 'matchmaker') renderMatchmakerPlayers();
     if (tabId === 'simulation') renderSimulationBoard();
+    if (tabId === 'duckrace') {
+        if (typeof initDuckRaceTab === 'function') initDuckRaceTab();
+    }
 }
 
 // ==========================================

@@ -81,6 +81,7 @@
         {% include 'components/tab_matchmaker.html' %}
         {% include 'components/tab_captains.html' %}
         {% include 'components/tab_simulation.html' %}
+        {% include 'components/tab_duck_race.html' %}
         {% include 'components/tab_admin.html' %}
         {% include 'components/tab_leaderboard.html' %}
         {% include 'components/tab_player_detail.html' %}
@@ -91,11 +92,13 @@
     {% include 'components/modal_player.html' %}
     {% include 'components/modal_match_result.html' %}
     {% include 'components/modal_edit_match.html' %}
+    {% include 'components/modal_duck_race.html' %}
 
     <!-- Application Core Script Modules -->
     <script src="/static/js/modules/state.js"></script>
     <script src="/static/js/modules/navigation.js"></script>
     <script src="/static/js/modules/matchmaker.js"></script>
+    <script src="/static/js/modules/duck_race.js"></script>
     <script src="/static/js/modules/captains.js"></script>
     <script src="/static/js/modules/simulation.js"></script>
     <script src="/static/js/modules/match_modal.js"></script>

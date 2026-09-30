@@ -7,6 +7,7 @@ var selectedMatchmaker = [];
 var selectedCaptains = [];
 var selectedCaptainMembers = [];
 var currentTeamsResult = null;
+var duckRaceRoster = [];
 
 // Trạng thái cho tab Mô Phỏng 5vs5 (Simulation)
 var simTeam1 = [null, null, null, null, null];

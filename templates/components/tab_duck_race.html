@@ -1,0 +1,279 @@
+<!-- ============================================== -->
+<!-- TAB: MINIGAME ĐUA VỊT (DUCK RACE) ĐỘC LẬP -->
+<!-- ============================================== -->
+<section id="tab-content-duckrace" class="tab-pane hidden space-y-6">
+    <!-- Top Header Bar -->
+    <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-500 flex items-center justify-center text-3xl shadow-lg shadow-amber-500/20 shrink-0">
+                🦆
+            </div>
+            <div>
+                <div class="flex items-center gap-2.5 flex-wrap">
+                    <h2 class="text-2xl font-black font-heading text-slate-900">
+                        Duck Race — Đua Vịt Bốc Thăm
+                    </h2>
+                    <span class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold font-heading">
+                        Tính Năng Độc Lập
+                    </span>
+                    <span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold font-heading">
+                        Loại Người Thắng & Đua Tiếp
+                    </span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">
+                    Quản lý danh sách người chơi tùy ý, bốc thăm thứ tự ban/pick, quay số may mắn, hoặc loại dần từng người thắng cuộc qua nhiều vòng!
+                </p>
+            </div>
+        </div>
+
+        <!-- Header Action Controls -->
+        <div class="flex items-center gap-2.5 flex-wrap w-full lg:w-auto justify-end">
+            <!-- Sound Toggle -->
+            <button type="button" onclick="toggleDuckRaceSound()" title="Bật/Tắt âm thanh"
+                    class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 border border-slate-200">
+                <i id="tab-duck-sound-icon" class="fa-solid fa-volume-high text-amber-500"></i>
+                <span class="hidden sm:inline">Âm Thanh</span>
+            </button>
+
+            <!-- Duration Selector -->
+            <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200" id="tab-duck-duration-group">
+                <button type="button" onclick="setDuckRaceDuration(15)" id="btn-tab-dur-15"
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition">
+                    ⚡ 15s
+                </button>
+                <button type="button" onclick="setDuckRaceDuration(30)" id="btn-tab-dur-30"
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-amber-500 text-slate-950 shadow-xs">
+                    ⏱️ 30s
+                </button>
+                <button type="button" onclick="setDuckRaceDuration(45)" id="btn-tab-dur-45"
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition">
+                    🍿 45s
+                </button>
+                <button type="button" onclick="setDuckRaceDuration(60)" id="btn-tab-dur-60"
+                        class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition">
+                    🎬 60s
+                </button>
+            </div>
+
+            <!-- Start / Restart Race Buttons -->
+            <button type="button" id="btn-tab-start-race" onclick="startDuckRace()"
+                    class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold font-heading text-xs shadow-md shadow-emerald-500/20 transition flex items-center gap-2">
+                <i class="fa-solid fa-flag-checkered text-sm"></i>
+                <span>Bắt Đầu Đua!</span>
+            </button>
+
+            <button type="button" id="btn-tab-restart-race" onclick="restartDuckRace()"
+                    class="hidden px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold font-heading text-xs shadow-xs transition flex items-center gap-2">
+                <i class="fa-solid fa-rotate-right text-xs"></i>
+                <span>Đua Lại</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Roster Management Card (Thêm / Xoá người chơi) -->
+    <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2.5">
+                <h3 class="text-base font-bold font-heading text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-users text-amber-500"></i>
+                    <span>Danh Sách Tham Gia Đua</span>
+                </h3>
+                <span id="roster-count-badge" class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-200">
+                    0 người chơi
+                </span>
+            </div>
+
+            <!-- Quick presets toolbar -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" onclick="loadTeamsToDuckRaceRoster()" title="Lấy 10 người từ lần chia đội gần nhất"
+                        class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 transition flex items-center gap-1.5 shadow-2xs">
+                    <i class="fa-solid fa-bolt text-indigo-500"></i>
+                    <span>Nạp Từ Chia Đội</span>
+                </button>
+                <button type="button" onclick="addRandomPlayersToRoster(10)" 
+                        class="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-dice text-amber-500"></i>
+                    <span>Chọn 10 Ngẫu Nhiên</span>
+                </button>
+                <button type="button" onclick="addRandomPlayersToRoster(5)" 
+                        class="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-dice text-amber-500"></i>
+                    <span>Chọn 5 Ngẫu Nhiên</span>
+                </button>
+                <button type="button" onclick="clearDuckRaceRoster()" 
+                        class="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold transition flex items-center gap-1">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                    <span>Xoá Hết</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Add Player Form: Input custom name & Pick from system list -->
+        <div class="flex flex-col sm:flex-row items-center gap-3">
+            <div class="relative flex-1 w-full">
+                <i class="fa-solid fa-user-plus absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                <input type="text" id="duck-input-player-name" 
+                       placeholder="Nhập tên người chơi mới rồi bấm Thêm (hoặc Enter)..." 
+                       onkeydown="if(event.key === 'Enter') handleAddCustomDuckPlayer()"
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-amber-500 focus:bg-white transition">
+            </div>
+            <button type="button" onclick="handleAddCustomDuckPlayer()" 
+                    class="w-full sm:w-auto px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold font-heading text-xs shadow-xs transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-plus"></i>
+                <span>Thêm Tên Này</span>
+            </button>
+            <button type="button" onclick="openSystemPlayerPickerModal()" 
+                    class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-list-check text-indigo-500"></i>
+                <span>Chọn Từ Tuyển Thủ FBCS</span>
+            </button>
+        </div>
+
+        <!-- Active Player Chips Container -->
+        <div id="duck-roster-chips-container" class="flex flex-wrap items-center gap-2 p-3 bg-slate-50/70 rounded-2xl border border-slate-200/80 min-h-[58px]">
+            <!-- Dynamic Player Chips Rendered via JS -->
+            <p id="duck-roster-empty-notice" class="text-xs text-slate-400 italic">
+                Chưa có ai trong danh sách. Hãy nhập tên ở trên hoặc bấm "Nạp Từ Chia Đội" / "Chọn Ngẫu Nhiên".
+            </p>
+        </div>
+    </div>
+
+    <!-- Canvas Race Arena Container -->
+    <div class="bg-slate-900 rounded-3xl border border-slate-800 shadow-xl overflow-hidden relative">
+        <!-- Arena Sub-toolbar (Team mode filter if teams exist) -->
+        <div class="px-5 py-2.5 bg-slate-800/90 border-b border-slate-700/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-2">
+                <span class="text-slate-400 font-bold flex items-center gap-1.5">
+                    <i class="fa-solid fa-filter text-amber-400"></i> Lọc lượt đua:
+                </span>
+                <div class="inline-flex rounded-xl bg-slate-900 p-1 border border-slate-700/80" id="tab-duck-mode-group">
+                    <button type="button" onclick="setDuckRaceTeamMode('all')" id="btn-mode-all"
+                            class="px-3 py-1 rounded-lg text-xs font-bold transition bg-amber-500 text-slate-950 shadow-xs">
+                        👥 Toàn Bộ Danh Sách
+                    </button>
+                    <button type="button" onclick="setDuckRaceTeamMode('team1')" id="btn-mode-team1"
+                            class="px-3 py-1 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition">
+                        🔵 Đội Xanh
+                    </button>
+                    <button type="button" onclick="setDuckRaceTeamMode('team2')" id="btn-mode-team2"
+                            class="px-3 py-1 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition">
+                        🔴 Đội Đỏ
+                    </button>
+                </div>
+            </div>
+
+            <div class="text-slate-400 text-xs font-medium flex items-center gap-2">
+                <span id="tab-duck-status-text">Sẵn sàng xuất phát!</span>
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="relative bg-slate-950 flex items-center justify-center overflow-hidden min-h-[420px] max-h-[600px]">
+            <canvas id="tab-duck-race-canvas" class="w-full h-full block select-none cursor-default"></canvas>
+
+            <!-- Event Toast Banner -->
+            <div id="duck-race-event-toast" 
+                 class="absolute top-4 left-1/2 -translate-x-1/2 pointer-events-none transition-all duration-300 transform opacity-0 -translate-y-4 scale-90 z-20">
+                <div id="duck-race-toast-content" class="px-5 py-2 rounded-2xl bg-amber-500 text-slate-950 font-black font-heading text-xs sm:text-sm shadow-xl flex items-center gap-2 border-2 border-white/60">
+                    <span id="duck-race-toast-icon" class="text-lg">🚀</span>
+                    <span id="duck-race-toast-text">TĂNG TỐC ĐỘ!</span>
+                </div>
+            </div>
+
+            <!-- Countdown Overlay -->
+            <div id="duck-race-countdown-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/40 backdrop-blur-[2px] pointer-events-none z-10 hidden">
+                <div id="duck-race-countdown-number" class="text-7xl sm:text-8xl font-black font-heading text-amber-400 drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] animate-pulse">
+                    3
+                </div>
+                <div id="duck-race-countdown-sub" class="text-sm font-bold text-white/90 mt-2 uppercase tracking-widest drop-shadow">
+                    Chuẩn bị xuất phát...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Race Results & Elimination Section -->
+    <div id="duck-race-result-container" class="hidden space-y-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
+        
+        <!-- Winner Hero Card with Instant Elimination -->
+        <div id="duck-winner-hero-card" class="p-5 rounded-2xl bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-100 border-2 border-amber-300 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+            <div class="flex items-center gap-4 text-center md:text-left">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-500 flex items-center justify-center text-3xl shadow-md text-white shrink-0">
+                    🏆
+                </div>
+                <div>
+                    <span class="text-[11px] font-black font-heading uppercase tracking-wider text-amber-800 bg-amber-200/60 px-2.5 py-0.5 rounded-full border border-amber-300">
+                        Quán Quân Về Đích Đầu Tiên (#1)
+                    </span>
+                    <h3 class="text-xl font-black font-heading text-slate-900 mt-1" id="duck-winner-name">
+                        --
+                    </h3>
+                    <p class="text-xs text-slate-600 mt-0.5">
+                        Bạn có thể loại người chiến thắng này ra khỏi danh sách để tiếp tục đua chọn các hạng tiếp theo!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Winner Action Buttons -->
+            <div class="flex items-center gap-2.5 shrink-0 flex-wrap justify-center">
+                <button type="button" onclick="eliminateWinnerAndContinue()" 
+                        class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-bold font-heading text-xs shadow-md shadow-rose-500/20 transition flex items-center gap-2">
+                    <i class="fa-solid fa-user-xmark text-sm"></i>
+                    <span>Xoá Người Thắng & Đua Tiếp Vòng Sau</span>
+                </button>
+                <button type="button" onclick="restartDuckRace()" 
+                        class="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold font-heading text-xs border border-slate-200 shadow-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-rotate-right text-xs"></i>
+                    <span>Đua Lại (Giữ Nguyên)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Full Finish Ranking Board -->
+        <div>
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-bold font-heading text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-list-ol text-indigo-600"></i>
+                    <span>Bảng Xếp Hạng Về Đích (<span id="duck-finished-count">0</span>/<span id="duck-total-count">0</span>)</span>
+                </h4>
+                <span class="text-xs text-slate-500">Bấm nút "Loại" ở từng thẻ để gạch tên bất kỳ người chơi nào</span>
+            </div>
+
+            <div id="duck-race-result-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+                <!-- Dynamically Rendered Finish Cards with Remove Buttons -->
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- System Player Quick Picker Modal (Select from allPlayers) -->
+<div id="modal-duck-player-picker" class="fixed inset-0 z-[9999] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="text-base font-bold font-heading text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-users text-indigo-600"></i>
+                <span>Chọn Tuyển Thủ Thêm Vào Đường Đua</span>
+            </h3>
+            <button type="button" onclick="closeSystemPlayerPickerModal()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+
+        <div class="relative">
+            <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+            <input type="text" id="duck-picker-search" oninput="renderSystemPlayerPickerGrid()" 
+                   placeholder="Tìm tên tuyển thủ..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white transition">
+        </div>
+
+        <div id="duck-picker-players-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto custom-scrollbar p-1">
+            <!-- Dynamic Player Options -->
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+            <span class="text-slate-500">Bấm vào tuyển thủ để thêm vào danh sách đua.</span>
+            <button type="button" onclick="closeSystemPlayerPickerModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition">
+                Xong
+            </button>
+        </div>
+    </div>
+</div>

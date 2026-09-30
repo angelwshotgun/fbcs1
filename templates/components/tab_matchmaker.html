@@ -121,7 +121,11 @@
                         <span id="res-pool-count-label" class="text-slate-500">Cực kỳ cân bằng</span>
                     </div>
                 </div>
-                <div class="flex items-center gap-2 w-full sm:w-auto">
+                <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                    <button onclick="openDuckRace()" id="btn-duck-race" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 font-black font-heading text-xs shadow-md shadow-amber-500/20 transition flex items-center justify-center gap-2">
+                        <span class="text-sm">🦆</span>
+                        <span>Duck Race (Ban/Pick)</span>
+                    </button>
                     <button onclick="transferMatchmakerResultToSimulation()" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold font-heading shadow-xs transition flex items-center justify-center gap-2">
                         <i class="fa-solid fa-gamepad text-sm"></i>
                         <span>Đưa Sang Mô Phỏng 5vs5</span>
