@@ -144,6 +144,11 @@ function displayTeamsResult(data) {
     const avgPower1 = data.team1_avg_elo || Math.round(totalPower1 / 5);
     const avgPower2 = data.team2_avg_elo || Math.round(totalPower2 / 5);
     const diffPower = data.power_difference;
+    const diffElo = diffPower;
+    const totalElo1 = totalPower1;
+    const totalElo2 = totalPower2;
+    const avgElo1 = avgPower1;
+    const avgElo2 = avgPower2;
 
     const diffElem = document.getElementById('res-power-diff');
     if (diffElem) diffElem.innerText = `${diffPower} điểm`;
@@ -162,7 +167,7 @@ function displayTeamsResult(data) {
     const rngBadge = document.getElementById('res-rng-badge');
     if (rngBadge) {
         if (data.rng_applied) {
-            rngBadge.innerHTML = `<i class="fa-solid fa-dice"></i> <span>RNG Cân Bằng: Sai số ±${diffElo} Elo</span>`;
+            rngBadge.innerHTML = `<i class="fa-solid fa-dice"></i> <span>RNG Cân Bằng: Sai số ±${diffPower} điểm</span>`;
             rngBadge.className = "px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold font-heading flex items-center gap-1.5";
         } else {
             rngBadge.innerHTML = `<i class="fa-solid fa-scale-balanced"></i> <span>Cân bằng tuyệt đối</span>`;
@@ -213,14 +218,14 @@ function displayTeamsResult(data) {
     }
 
     const t1PowerElem = document.getElementById('team1-power-text');
-    if (t1PowerElem) t1PowerElem.innerText = totalElo1;
+    if (t1PowerElem) t1PowerElem.innerText = totalPower1;
     const t1AvgElem = document.getElementById('team1-avg-text');
-    if (t1AvgElem) t1AvgElem.innerText = avgElo1;
+    if (t1AvgElem) t1AvgElem.innerText = avgPower1;
 
     const t2PowerElem = document.getElementById('team2-power-text');
-    if (t2PowerElem) t2PowerElem.innerText = totalElo2;
+    if (t2PowerElem) t2PowerElem.innerText = totalPower2;
     const t2AvgElem = document.getElementById('team2-avg-text');
-    if (t2AvgElem) t2AvgElem.innerText = avgElo2;
+    if (t2AvgElem) t2AvgElem.innerText = avgPower2;
 
     const t1ProbBadge = document.getElementById('team1-prob-badge');
     if (t1ProbBadge) t1ProbBadge.innerText = `${data.team1_win_prob}% Thắng`;
