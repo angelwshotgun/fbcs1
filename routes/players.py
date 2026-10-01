@@ -1,3 +1,5 @@
+import os
+import time
 from flask import Blueprint, request, jsonify, current_app
 from services.player_service import player_service
 
@@ -91,3 +93,49 @@ def api_delete_player(player_id: str):
         return jsonify({'success': False, 'error': message}), 400
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@players_bp.route('/api/players/<player_id>/duck_image', methods=['POST'])
+def api_upload_duck_image(player_id: str):
+    """Upload ảnh PNG hoặc cập nhật link ảnh vịt đua tùy chỉnh cho người chơi."""
+    try:
+        pid = str(player_id).strip().lower()
+        player = player_service.get_player(pid)
+        if not player:
+            return jsonify({'success': False, 'error': 'Không tìm thấy người chơi'}), 404
+
+        duck_img_url = ''
+
+        # 1. Trường hợp gửi Multipart Form File
+        if 'file' in request.files or 'duck_image' in request.files:
+            file = request.files.get('file') or request.files.get('duck_image')
+            if file and file.filename:
+                # Tạo thư mục uploads nếu chưa có
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                upload_dir = os.path.join(base_dir, 'static', 'uploads', 'ducks')
+                os.makedirs(upload_dir, exist_ok=True)
+
+                filename = f"{pid}.png"
+                file_path = os.path.join(upload_dir, filename)
+                file.save(file_path)
+                duck_img_url = f"/static/uploads/ducks/{filename}?t={int(time.time())}"
+
+        # 2. Trường hợp gửi JSON payload (URL hoặc Base64 Data URL)
+        elif request.is_json:
+            data = request.json or {}
+            duck_img_url = str(data.get('duck_image', '')).strip()
+
+        # Cập nhật hồ sơ tuyển thủ
+        success, msg, updated = player_service.update_player(pid, {'duck_image': duck_img_url})
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Đã cập nhật ảnh vịt đua thành công!',
+                'duck_image': duck_img_url,
+                'player': updated
+            }), 200
+        return jsonify({'success': False, 'error': msg}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error in api_upload_duck_image: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+

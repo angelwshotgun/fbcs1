@@ -3,11 +3,16 @@
 -- Chạy script này trong Supabase Dashboard > SQL Editor
 -- ==========================================================
 
+-- 0. CẤP QUYỀN TRUY CẬP SCHEMA PUBLIC CHO CÁC ROLE SUPABASE (TRÁNH LỖI 42501)
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON SCHEMA public TO postgres, anon, authenticated, service_role;
+
 -- 1. BẢNG HỒ SƠ TUYỂN THỦ (PLAYERS)
 CREATE TABLE IF NOT EXISTS public.players (
     id VARCHAR(64) PRIMARY KEY,
     nickname VARCHAR(100) NOT NULL,
     avatar TEXT,
+    duck_image TEXT,
     skill NUMERIC(4, 2) DEFAULT 7.00 CHECK (skill >= 1.0 AND skill <= 10.0),
     champion_pool NUMERIC(4, 2) DEFAULT 7.00 CHECK (champion_pool >= 1.0 AND champion_pool <= 10.0),
     flex_lane NUMERIC(4, 2) DEFAULT 6.50 CHECK (flex_lane >= 1.0 AND flex_lane <= 10.0),
@@ -85,23 +90,34 @@ CREATE TRIGGER tr_players_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_updated_at();
 
--- 5. PHÂN QUYỀN ROW LEVEL SECURITY (RLS)
--- Cho phép ứng dụng đọc và ghi thông qua anon key / service role key
+-- 5. CẤP QUYỀN TRÊN BẢNG VÀ PHÂN QUYỀN ROW LEVEL SECURITY (RLS)
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO postgres, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO postgres, anon, authenticated, service_role;
+
 ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.match_participants ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public read access to players" ON public.players FOR SELECT USING (true);
-CREATE POLICY "Allow service insert access to players" ON public.players FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow service update access to players" ON public.players FOR UPDATE USING (true);
-CREATE POLICY "Allow service delete access to players" ON public.players FOR DELETE USING (true);
+DROP POLICY IF EXISTS "Allow all for players" ON public.players;
+DROP POLICY IF EXISTS "Allow all for matches" ON public.matches;
+DROP POLICY IF EXISTS "Allow all for match_participants" ON public.match_participants;
 
-CREATE POLICY "Allow public read access to matches" ON public.matches FOR SELECT USING (true);
-CREATE POLICY "Allow service insert access to matches" ON public.matches FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow service update access to matches" ON public.matches FOR UPDATE USING (true);
-CREATE POLICY "Allow service delete access to matches" ON public.matches FOR DELETE USING (true);
+CREATE POLICY "Allow all for players" ON public.players
+FOR ALL TO anon, authenticated, service_role
+USING (true)
+WITH CHECK (true);
 
-CREATE POLICY "Allow public read access to match_participants" ON public.match_participants FOR SELECT USING (true);
-CREATE POLICY "Allow service insert access to match_participants" ON public.match_participants FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow service update access to match_participants" ON public.match_participants FOR UPDATE USING (true);
-CREATE POLICY "Allow service delete access to match_participants" ON public.match_participants FOR DELETE USING (true);
+CREATE POLICY "Allow all for matches" ON public.matches
+FOR ALL TO anon, authenticated, service_role
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY "Allow all for match_participants" ON public.match_participants
+FOR ALL TO anon, authenticated, service_role
+USING (true)
+WITH CHECK (true);

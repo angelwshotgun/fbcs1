@@ -149,6 +149,7 @@ class PlayerService:
                 'id': pid,
                 'nickname': profile.get('nickname', pid.capitalize()),
                 'avatar': profile.get('avatar', f"https://api.dicebear.com/7.x/bottts/svg?seed={pid}"),
+                'duck_image': profile.get('duck_image', ''),
                 'power_score': power_score,
                 'tier': tier,
                 'tier_name': tier_name,
@@ -251,11 +252,13 @@ class PlayerService:
 
         nickname = data.get('nickname', '').strip() or player_id.capitalize()
         avatar = data.get('avatar', '').strip() or f"https://api.dicebear.com/7.x/bottts/svg?seed={player_id}"
+        duck_image = data.get('duck_image', '').strip()
 
         new_player = {
             'id': player_id,
             'nickname': nickname,
-            'avatar': avatar
+            'avatar': avatar,
+            'duck_image': duck_image
         }
 
         success = data_manager.save_single_player(new_player)
@@ -287,6 +290,8 @@ class PlayerService:
             cur['nickname'] = str(data['nickname']).strip()
         if 'avatar' in data and data['avatar']:
             cur['avatar'] = str(data['avatar']).strip()
+        if 'duck_image' in data:
+            cur['duck_image'] = str(data['duck_image']).strip()
 
         # Loại bỏ các trường kỹ năng cảm tính cũ nếu có
         for old_field in ['skill', 'champion_pool', 'flex_lane', 'consistency', 'primary_role', 'favorite_champions']:

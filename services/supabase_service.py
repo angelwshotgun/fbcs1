@@ -143,6 +143,7 @@ class SupabaseService:
                 'id': pid,
                 'nickname': row.get('nickname', pid.capitalize()),
                 'avatar': row.get('avatar') or f"https://api.dicebear.com/7.x/bottts/svg?seed={pid}",
+                'duck_image': row.get('duck_image', ''),
                 'skill': float(row.get('skill', 7.0)),
                 'champion_pool': float(row.get('champion_pool', 7.0)),
                 'flex_lane': float(row.get('flex_lane', 6.5)),
@@ -177,6 +178,8 @@ class SupabaseService:
             'primary_role': p_data.get('primary_role', 'ALL'),
             'favorite_champions': p_data.get('favorite_champions', [])
         }
+        if 'duck_image' in p_data and p_data['duck_image']:
+            row['duck_image'] = p_data['duck_image']
 
         ok, res = self._request(
             'players',
@@ -184,6 +187,16 @@ class SupabaseService:
             data=row,
             prefer='resolution=merge-duplicates,return=representation'
         )
+        if not ok and 'duck_image' in row:
+            # Fallback nếu bảng Supabase chưa có cột duck_image
+            del row['duck_image']
+            ok, res = self._request(
+                'players',
+                method='POST',
+                data=row,
+                prefer='resolution=merge-duplicates,return=representation'
+            )
+
         if ok:
             return True, "Đã lưu tuyển thủ lên Supabase thành công"
         return False, str(res)

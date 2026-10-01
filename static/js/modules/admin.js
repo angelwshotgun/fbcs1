@@ -106,6 +106,9 @@ function openPlayerModal(mode, playerId = null) {
         document.getElementById('form-nickname').value = '';
         document.getElementById('form-avatar').value = '';
         document.getElementById('form-avatar-preview').src = 'https://api.dicebear.com/7.x/bottts/svg?seed=new';
+        if (document.getElementById('form-duck-image')) document.getElementById('form-duck-image').value = '';
+        if (document.getElementById('form-duck-file')) document.getElementById('form-duck-file').value = '';
+        if (document.getElementById('form-duck-preview')) document.getElementById('form-duck-preview').src = '/static/images/duck_default.svg';
         document.getElementById('form-display-badge').innerText = '🌱 Tân Binh';
         document.getElementById('form-display-power').innerText = '50.0';
         document.getElementById('form-display-record').innerText = '0 (0/0)';
@@ -119,6 +122,9 @@ function openPlayerModal(mode, playerId = null) {
         document.getElementById('form-nickname').value = p.nickname;
         document.getElementById('form-avatar').value = p.avatar;
         document.getElementById('form-avatar-preview').src = p.avatar;
+        if (document.getElementById('form-duck-image')) document.getElementById('form-duck-image').value = p.duck_image || '';
+        if (document.getElementById('form-duck-file')) document.getElementById('form-duck-file').value = '';
+        if (document.getElementById('form-duck-preview')) document.getElementById('form-duck-preview').src = p.duck_image || '/static/images/duck_default.svg';
 
         document.getElementById('form-display-badge').innerText = `${p.tier_icon || '🛡️'} ${p.tier_name || 'Tier B'}`;
         document.getElementById('form-display-power').innerText = `${p.power_score || 50.0}`;
@@ -134,6 +140,48 @@ function updateAvatarPreview(url) {
     if (url) {
         document.getElementById('form-avatar-preview').src = url;
     }
+}
+
+function updateDuckPreview(url) {
+    const preview = document.getElementById('form-duck-preview');
+    if (preview) {
+        preview.src = url ? url : '/static/images/duck_default.svg';
+    }
+}
+
+function resetDefaultDuckImage() {
+    const input = document.getElementById('form-duck-image');
+    const fileInput = document.getElementById('form-duck-file');
+    const preview = document.getElementById('form-duck-preview');
+    if (input) input.value = '';
+    if (fileInput) fileInput.value = '';
+    if (preview) preview.src = '/static/images/duck_default.svg';
+}
+
+function handleDuckFileSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'File quá lớn',
+            text: 'Vui lòng chọn ảnh dung lượng dưới 2MB để đảm bảo hiệu năng Canvas.',
+            ...SWAL_THEME
+        });
+        event.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        const input = document.getElementById('form-duck-image');
+        const preview = document.getElementById('form-duck-preview');
+        if (input) input.value = dataUrl;
+        if (preview) preview.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
 }
 
 function randomizeAvatar() {
@@ -153,6 +201,7 @@ async function handleSavePlayer(e) {
     const id = document.getElementById('form-id').value.trim().toLowerCase();
     const nickname = document.getElementById('form-nickname').value.trim();
     const avatar = document.getElementById('form-avatar').value.trim() || `https://api.dicebear.com/7.x/bottts/svg?seed=${id}`;
+    const duck_image = document.getElementById('form-duck-image') ? document.getElementById('form-duck-image').value.trim() : '';
 
     if (!id) {
         Swal.fire({
@@ -167,7 +216,8 @@ async function handleSavePlayer(e) {
     const payload = {
         id,
         nickname: nickname || id.toUpperCase(),
-        avatar
+        avatar,
+        duck_image
     };
 
     const saveBtn = document.getElementById('btn-save-player') || document.querySelector('#player-form button[type="submit"]');

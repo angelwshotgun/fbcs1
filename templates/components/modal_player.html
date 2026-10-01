@@ -43,6 +43,38 @@
                 </div>
             </div>
 
+            <!-- Vịt Đua Riêng (Duck Race Custom Sprite - PNG) -->
+            <div class="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <label class="font-bold text-amber-950 font-heading flex items-center gap-1.5 text-xs">
+                        <span>🦆</span>
+                        <span>Ảnh Vịt Đua Riêng (Duck Race — PNG)</span>
+                    </label>
+                    <span class="text-[10px] text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full font-semibold">Tùy chọn</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="relative w-12 h-12 rounded-2xl bg-gradient-to-b from-sky-400 to-sky-600 border border-sky-300 flex items-center justify-center p-1 shadow-inner shrink-0 overflow-hidden">
+                        <img id="form-duck-preview" src="/static/images/duck_default.svg" class="w-10 h-10 object-contain drop-shadow-sm transition-transform hover:scale-110" alt="Duck Preview">
+                    </div>
+                    <div class="flex-1 space-y-1.5">
+                        <div class="flex items-center gap-2">
+                            <label class="cursor-pointer px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl transition text-[11px] font-bold font-heading flex items-center gap-1.5 shadow-2xs">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span>Tải ảnh PNG lên</span>
+                                <input type="file" id="form-duck-file" accept="image/png,image/webp,image/jpeg,image/gif" onchange="handleDuckFileSelect(event)" class="hidden">
+                            </label>
+                            <button type="button" onclick="resetDefaultDuckImage()" class="px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-xl transition text-[11px] font-semibold" title="Khôi phục vịt vàng mặc định">
+                                <i class="fa-solid fa-rotate-left mr-1 text-slate-400"></i> Mặc định
+                            </button>
+                        </div>
+                        <input type="text" id="form-duck-image" oninput="updateDuckPreview(this.value)" placeholder="Hoặc dán URL ảnh PNG vịt đua..." class="w-full bg-white border border-amber-200 rounded-xl px-3 py-1.5 text-[11px] text-slate-800 focus:outline-none focus:border-amber-500 transition">
+                    </div>
+                </div>
+                <p class="text-[10px] text-amber-800/80 leading-tight">
+                    Khuyến nghị dùng ảnh PNG nền trong suốt (quay mặt sang phải) để vịt lướt sóng đẹp nhất trên đường đua!
+                </p>
+            </div>
+
             <!-- THỰC LỰC & PHÂN BẬC (TỰ ĐỘNG TÍNH TOÁN KHÁCH QUAN) -->
             <div class="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/70 to-purple-50/50 border border-indigo-100 space-y-2.5">
                 <div class="flex items-center justify-between">

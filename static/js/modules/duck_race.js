@@ -255,6 +255,9 @@ class ParticleSystem {
     }
 }
 
+// Embedded Default Duck SVG Data URI (100% resilient fallback)
+const DEFAULT_DUCK_DATA_URI = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128"><defs><linearGradient id="duckBody" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="%23fff176"/><stop offset="50%" stop-color="%23fdd835"/><stop offset="100%" stop-color="%23fbc02d"/></linearGradient><linearGradient id="duckWing" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23ffee58"/><stop offset="100%" stop-color="%23f9a825"/></linearGradient><linearGradient id="duckBeak" x1="0%" y1="0%" x2="100%" y2="50%"><stop offset="0%" stop-color="%23ff9800"/><stop offset="100%" stop-color="%23e65100"/></linearGradient></defs><path d="M 22 75 C 10 70 8 50 20 46 C 26 44 32 55 35 63 Z" fill="%23fbc02d" stroke="%23f57f17" stroke-width="2.5"/><ellipse cx="60" cy="80" rx="42" ry="32" fill="url(%23duckBody)" stroke="%23f57f17" stroke-width="2.5"/><path d="M 44 72 C 38 72 32 78 35 86 C 39 96 54 98 68 93 C 78 89 82 81 78 76 C 73 70 54 72 44 72 Z" fill="url(%23duckWing)" stroke="%23f57f17" stroke-width="2.5"/><path d="M 72 70 C 72 65 74 54 77 46 C 78 40 82 30 92 30 C 104 30 110 40 108 52 C 107 60 102 67 96 74 Z" fill="url(%23duckBody)" stroke="%23f57f17" stroke-width="2.5"/><path d="M 103 48 C 112 47 124 50 126 55 C 127 57 122 62 113 63 C 103 64 98 62 98 56 Z" fill="url(%23duckBeak)" stroke="%23bf360c" stroke-width="2"/><ellipse cx="94" cy="42" rx="6.5" ry="8" fill="%231e293b"/><ellipse cx="96" cy="39.5" rx="2.5" ry="3.5" fill="%23ffffff"/><circle cx="92.5" cy="45" r="1.2" fill="%23ffffff"/><ellipse cx="89" cy="54" rx="4.5" ry="3" fill="%23ff7043" opacity="0.4"/></svg>`;
+
 // Main Duck Race Game Class
 class DuckRaceGame {
     constructor(canvasId, allPlayers = []) {
@@ -275,13 +278,25 @@ class DuckRaceGame {
         this.activeToastTimer = null;
         this.lastTime = performance.now();
 
-        // Avatar image cache: { playerId: HTMLImageElement }
-        this.avatarImages = {};
+        // Image caches: avatar & custom duck sprites
+        this.avatarImages = {}; // { playerId: HTMLImageElement }
+        this.duckImages = {};   // { playerId: HTMLImageElement }
+        this.defaultDuckImg = new Image();
+        this.defaultDuckImg.crossOrigin = 'anonymous';
+        this.defaultDuckImg.src = '/static/images/duck_default.svg';
+        this.defaultDuckImg.onerror = () => {
+            this.defaultDuckImg.src = DEFAULT_DUCK_DATA_URI;
+        };
 
-        // Screen & Track Specs
-        this.laneCount = Math.max(2, allPlayers.length);
-        this.trackPaddingLeft = 175; // Sidebar space for avatar + name + rank
-        this.trackPaddingRight = 80; // Finish line buffer
+        // Camera & Virtual Track Specs (Zoomed Follow View)
+        this.zoom = 1.45;
+        this.cameraX = 0;
+        this.cameraY = 0;
+        this.targetCameraX = 0;
+        this.virtualTrackLength = 2600;
+        this.startLineX = 90;
+        this.finishLineX = 2480;
+        this.duckSize = 52;
     }
 
     init() {
@@ -291,7 +306,7 @@ class DuckRaceGame {
         }
         if (!this.canvas) return;
 
-        this.preloadAvatars();
+        this.preloadImages();
         this.resizeCanvas();
         if (!this.boundResize) {
             window.addEventListener('resize', this.boundResize = () => this.resizeCanvas());
@@ -303,7 +318,7 @@ class DuckRaceGame {
         this.updateDurationButtonsUI();
     }
 
-    preloadAvatars() {
+    preloadImages() {
         this.allPlayers.forEach(p => {
             if (p.avatar && !this.avatarImages[p.id]) {
                 const img = new Image();
@@ -311,12 +326,25 @@ class DuckRaceGame {
                 img.src = p.avatar;
                 this.avatarImages[p.id] = img;
             }
+            if (p.duck_image && !this.duckImages[p.id]) {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.src = p.duck_image;
+                this.duckImages[p.id] = img;
+            }
         });
+    }
+
+    getDuckImage(duck) {
+        if (duck.duck_image && this.duckImages[duck.id] && this.duckImages[duck.id].complete && this.duckImages[duck.id].naturalWidth > 0) {
+            return this.duckImages[duck.id];
+        }
+        return this.defaultDuckImg;
     }
 
     setAllPlayers(players) {
         this.allPlayers = players;
-        this.preloadAvatars();
+        this.preloadImages();
         this.setupDucks();
         this.resizeCanvas();
         this.renderStatic();
@@ -395,9 +423,8 @@ class DuckRaceGame {
         const dpr = window.devicePixelRatio || 1;
         const width = Math.max(640, Math.floor(rect.width));
         
-        // Dynamic track height according to player count (at least 380px, up to 640px)
-        const desiredHeight = Math.max(380, Math.min(640, this.laneCount * 46 + 40));
-        const height = desiredHeight;
+        // Open river height: at least 420px, up to 520px
+        const height = Math.max(420, Math.min(520, Math.floor(window.innerHeight * 0.52)));
 
         this.canvas.width = width * dpr;
         this.canvas.height = height * dpr;
@@ -408,21 +435,25 @@ class DuckRaceGame {
         this.ctx.scale(dpr, dpr);
         this.logicalWidth = width;
         this.logicalHeight = height;
-        this.laneHeight = (this.logicalHeight - 20) / Math.max(1, this.laneCount);
-        this.finishLineX = this.logicalWidth - this.trackPaddingRight;
+
+        // Dynamic Virtual Track Length based on race duration
+        this.virtualTrackLength = Math.max(2400, this.targetDuration * 85);
+        this.startLineX = 90;
+        this.finishLineX = this.virtualTrackLength - 120;
     }
 
     setupDucks() {
         this.ducks = [];
         this.finishOrder = [];
+        this.cameraX = 0;
+        this.targetCameraX = 0;
 
         const activePlayers = this.getActivePlayers();
-        this.laneCount = Math.max(1, activePlayers.length);
-        this.laneHeight = (this.logicalHeight - 20) / this.laneCount;
+        const N = Math.max(1, activePlayers.length);
 
-        const trackLength = Math.max(200, this.finishLineX - this.trackPaddingLeft);
+        const trackDist = this.finishLineX - this.startLineX;
         const totalFrames = Math.max(300, this.targetDuration * 60);
-        const nominalSpeed = trackLength / totalFrames;
+        const nominalSpeed = trackDist / totalFrames;
 
         const countSpans = [
             document.getElementById('duck-total-count'),
@@ -430,20 +461,35 @@ class DuckRaceGame {
         ];
         countSpans.forEach(s => { if (s) s.innerText = activePlayers.length; });
 
+        // Open river vertical swimming zone
+        const waterTop = 50;
+        const waterBottom = this.logicalHeight - 50;
+        const waterSpan = waterBottom - waterTop;
+
         activePlayers.forEach((p, idx) => {
-            const variance = (Math.random() - 0.5) * 0.24;
+            const variance = (Math.random() - 0.5) * 0.22;
             const baseSpd = nominalSpeed * (1 + variance);
+
+            // Natural staggered open-river placement (no rigid lanes)
+            const rowStep = (waterSpan - 40) / Math.max(1, N - 1 || 1);
+            const baseY = N === 1 ? waterTop + waterSpan / 2 : waterTop + 20 + idx * rowStep;
+            const jitterY = (Math.random() - 0.5) * 14;
+            const startX = this.startLineX - 25 + (Math.random() - 0.5) * 40;
 
             this.ducks.push({
                 id: p.id,
                 nickname: p.nickname || `Tuyển Thủ ${idx + 1}`,
                 team: p.team || 0,
                 avatar: p.avatar,
-                lane: idx,
-                x: 0,
+                duck_image: p.duck_image || '',
+                x: startX,
+                y: Math.max(waterTop + 22, Math.min(waterBottom - 22, baseY + jitterY)),
+                baseY: Math.max(waterTop + 22, Math.min(waterBottom - 22, baseY + jitterY)),
+                driftSeed: Math.random() * Math.PI * 2,
                 baseSpeed: baseSpd,
                 nominalSpeed: nominalSpeed,
                 speedMultiplier: 1.0,
+                tiltAngle: 0,
                 effect: null,
                 effectDuration: 0,
                 spinAngle: 0,
@@ -659,7 +705,8 @@ class DuckRaceGame {
             this.nextEventCheck = now + minInterval + Math.random() * randInterval;
         }
 
-        const trackLength = this.finishLineX - this.trackPaddingLeft;
+        const waterTop = 50;
+        const waterBottom = this.logicalHeight - 50;
 
         for (const duck of this.ducks) {
             if (duck.finished) continue;
@@ -673,20 +720,25 @@ class DuckRaceGame {
             }
 
             duck.bobOffset += 0.12;
-            const strokeRhythm = 1 + Math.sin(duck.bobOffset * 2) * 0.25;
-            const noise = (Math.random() - 0.48) * (duck.nominalSpeed * 0.35);
+            const strokeRhythm = 1 + Math.sin(duck.bobOffset * 2) * 0.22;
+            const noise = (Math.random() - 0.48) * (duck.nominalSpeed * 0.30);
 
             const speed = (duck.baseSpeed * duck.speedMultiplier * strokeRhythm + noise) * (dt / 16.6);
             duck.x += Math.max(0.1, speed);
 
-            const currentLaneY = 15 + duck.lane * this.laneHeight + this.laneHeight / 2;
+            // Natural undulating sinusoidal swimming drift inside open river
+            const drift = Math.sin(now * 0.002 + duck.driftSeed) * 13 + Math.sin(now * 0.004 + duck.driftSeed * 2.3) * 6;
+            duck.y = Math.max(waterTop + 24, Math.min(waterBottom - 24, duck.baseY + drift));
 
-            if (Math.random() < 0.25) {
-                this.particles.addWaterSplash(this.trackPaddingLeft + duck.x - 15, currentLaneY);
+            // Tilt forward on boost
+            duck.tiltAngle = (duck.speedMultiplier > 1.2 ? 0.14 : (duck.speedMultiplier < 0.8 ? -0.09 : 0));
+
+            if (Math.random() < 0.28) {
+                this.particles.addWaterSplash(duck.x - 22, duck.y + Math.sin(duck.bobOffset) * 2.8);
             }
 
             if (duck.effect === 'boost' || duck.effect === 'tailwind') {
-                this.particles.addFireTrail(this.trackPaddingLeft + duck.x, currentLaneY);
+                this.particles.addFireTrail(duck.x - 18, duck.y);
             }
 
             if (duck.effect === 'whirlpool') {
@@ -695,13 +747,13 @@ class DuckRaceGame {
                 duck.spinAngle = 0;
             }
 
-            if (duck.x >= trackLength) {
+            if (duck.x >= this.finishLineX) {
                 duck.finished = true;
                 duck.finishTime = now;
                 duck.rank = this.finishOrder.length + 1;
                 this.finishOrder.push(duck);
 
-                this.particles.addConfetti(this.finishLineX, currentLaneY, 25);
+                this.particles.addConfetti(this.finishLineX, duck.y, 35);
 
                 if (duck.rank === 1) {
                     duckAudio.playFinishFanfare();
@@ -712,6 +764,22 @@ class DuckRaceGame {
 
                 this.updateResultUI();
             }
+        }
+
+        // Camera Follow Logic (Smooth Tracking Camera Zoomed on the Flock)
+        const activeDucks = this.ducks.filter(d => !d.finished);
+        const viewW = this.logicalWidth / this.zoom;
+        if (activeDucks.length > 0) {
+            const leaderX = Math.max(...activeDucks.map(d => d.x));
+            const avgX = activeDucks.reduce((s, d) => s + d.x, 0) / activeDucks.length;
+            const focusX = leaderX * 0.65 + avgX * 0.35;
+            let targetX = focusX - viewW * 0.40;
+            const maxCamX = Math.max(0, this.finishLineX - viewW * 0.70);
+            targetX = Math.max(0, Math.min(targetX, maxCamX));
+            this.cameraX += (targetX - this.cameraX) * 0.08;
+        } else {
+            const targetX = Math.max(0, this.finishLineX - viewW * 0.60);
+            this.cameraX += (targetX - this.cameraX) * 0.05;
         }
 
         if (this.finishOrder.length === this.ducks.length && this.state === 'racing') {
@@ -808,7 +876,7 @@ class DuckRaceGame {
         ];
         btnRestarts.forEach(b => { if (b) b.classList.remove('hidden'); });
 
-        this.particles.addConfetti(this.logicalWidth / 2, this.logicalHeight / 2, 80);
+        this.particles.addConfetti(this.finishLineX, this.logicalHeight / 2, 80);
     }
 
     render() {
@@ -819,98 +887,143 @@ class DuckRaceGame {
 
         ctx.clearRect(0, 0, W, H);
 
-        this.drawRiver(W, H);
-        this.drawLanes(W, H);
+        ctx.save();
+        // Zoom and follow flock
+        ctx.scale(this.zoom, this.zoom);
+        ctx.translate(-this.cameraX, -this.cameraY);
+
+        const viewW = W / this.zoom;
+        const startDrawX = this.cameraX - 100;
+        const endDrawX = this.cameraX + viewW + 100;
+
+        // 1. Draw River & Water Waves
+        this.drawRiverEnvironment(startDrawX, endDrawX, H);
+
+        // 2. Draw Start Line & Track Props
+        this.drawTrackScenery(startDrawX, endDrawX, H);
+
+        // 3. Draw Finish Line
         this.drawFinishLine(H);
 
-        for (const duck of this.ducks) {
+        // 4. Draw Ducks with Z-Ordering (Y-depth sorting: background ducks first, foreground ducks overlap on top!)
+        const sortedDucks = [...this.ducks].sort((a, b) => a.y - b.y);
+        for (const duck of sortedDucks) {
             this.drawDuck(duck);
         }
 
+        // 5. Draw Particle System
         this.particles.draw(ctx);
+
+        ctx.restore();
     }
 
     renderStatic() {
         this.render();
     }
 
-    drawRiver(W, H) {
+    drawRiverEnvironment(startDrawX, endDrawX, H) {
         const ctx = this.ctx;
+
+        // River water gradient
         const riverGrad = ctx.createLinearGradient(0, 0, 0, H);
         riverGrad.addColorStop(0, '#0c4a6e');
         riverGrad.addColorStop(0.5, '#075985');
         riverGrad.addColorStop(1, '#0369a1');
         ctx.fillStyle = riverGrad;
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillRect(startDrawX, 0, endDrawX - startDrawX, H);
 
+        // Animated wavy surface water lines
         ctx.save();
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
         ctx.lineWidth = 1.5;
 
-        for (let y = 10; y < H; y += 35) {
+        for (let y = 50; y < H - 50; y += 38) {
             ctx.beginPath();
-            for (let x = 0; x < W; x += 15) {
-                const waveY = y + Math.sin((x * 0.02) + this.waveOffset + (y * 0.1)) * 3;
-                if (x === 0) ctx.moveTo(x, waveY);
+            const step = 20;
+            const startXAligned = Math.floor(startDrawX / step) * step;
+            for (let x = startXAligned; x < endDrawX; x += step) {
+                const waveY = y + Math.sin((x * 0.02) + this.waveOffset + (y * 0.1)) * 3.5;
+                if (x === startXAligned) ctx.moveTo(x, waveY);
                 else ctx.lineTo(x, waveY);
             }
             ctx.stroke();
         }
         ctx.restore();
+
+        // Top River Bank (Grass + Stone border + Water foam)
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(startDrawX, 0, endDrawX - startDrawX, 26);
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(startDrawX, 26, endDrawX - startDrawX, 6);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fillRect(startDrawX, 32, endDrawX - startDrawX, 2.5);
+
+        // Bottom River Bank (Water foam + Stone border + Grass)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fillRect(startDrawX, H - 34.5, endDrawX - startDrawX, 2.5);
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(startDrawX, H - 32, endDrawX - startDrawX, 6);
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(startDrawX, H - 26, endDrawX - startDrawX, 26);
     }
 
-    drawLanes(W, H) {
+    drawTrackScenery(startDrawX, endDrawX, H) {
         const ctx = this.ctx;
 
-        for (let i = 0; i < this.laneCount; i++) {
-            const duck = this.ducks[i];
-            const laneY = 10 + i * this.laneHeight;
-            if (duck) {
-                const isBlue = duck.team === 1;
-                const isRed = duck.team === 2;
-                const alpha = (i % 2 === 0) ? 0.06 : 0.10;
-                if (isBlue) {
-                    ctx.fillStyle = `rgba(59, 130, 246, ${alpha})`;
-                } else if (isRed) {
-                    ctx.fillStyle = `rgba(244, 63, 94, ${alpha})`;
-                } else {
-                    ctx.fillStyle = `rgba(245, 158, 11, ${alpha * 0.7})`;
-                }
-                ctx.fillRect(this.trackPaddingLeft - 10, laneY, W - this.trackPaddingLeft + 10, this.laneHeight);
-            }
-        }
+        // Start Line & Wooden Platform
+        if (this.startLineX >= startDrawX - 60 && this.startLineX <= endDrawX + 60) {
+            ctx.save();
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(this.startLineX - 35, 32, 18, H - 64);
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(this.startLineX - 35, 32, 18, H - 64);
 
-        const sideGrad = ctx.createLinearGradient(0, 0, this.trackPaddingLeft - 10, 0);
-        sideGrad.addColorStop(0, 'rgba(2, 6, 23, 0.92)');
-        sideGrad.addColorStop(1, 'rgba(15, 23, 42, 0.88)');
-        ctx.fillStyle = sideGrad;
-        ctx.fillRect(0, 0, this.trackPaddingLeft - 10, H);
-
-        ctx.strokeStyle = 'rgba(99, 102, 241, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(this.trackPaddingLeft - 10, 0);
-        ctx.lineTo(this.trackPaddingLeft - 10, H);
-        ctx.stroke();
-
-        for (let i = 0; i <= this.laneCount; i++) {
-            const y = 10 + i * this.laneHeight;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([3, 8]);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 8]);
             ctx.beginPath();
-            ctx.moveTo(this.trackPaddingLeft - 10, y);
-            ctx.lineTo(W, y);
+            ctx.moveTo(this.startLineX, 32);
+            ctx.lineTo(this.startLineX, H - 32);
             ctx.stroke();
             ctx.setLineDash([]);
 
-            if (i < this.laneCount) {
-                for (let bx = this.trackPaddingLeft + 60; bx < this.finishLineX - 30; bx += 120) {
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-                    ctx.beginPath();
-                    ctx.arc(bx, y, 2, 0, Math.PI * 2);
-                    ctx.fill();
-                }
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 11px font-heading, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('🏁 START', this.startLineX - 26, 22);
+            ctx.restore();
+        }
+
+        // Distance markers / floating buoys along the river
+        for (let dist = 500; dist < this.finishLineX - 200; dist += 500) {
+            if (dist >= startDrawX - 40 && dist <= endDrawX + 40) {
+                ctx.save();
+                // Floating red/white buoy
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(dist, 44, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(dist, 44, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+                ctx.font = 'bold 9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${dist}m`, dist, 60);
+
+                // Bottom buoy
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(dist, H - 44, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(dist, H - 44, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
             }
         }
     }
@@ -918,10 +1031,10 @@ class DuckRaceGame {
     drawFinishLine(H) {
         const ctx = this.ctx;
         const x = this.finishLineX;
-        const boxSize = 10;
+        const boxSize = 12;
 
         ctx.save();
-        for (let y = 10; y < H - 10; y += boxSize) {
+        for (let y = 32; y < H - 32; y += boxSize) {
             const isWhite1 = Math.floor(y / boxSize) % 2 === 0;
             ctx.fillStyle = isWhite1 ? '#ffffff' : '#0f172a';
             ctx.fillRect(x, y, boxSize, boxSize);
@@ -931,240 +1044,137 @@ class DuckRaceGame {
         }
 
         ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3.5;
         ctx.beginPath();
-        ctx.moveTo(x, 5);
-        ctx.lineTo(x, H - 5);
+        ctx.moveTo(x, 26);
+        ctx.lineTo(x, H - 26);
         ctx.stroke();
 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.font = 'bold 9px sans-serif';
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(x - 8, 8, boxSize * 2 + 16, 18);
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '900 10px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('FINISH', x + boxSize, 8);
+        ctx.textBaseline = 'middle';
+        ctx.fillText('FINISH', x + boxSize, 18);
         ctx.restore();
     }
 
     drawDuck(duck) {
         const ctx = this.ctx;
-        const laneY = 10 + duck.lane * this.laneHeight;
-        const centerY = laneY + this.laneHeight / 2;
-        const isBlue = duck.team === 1;
-        const isRed = duck.team === 2;
-        const teamColor = isBlue ? '#3b82f6' : (isRed ? '#f43f5e' : '#f59e0b');
-        const teamColorLight = isBlue ? '#93c5fd' : (isRed ? '#fda4af' : '#fde68a');
+        const img = this.getDuckImage(duck);
+        const size = this.duckSize;
+        const bobbingY = Math.sin(duck.bobOffset) * 2.8;
 
-        // ─── SIDEBAR: Avatar + Name ───
+        // 1. Water Contact Shadow
         ctx.save();
-
-        const avatarImg = this.avatarImages[duck.id];
-        const avatarSize = Math.min(22, this.laneHeight * 0.55);
-        const avatarX = 8 + avatarSize / 2;
-        const avatarY = centerY;
-
-        if (avatarImg && avatarImg.complete && avatarImg.naturalWidth > 0) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(avatarX, avatarY, avatarSize / 2, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.clip();
-            ctx.drawImage(avatarImg, avatarX - avatarSize / 2, avatarY - avatarSize / 2, avatarSize, avatarSize);
-            ctx.restore();
-            ctx.strokeStyle = teamColor;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(avatarX, avatarY, avatarSize / 2 + 1, 0, Math.PI * 2);
-            ctx.stroke();
-        } else {
-            ctx.fillStyle = teamColor;
-            ctx.beginPath();
-            ctx.arc(avatarX, avatarY, avatarSize / 2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.font = `bold ${Math.round(avatarSize * 0.5)}px "Outfit", sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(duck.nickname.charAt(0).toUpperCase(), avatarX, avatarY);
-        }
-
-        const nameX = avatarX + avatarSize / 2 + 7;
-        ctx.fillStyle = '#e2e8f0';
-        ctx.font = `bold ${Math.min(11, this.laneHeight * 0.28)}px "Plus Jakarta Sans", sans-serif`;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        let displayName = duck.nickname;
-        if (displayName.length > 11) {
-            displayName = displayName.substring(0, 10) + '…';
-        }
-        ctx.fillText(displayName, nameX, centerY);
-
-        if (duck.finished && duck.rank) {
-            const badgeX = this.trackPaddingLeft - 24;
-            const badgeRadius = Math.min(10, this.laneHeight * 0.22);
-            ctx.fillStyle = duck.rank === 1 ? '#f59e0b' : (duck.rank <= 3 ? '#94a3b8' : 'rgba(100, 116, 139, 0.5)');
-            ctx.beginPath();
-            ctx.arc(badgeX, centerY, badgeRadius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = duck.rank <= 3 ? '#0f172a' : '#e2e8f0';
-            ctx.font = `bold ${Math.round(badgeRadius * 1.1)}px "Outfit", sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${duck.rank}`, badgeX, centerY + 0.5);
-        }
-        ctx.restore();
-
-        // ─── DUCK ON TRACK ───
-        const duckX = this.trackPaddingLeft + duck.x;
-        const bobbingY = centerY + Math.sin(duck.bobOffset) * 2.5;
-        const scale = this.laneCount <= 5 ? 1.35 : (this.laneCount <= 8 ? 1.15 : 1.0);
-
-        ctx.save();
-        ctx.globalAlpha = 0.25;
-        const wakeGrad = ctx.createLinearGradient(duckX - 50 * scale, bobbingY, duckX - 5 * scale, bobbingY);
-        wakeGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-        wakeGrad.addColorStop(1, teamColorLight);
-        ctx.strokeStyle = wakeGrad;
-        ctx.lineWidth = 4 * scale;
-        ctx.lineCap = 'round';
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.24)';
         ctx.beginPath();
-        ctx.moveTo(duckX - 45 * scale, bobbingY + 2);
-        ctx.quadraticCurveTo(duckX - 25 * scale, bobbingY + Math.sin(duck.bobOffset * 1.3) * 3, duckX - 8 * scale, bobbingY);
+        ctx.ellipse(duck.x, duck.y + bobbingY + size * 0.30, size * 0.40, size * 0.14, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Water Wake Waves
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(duck.x - size * 0.35, duck.y + bobbingY + 2, size * 0.20, Math.PI * 0.6, Math.PI * 1.4);
         ctx.stroke();
         ctx.restore();
 
+        // 2. Standardized 2D Image Duck Sprite
         ctx.save();
-        ctx.translate(duckX, bobbingY);
-        ctx.scale(scale, scale);
+        ctx.translate(duck.x, duck.y + bobbingY);
 
         if (duck.spinAngle !== 0) {
             ctx.rotate(duck.spinAngle);
+        } else if (duck.tiltAngle !== 0) {
+            ctx.rotate(duck.tiltAngle);
         }
 
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.beginPath();
-        ctx.ellipse(0, 6, 16, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
+        // Draw the Duck Image
+        ctx.drawImage(img, -size / 2, -size / 2, size, size);
 
-        ctx.fillStyle = '#facc15';
-        ctx.strokeStyle = '#ca8a04';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 15, 11, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#eab308';
-        ctx.beginPath();
-        ctx.moveTo(-11, -3);
-        ctx.quadraticCurveTo(-20, -10, -15, -1);
-        ctx.quadraticCurveTo(-20, -5, -12, 2);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.strokeStyle = 'rgba(202, 138, 4, 0.5)';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.ellipse(-2, 2, 8, 5, -0.2, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.fillStyle = '#facc15';
-        ctx.strokeStyle = '#ca8a04';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.arc(9, -7, 9, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#ea580c';
-        ctx.beginPath();
-        ctx.moveTo(15, -8);
-        ctx.lineTo(23, -6);
-        ctx.lineTo(15, -3);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.strokeStyle = '#c2410c';
-        ctx.lineWidth = 0.6;
-        ctx.beginPath();
-        ctx.moveTo(15, -5.5);
-        ctx.lineTo(22, -5.5);
-        ctx.stroke();
-
-        ctx.fillStyle = '#1e293b';
-        ctx.beginPath();
-        ctx.arc(11, -9, 2.2, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(11.8, -9.8, 0.8, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = isBlue ? '#2563eb' : (isRed ? '#e11d48' : '#d97706');
-        ctx.beginPath();
-        ctx.arc(8, -12, 5.5, Math.PI * 0.85, Math.PI * 2.15);
-        ctx.fill();
-
-        ctx.fillStyle = isBlue ? '#1d4ed8' : (isRed ? '#be123c' : '#b45309');
-        ctx.beginPath();
-        ctx.arc(3, -14, 2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(1, -13, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-
+        // Powerup Indicators
         if (duck.effect === 'boost' || duck.effect === 'tailwind') {
             ctx.font = '16px sans-serif';
-            ctx.fillText('🚀', -22, -8);
+            ctx.fillText('🚀', -size * 0.5, -size * 0.15);
         } else if (duck.effect === 'shock') {
             ctx.font = '17px sans-serif';
-            ctx.fillText('⚡', -2, -18);
+            ctx.fillText('⚡', 0, -size * 0.42);
         } else if (duck.effect === 'whirlpool') {
             ctx.font = '16px sans-serif';
-            ctx.fillText('🌀', -2, -18);
+            ctx.fillText('🌀', 0, -size * 0.42);
         }
-
         ctx.restore();
 
-        // Floating Avatar Bubble
-        if (avatarImg && avatarImg.complete && avatarImg.naturalWidth > 0) {
-            const bubbleSize = this.laneCount <= 5 ? 22 : (this.laneCount <= 8 ? 18 : 16);
-            const bubbleX = duckX;
-            const bubbleY = bobbingY - (22 * scale) - bubbleSize / 2;
+        // 3. Clean Name Tag (Option B: No team badge, just clear pill with mini avatar and nickname)
+        ctx.save();
+        const avatarImg = this.avatarImages[duck.id];
+        let displayName = duck.nickname;
+        if (displayName.length > 12) {
+            displayName = displayName.substring(0, 11) + '…';
+        }
 
+        ctx.font = 'bold 9.5px "Plus Jakarta Sans", sans-serif';
+        const textMetrics = ctx.measureText(displayName);
+        const textW = textMetrics.width;
+        const hasAvatar = avatarImg && avatarImg.complete && avatarImg.naturalWidth > 0;
+        const tagH = 17;
+        const tagW = textW + (hasAvatar ? 23 : 13);
+        const tagY = duck.y + bobbingY - size * 0.54;
+        const tagX = duck.x - tagW / 2;
+
+        // Dark translucent glassmorphism pill
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(tagX, tagY - tagH / 2, tagW, tagH, 8.5);
+        } else {
+            ctx.rect(tagX, tagY - tagH / 2, tagW, tagH);
+        }
+        ctx.fill();
+        ctx.strokeStyle = duck.finished && duck.rank === 1 ? '#f59e0b' : 'rgba(255, 255, 255, 0.22)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        let textStartX = tagX + 6;
+        if (hasAvatar) {
+            const avR = 6;
+            const avX = tagX + 8;
             ctx.save();
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-            ctx.shadowBlur = 4;
-            ctx.shadowOffsetY = 2;
-
-            ctx.fillStyle = '#ffffff';
             ctx.beginPath();
-            ctx.arc(bubbleX, bubbleY, bubbleSize / 2 + 2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            ctx.strokeStyle = teamColor;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(bubbleX, bubbleY, bubbleSize / 2 + 2, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(bubbleX, bubbleY, bubbleSize / 2, 0, Math.PI * 2);
+            ctx.arc(avX, tagY, avR, 0, Math.PI * 2);
             ctx.closePath();
             ctx.clip();
-            ctx.drawImage(avatarImg, bubbleX - bubbleSize / 2, bubbleY - bubbleSize / 2, bubbleSize, bubbleSize);
+            ctx.drawImage(avatarImg, avX - avR, tagY - avR, avR * 2, avR * 2);
             ctx.restore();
-
-            ctx.save();
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.moveTo(bubbleX - 3, bubbleY + bubbleSize / 2 + 1);
-            ctx.lineTo(bubbleX + 3, bubbleY + bubbleSize / 2 + 1);
-            ctx.lineTo(bubbleX, bubbleY + bubbleSize / 2 + 5);
-            ctx.closePath();
-            ctx.fill();
-            ctx.restore();
+            textStartX = tagX + 17;
         }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(displayName, textStartX, tagY);
+
+        // Rank Medal next to name if finished
+        if (duck.finished && duck.rank) {
+            const badgeX = tagX + tagW + 7;
+            let medal = `${duck.rank}`;
+            let bg = '#64748b';
+            if (duck.rank === 1) { medal = '🥇'; bg = '#f59e0b'; }
+            else if (duck.rank === 2) { medal = '🥈'; bg = '#94a3b8'; }
+            else if (duck.rank === 3) { medal = '🥉'; bg = '#d97706'; }
+
+            ctx.fillStyle = bg;
+            ctx.beginPath();
+            ctx.arc(badgeX, tagY, 7.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 8.5px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(medal, badgeX, tagY + 0.5);
+        }
+        ctx.restore();
     }
 
     updateStatusText(text) {
@@ -1249,6 +1259,7 @@ function initDuckRaceTab() {
                 id: p.id,
                 nickname: p.nickname,
                 avatar: p.avatar,
+                duck_image: p.duck_image || '',
                 team: idx < 5 ? 1 : 2
             }));
         }
@@ -1351,8 +1362,8 @@ function loadTeamsToDuckRaceRoster(showToast = true) {
     }
 
     duckRaceRoster = [
-        ...currentTeamsResult.team1.map(p => ({ ...p, team: 1 })),
-        ...currentTeamsResult.team2.map(p => ({ ...p, team: 2 }))
+        ...currentTeamsResult.team1.map(p => ({ ...p, duck_image: p.duck_image || '', team: 1 })),
+        ...currentTeamsResult.team2.map(p => ({ ...p, duck_image: p.duck_image || '', team: 2 }))
     ];
     renderDuckRaceRoster();
 
@@ -1390,6 +1401,7 @@ function addRandomPlayersToRoster(count = 10) {
                 id: p.id,
                 nickname: p.nickname,
                 avatar: p.avatar,
+                duck_image: p.duck_image || '',
                 team: idx < Math.floor(count / 2) ? 1 : 2
             });
         }
@@ -1487,7 +1499,7 @@ function renderSystemPlayerPickerGrid() {
         }`;
         card.onclick = () => {
             if (!isAdded) {
-                duckRaceRoster.push({ id: p.id, nickname: p.nickname, avatar: p.avatar, team: 0 });
+                duckRaceRoster.push({ id: p.id, nickname: p.nickname, avatar: p.avatar, duck_image: p.duck_image || '', team: 0 });
                 renderDuckRaceRoster();
                 renderSystemPlayerPickerGrid();
             }

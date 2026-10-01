@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <!-- Thân vịt gradient -->
+    <linearGradient id="duckBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff176"/>
+      <stop offset="50%" stop-color="#fdd835"/>
+      <stop offset="100%" stop-color="#fbc02d"/>
+    </linearGradient>
+    <!-- Cánh vịt gradient -->
+    <linearGradient id="duckWing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffee58"/>
+      <stop offset="100%" stop-color="#f9a825"/>
+    </linearGradient>
+    <!-- Mỏ vịt gradient -->
+    <linearGradient id="duckBeak" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#ff9800"/>
+      <stop offset="100%" stop-color="#e65100"/>
+    </linearGradient>
+    <!-- Kính bơi gradient -->
+    <linearGradient id="goggleGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Đuôi vịt -->
+  <path d="M 22 75 C 10 70 8 50 20 46 C 26 44 32 55 35 63 Z" fill="#fbc02d" stroke="#f57f17" stroke-width="2.5" stroke-linejoin="round"/>
+
+  <!-- Thân vịt -->
+  <ellipse cx="60" cy="80" rx="42" ry="32" fill="url(#duckBody)" stroke="#f57f17" stroke-width="2.5"/>
+
+  <!-- Cánh vịt -->
+  <path d="M 44 72 C 38 72 32 78 35 86 C 39 96 54 98 68 93 C 78 89 82 81 78 76 C 73 70 54 72 44 72 Z" fill="url(#duckWing)" stroke="#f57f17" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Chi tiết lông cánh -->
+  <path d="M 48 80 C 56 82 68 83 72 79" stroke="#f57f17" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <path d="M 45 86 C 53 88 64 89 67 85" stroke="#f57f17" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+  <!-- Cổ & Đầu vịt -->
+  <path d="M 72 70 C 72 65 74 54 77 46 C 78 40 82 30 92 30 C 104 30 110 40 108 52 C 107 60 102 67 96 74 Z" fill="url(#duckBody)" stroke="#f57f17" stroke-width="2.5" stroke-linejoin="round"/>
+
+  <!-- Mỏ vịt xinh xắn hướng sang phải -->
+  <path d="M 103 48 C 112 47 124 50 126 55 C 127 57 122 62 113 63 C 103 64 98 62 98 56 Z" fill="url(#duckBeak)" stroke="#bf360c" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Đường cười khóe mỏ -->
+  <path d="M 102 55 C 112 55 120 56 124 56" stroke="#bf360c" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Mắt vịt to tròn đáng yêu -->
+  <ellipse cx="94" cy="42" rx="6.5" ry="8" fill="#1e293b"/>
+  <!-- Con ngươi & đốm sáng lấp lánh -->
+  <ellipse cx="96" cy="39.5" rx="2.5" ry="3.5" fill="#ffffff"/>
+  <circle cx="92.5" cy="45" r="1.2" fill="#ffffff"/>
+
+  <!-- Má hồng ngộ nghĩnh -->
+  <ellipse cx="89" cy="54" rx="4.5" ry="3" fill="#ff7043" opacity="0.4"/>
+
+  <!-- Băng đô / Mũ bơi thể thao màu xanh cá tính -->
+  <path d="M 80 34 C 84 27 98 25 107 33" stroke="#0284c7" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <circle cx="81" cy="35" r="3.5" fill="#38bdf8"/>
+</svg>
