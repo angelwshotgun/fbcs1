@@ -282,14 +282,14 @@ class DuckRaceGame {
         this.avatarImages = {}; // { playerId: HTMLImageElement }
         this.duckImages = {};   // { playerId: HTMLImageElement }
         this.defaultDuckImg = new Image();
-        this.defaultDuckImg.crossOrigin = 'anonymous';
         this.defaultDuckImg.src = '/static/images/duck_default.svg';
         this.defaultDuckImg.onerror = () => {
             this.defaultDuckImg.src = DEFAULT_DUCK_DATA_URI;
         };
 
         // Camera & Virtual Track Specs (Zoomed Follow View)
-        this.zoom = 1.45;
+        this.worldHeight = 360;
+        this.zoom = 1.25;
         this.cameraX = 0;
         this.cameraY = 0;
         this.targetCameraX = 0;
@@ -322,13 +322,13 @@ class DuckRaceGame {
         this.allPlayers.forEach(p => {
             if (p.avatar && !this.avatarImages[p.id]) {
                 const img = new Image();
-                img.crossOrigin = 'anonymous';
+                img.referrerPolicy = 'no-referrer';
                 img.src = p.avatar;
                 this.avatarImages[p.id] = img;
             }
             if (p.duck_image && !this.duckImages[p.id]) {
                 const img = new Image();
-                img.crossOrigin = 'anonymous';
+                img.referrerPolicy = 'no-referrer';
                 img.src = p.duck_image;
                 this.duckImages[p.id] = img;
             }
@@ -436,6 +436,10 @@ class DuckRaceGame {
         this.logicalWidth = width;
         this.logicalHeight = height;
 
+        // Virtual World Scaling: Fit river height exactly into canvas height
+        this.worldHeight = 360;
+        this.zoom = this.logicalHeight / this.worldHeight;
+
         // Dynamic Virtual Track Length based on race duration
         this.virtualTrackLength = Math.max(2400, this.targetDuration * 85);
         this.startLineX = 90;
@@ -461,20 +465,40 @@ class DuckRaceGame {
         ];
         countSpans.forEach(s => { if (s) s.innerText = activePlayers.length; });
 
-        // Open river vertical swimming zone
-        const waterTop = 50;
-        const waterBottom = this.logicalHeight - 50;
+        // Open river vertical swimming zone (in world coordinates [0, this.worldHeight])
+        const waterTop = 36;
+        const waterBottom = this.worldHeight - 36;
         const waterSpan = waterBottom - waterTop;
+
+        // Determine columns for starting grid: 1 col for <=5 ducks, 2 cols for 6-12 ducks, 3 cols for >12 ducks
+        const cols = N > 12 ? 3 : (N > 5 ? 2 : 1);
+        const rows = Math.ceil(N / cols);
+        const rowStep = rows > 1 ? (waterSpan - 36) / (rows - 1) : 0;
 
         activePlayers.forEach((p, idx) => {
             const variance = (Math.random() - 0.5) * 0.22;
             const baseSpd = nominalSpeed * (1 + variance);
 
-            // Natural staggered open-river placement (no rigid lanes)
-            const rowStep = (waterSpan - 40) / Math.max(1, N - 1 || 1);
-            const baseY = N === 1 ? waterTop + waterSpan / 2 : waterTop + 20 + idx * rowStep;
-            const jitterY = (Math.random() - 0.5) * 14;
-            const startX = this.startLineX - 25 + (Math.random() - 0.5) * 40;
+            const col = idx % cols;
+            const row = Math.floor(idx / cols);
+
+            // Staggered grid placement so ducks don't align in a single cramped vertical column
+            let baseY = rows === 1 
+                ? (waterTop + waterSpan / 2) 
+                : (waterTop + 18 + row * rowStep);
+            
+            // Stagger alternate column slightly for dynamic natural flock look
+            if (cols > 1 && col % 2 === 1 && rows > 1) {
+                baseY = Math.min(waterBottom - 20, baseY + rowStep * 0.28);
+            }
+
+            const jitterY = (Math.random() - 0.5) * 6;
+            const finalY = Math.max(waterTop + 20, Math.min(waterBottom - 20, baseY + jitterY));
+
+            // Starting X: Column 0 is closest to start line, subsequent columns line up slightly behind
+            const colOffsetX = col * 42;
+            const jitterX = (Math.random() - 0.5) * 10;
+            const startX = this.startLineX - 32 - colOffsetX + jitterX;
 
             this.ducks.push({
                 id: p.id,
@@ -483,8 +507,8 @@ class DuckRaceGame {
                 avatar: p.avatar,
                 duck_image: p.duck_image || '',
                 x: startX,
-                y: Math.max(waterTop + 22, Math.min(waterBottom - 22, baseY + jitterY)),
-                baseY: Math.max(waterTop + 22, Math.min(waterBottom - 22, baseY + jitterY)),
+                y: finalY,
+                baseY: finalY,
                 driftSeed: Math.random() * Math.PI * 2,
                 baseSpeed: baseSpd,
                 nominalSpeed: nominalSpeed,
@@ -705,8 +729,8 @@ class DuckRaceGame {
             this.nextEventCheck = now + minInterval + Math.random() * randInterval;
         }
 
-        const waterTop = 50;
-        const waterBottom = this.logicalHeight - 50;
+        const waterTop = 36;
+        const waterBottom = this.worldHeight - 36;
 
         for (const duck of this.ducks) {
             if (duck.finished) continue;
@@ -727,8 +751,8 @@ class DuckRaceGame {
             duck.x += Math.max(0.1, speed);
 
             // Natural undulating sinusoidal swimming drift inside open river
-            const drift = Math.sin(now * 0.002 + duck.driftSeed) * 13 + Math.sin(now * 0.004 + duck.driftSeed * 2.3) * 6;
-            duck.y = Math.max(waterTop + 24, Math.min(waterBottom - 24, duck.baseY + drift));
+            const drift = Math.sin(now * 0.002 + duck.driftSeed) * 11 + Math.sin(now * 0.004 + duck.driftSeed * 2.3) * 5;
+            duck.y = Math.max(waterTop + 20, Math.min(waterBottom - 20, duck.baseY + drift));
 
             // Tilt forward on boost
             duck.tiltAngle = (duck.speedMultiplier > 1.2 ? 0.14 : (duck.speedMultiplier < 0.8 ? -0.09 : 0));
@@ -876,7 +900,7 @@ class DuckRaceGame {
         ];
         btnRestarts.forEach(b => { if (b) b.classList.remove('hidden'); });
 
-        this.particles.addConfetti(this.finishLineX, this.logicalHeight / 2, 80);
+        this.particles.addConfetti(this.finishLineX, this.worldHeight / 2, 80);
     }
 
     render() {
@@ -884,6 +908,7 @@ class DuckRaceGame {
         const ctx = this.ctx;
         const W = this.logicalWidth;
         const H = this.logicalHeight;
+        const worldH = this.worldHeight;
 
         ctx.clearRect(0, 0, W, H);
 
@@ -897,13 +922,13 @@ class DuckRaceGame {
         const endDrawX = this.cameraX + viewW + 100;
 
         // 1. Draw River & Water Waves
-        this.drawRiverEnvironment(startDrawX, endDrawX, H);
+        this.drawRiverEnvironment(startDrawX, endDrawX, worldH);
 
         // 2. Draw Start Line & Track Props
-        this.drawTrackScenery(startDrawX, endDrawX, H);
+        this.drawTrackScenery(startDrawX, endDrawX, worldH);
 
         // 3. Draw Finish Line
-        this.drawFinishLine(H);
+        this.drawFinishLine(worldH);
 
         // 4. Draw Ducks with Z-Ordering (Y-depth sorting: background ducks first, foreground ducks overlap on top!)
         const sortedDucks = [...this.ducks].sort((a, b) => a.y - b.y);
