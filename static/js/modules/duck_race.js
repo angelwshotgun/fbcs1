@@ -139,6 +139,67 @@ class DuckAudioFx {
             }, idx * 120);
         });
     }
+
+    playBump() {
+        if (!this.enabled) return;
+        try {
+            this.init();
+            if (!this.ctx) return;
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(240, t);
+            osc.frequency.exponentialRampToValueAtTime(480, t + 0.05);
+            osc.frequency.exponentialRampToValueAtTime(140, t + 0.14);
+            gain.gain.setValueAtTime(0.24, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.15);
+        } catch (e) {}
+    }
+
+    playSplash() {
+        if (!this.enabled) return;
+        try {
+            this.init();
+            if (!this.ctx) return;
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(320, t);
+            osc.frequency.linearRampToValueAtTime(180, t + 0.18);
+            gain.gain.setValueAtTime(0.22, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.2);
+        } catch (e) {}
+    }
+
+    playThunder() {
+        if (!this.enabled) return;
+        try {
+            this.init();
+            if (!this.ctx) return;
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(70, t);
+            osc.frequency.linearRampToValueAtTime(35, t + 0.65);
+            gain.gain.setValueAtTime(0.3, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.7);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.7);
+        } catch (e) {}
+    }
 }
 
 const duckAudio = new DuckAudioFx();
@@ -160,7 +221,7 @@ function toggleDuckRaceSound() {
     });
 }
 
-// Particle System for Water and Finish Celebration
+// Particle System for Water, Clashes, Weather and Celebration
 class ParticleSystem {
     constructor() {
         this.particles = [];
@@ -215,6 +276,74 @@ class ParticleSystem {
         });
     }
 
+    addBumpSpark(x, y, count = 6) {
+        const colors = ['#fde047', '#f59e0b', '#fb923c', '#ffffff'];
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = Math.random() * 3.5 + 1.5;
+            this.particles.push({
+                x,
+                y,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd,
+                size: Math.random() * 4 + 2.5,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                life: 1.0,
+                decay: 0.065,
+                type: 'spark'
+            });
+        }
+    }
+
+    addDraftingTrail(x, y) {
+        this.particles.push({
+            x,
+            y: y + (Math.random() - 0.5) * 8,
+            vx: -Math.random() * 3 - 3.5,
+            vy: (Math.random() - 0.5) * 0.6,
+            size: Math.random() * 8 + 4,
+            color: 'rgba(56, 189, 248, 0.5)',
+            life: 0.85,
+            decay: 0.06,
+            type: 'draft'
+        });
+    }
+
+    addRainDrops(startDrawX, endDrawX, count = 6) {
+        for (let i = 0; i < count; i++) {
+            this.particles.push({
+                x: startDrawX + Math.random() * (endDrawX - startDrawX + 100),
+                y: -10,
+                vx: 3 + Math.random() * 2,
+                vy: 9 + Math.random() * 4,
+                len: 12 + Math.random() * 8,
+                color: 'rgba(186, 230, 253, 0.45)',
+                life: 1.0,
+                decay: 0.035,
+                type: 'rain'
+            });
+        }
+    }
+
+    addWindLeaves(startDrawX, endDrawX, count = 2) {
+        const colors = ['#ea580c', '#eab308', '#dc2626', '#ca8a04'];
+        for (let i = 0; i < count; i++) {
+            this.particles.push({
+                x: startDrawX - 20,
+                y: 35 + Math.random() * 280,
+                vx: 4 + Math.random() * 3,
+                vy: (Math.random() - 0.5) * 1.5,
+                size: Math.random() * 5 + 3,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                rotation: Math.random() * Math.PI * 2,
+                vRot: (Math.random() - 0.5) * 0.15,
+                life: 1.0,
+                decay: 0.012,
+                type: 'leaf'
+            });
+        }
+    }
+
     update() {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
@@ -224,6 +353,8 @@ class ParticleSystem {
 
             if (p.type === 'confetti') {
                 p.vy += 0.18; // gravity
+                p.rotation += p.vRot;
+            } else if (p.type === 'leaf') {
                 p.rotation += p.vRot;
             }
 
@@ -243,6 +374,36 @@ class ParticleSystem {
                 ctx.rotate(p.rotation);
                 ctx.fillStyle = p.color;
                 ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+                ctx.restore();
+            } else if (p.type === 'spark') {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                // 4-pointed sparkle
+                ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            } else if (p.type === 'draft') {
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.ellipse(p.x, p.y, p.size, p.size * 0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (p.type === 'rain') {
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x - p.vx * 1.5, p.y - p.vy * 1.5);
+                ctx.stroke();
+            } else if (p.type === 'leaf') {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, p.size, p.size * 0.55, 0, 0, Math.PI * 2);
+                ctx.fill();
                 ctx.restore();
             } else {
                 ctx.fillStyle = p.color;
@@ -297,6 +458,57 @@ class DuckRaceGame {
         this.startLineX = 90;
         this.finishLineX = 2480;
         this.duckSize = 52;
+
+        // Environmental Hazards & Dynamic Weather
+        this.hazards = [];
+        this.weather = 'sunny'; // 'sunny' | 'sunset' | 'wind' | 'thunderstorm'
+        this.lightningFlash = 0;
+        this.nextLightningTime = 0;
+        this.activeClashes = [];
+    }
+
+    setupWeather() {
+        const weathers = ['sunny', 'sunny', 'sunset', 'wind', 'thunderstorm'];
+        this.weather = weathers[Math.floor(Math.random() * weathers.length)];
+        this.lightningFlash = 0;
+        this.nextLightningTime = performance.now() + 2500 + Math.random() * 4000;
+    }
+
+    setupHazards() {
+        this.hazards = [];
+        const trackDist = this.finishLineX - this.startLineX;
+        if (trackDist < 600) return;
+
+        // 5 Hazards placed strategically along the river
+        const hazardDefs = [
+            { type: 'rapids', relX: 0.18, width: 110, height: 50 },
+            { type: 'lilypad', relX: 0.38, width: 85, height: 46 },
+            { type: 'whirlpool', relX: 0.56, radius: 28 },
+            { type: 'rapids', relX: 0.74, width: 110, height: 50 },
+            { type: 'lilypad', relX: 0.88, width: 85, height: 46 }
+        ];
+
+        const waterTop = 50;
+        const waterBottom = this.worldHeight - 50;
+        const waterSpan = waterBottom - waterTop;
+
+        hazardDefs.forEach((def, idx) => {
+            const posX = this.startLineX + trackDist * def.relX + (Math.random() - 0.5) * 60;
+            const lanePos = (idx % 3);
+            let posY = waterTop + 25 + lanePos * ((waterSpan - 50) / 2) + (Math.random() - 0.5) * 20;
+            posY = Math.max(waterTop + 25, Math.min(waterBottom - 25, posY));
+
+            this.hazards.push({
+                id: `hazard_${idx}`,
+                type: def.type,
+                x: posX,
+                y: posY,
+                width: def.width || 0,
+                height: def.height || 0,
+                radius: def.radius || 0,
+                hitCooldowns: {}
+            });
+        });
     }
 
     init() {
@@ -452,6 +664,9 @@ class DuckRaceGame {
         this.cameraX = 0;
         this.targetCameraX = 0;
 
+        this.setupHazards();
+        this.setupWeather();
+
         const activePlayers = this.getActivePlayers();
         const N = Math.max(1, activePlayers.length);
 
@@ -520,7 +735,10 @@ class DuckRaceGame {
                 bobOffset: Math.random() * Math.PI * 2,
                 finished: false,
                 finishTime: 0,
-                rank: null
+                rank: null,
+                isDrafting: false,
+                draftTimer: 0,
+                lastBumpTime: 0
             });
         });
     }
@@ -593,7 +811,20 @@ class DuckRaceGame {
         const firstEventDelay = (this.targetDuration / 30) * 1800;
         this.nextEventCheck = performance.now() + firstEventDelay;
 
-        this.updateStatusText(`Cuộc đua (~${this.targetDuration}s) đang diễn ra! Hãy chú ý các biến cố lật kèo ⚡`);
+        let statusMsg = `Cuộc đua (~${this.targetDuration}s) đang diễn ra! Hãy chú ý các biến cố lật kèo ⚡`;
+        if (this.weather === 'thunderstorm') {
+            statusMsg = '⛈️ Bão dông đổ bộ! Sấm chớp và mưa rào xuất hiện!';
+            this.showToast('⛈️ Bão dông bất ngờ đổ bộ trên sông!', 'bg-slate-900 border-sky-400');
+            duckAudio.playThunder();
+        } else if (this.weather === 'wind') {
+            statusMsg = '🍃 Gió lốc xuôi dòng trợ lực cho toàn bầy vịt!';
+            this.showToast('🍃 Gió lốc thổi mạnh xuôi dòng!', 'bg-emerald-600');
+        } else if (this.weather === 'sunset') {
+            statusMsg = '🌅 Hoàng hôn rực lửa! Chặng đua nghẹt thở bắt đầu!';
+            this.showToast('🌅 Hoàng hôn rực rỡ buông xuống!', 'bg-amber-600');
+        }
+
+        this.updateStatusText(statusMsg);
         this.loop();
     }
 
@@ -722,6 +953,23 @@ class DuckRaceGame {
         this.waveOffset += 0.05;
         this.particles.update();
 
+        const viewW = this.logicalWidth / this.zoom;
+
+        // Dynamic Weather Particles & Events
+        if (this.weather === 'thunderstorm') {
+            this.particles.addRainDrops(this.cameraX - 40, this.cameraX + viewW + 120, 3);
+            if (now > this.nextLightningTime) {
+                this.lightningFlash = 7;
+                duckAudio.playThunder();
+                this.nextLightningTime = now + 4000 + Math.random() * 5500;
+            }
+        } else if (this.weather === 'wind') {
+            if (Math.random() < 0.22) {
+                this.particles.addWindLeaves(this.cameraX - 40, this.cameraX + viewW + 40, 1);
+            }
+        }
+        const weatherSpeedMod = this.weather === 'wind' ? 1.13 : 1.0;
+
         if (now > this.nextEventCheck && this.state === 'racing') {
             this.triggerSurpriseEvent();
             const minInterval = (this.targetDuration / 30) * 2200;
@@ -747,12 +995,48 @@ class DuckRaceGame {
             const strokeRhythm = 1 + Math.sin(duck.bobOffset * 2) * 0.22;
             const noise = (Math.random() - 0.48) * (duck.nominalSpeed * 0.30);
 
-            const speed = (duck.baseSpeed * duck.speedMultiplier * strokeRhythm + noise) * (dt / 16.6);
+            const draftingMod = duck.isDrafting ? 1.25 : 1.0;
+            const speed = (duck.baseSpeed * duck.speedMultiplier * draftingMod * weatherSpeedMod * strokeRhythm + noise) * (dt / 16.6);
             duck.x += Math.max(0.1, speed);
 
             // Natural undulating sinusoidal swimming drift inside open river
             const drift = Math.sin(now * 0.002 + duck.driftSeed) * 11 + Math.sin(now * 0.004 + duck.driftSeed * 2.3) * 5;
             duck.y = Math.max(waterTop + 20, Math.min(waterBottom - 20, duck.baseY + drift));
+
+            // Hazard Interaction Check
+            for (const h of this.hazards) {
+                const lastHit = h.hitCooldowns[duck.id] || 0;
+                if (now - lastHit < 1600) continue;
+
+                if (h.type === 'rapids') {
+                    if (duck.x >= h.x - 15 && duck.x <= h.x + h.width + 15 && Math.abs(duck.y - h.y) < h.height / 2 + 12) {
+                        h.hitCooldowns[duck.id] = now;
+                        duck.effect = 'boost';
+                        duck.speedMultiplier = 1.85;
+                        duck.effectDuration = 1200;
+                        this.particles.addWaterSplash(duck.x, duck.y, 8);
+                        duckAudio.playSplash();
+                    }
+                } else if (h.type === 'lilypad') {
+                    if (duck.x >= h.x - 10 && duck.x <= h.x + h.width + 10 && Math.abs(duck.y - h.y) < h.height / 2 + 8) {
+                        h.hitCooldowns[duck.id] = now;
+                        duck.effect = 'shock';
+                        duck.speedMultiplier = 0.58;
+                        duck.effectDuration = 1000;
+                        this.particles.addWaterSplash(duck.x, duck.y, 4);
+                    }
+                } else if (h.type === 'whirlpool') {
+                    const distToCenter = Math.hypot(duck.x - h.x, duck.y - h.y);
+                    if (distToCenter < h.radius + 14) {
+                        h.hitCooldowns[duck.id] = now;
+                        duck.effect = 'whirlpool';
+                        duck.speedMultiplier = 0.28;
+                        duck.effectDuration = 850;
+                        duck.spinAngle = 0.4;
+                        duckAudio.playWhirlpool();
+                    }
+                }
+            }
 
             // Tilt forward on boost
             duck.tiltAngle = (duck.speedMultiplier > 1.2 ? 0.14 : (duck.speedMultiplier < 0.8 ? -0.09 : 0));
@@ -790,9 +1074,76 @@ class DuckRaceGame {
             }
         }
 
+        // Competitive Rivalry: Elastic Bumping, Slipstream Drafting & Team Sparks
+        this.activeClashes = [];
+        const activeList = this.ducks.filter(d => !d.finished);
+        const activeCount = activeList.length;
+
+        for (let i = 0; i < activeCount; i++) {
+            const d1 = activeList[i];
+            for (let j = i + 1; j < activeCount; j++) {
+                const d2 = activeList[j];
+                const dx = Math.abs(d1.x - d2.x);
+                const dy = Math.abs(d1.y - d2.y);
+
+                // 1. Elastic Bumping (Quẹt sườn & nảy nhẹ khi quá sát nhau)
+                if (dx < 32 && dy < 18) {
+                    if (now - d1.lastBumpTime > 450 && now - d2.lastBumpTime > 450) {
+                        d1.lastBumpTime = now;
+                        d2.lastBumpTime = now;
+                        const pushDir = d1.y >= d2.y ? 1 : -1;
+                        d1.baseY = Math.min(waterBottom - 20, d1.baseY + pushDir * 9);
+                        d2.baseY = Math.max(waterTop + 20, d2.baseY - pushDir * 9);
+                        this.particles.addBumpSpark((d1.x + d2.x) / 2, (d1.y + d2.y) / 2, 5);
+                        duckAudio.playBump();
+                    }
+                }
+
+                // 2. Team Rivalry Clash (Khi 2 vịt khác đội so kè ngang hàng)
+                if (d1.team !== 0 && d2.team !== 0 && d1.team !== d2.team) {
+                    if (dx < 20 && dy < 30) {
+                        this.activeClashes.push({
+                            x1: d1.x,
+                            y1: d1.y,
+                            x2: d2.x,
+                            y2: d2.y
+                        });
+                    }
+                }
+            }
+
+            // 3. Slipstream / Drafting (Núp gió đuôi vịt trước)
+            let isTuckedBehind = false;
+            for (let k = 0; k < activeCount; k++) {
+                if (i === k) continue;
+                const frontDuck = activeList[k];
+                const gapX = frontDuck.x - d1.x;
+                const gapY = Math.abs(frontDuck.y - d1.y);
+
+                if (gapX > 22 && gapX < 62 && gapY < 12) {
+                    isTuckedBehind = true;
+                    break;
+                }
+            }
+
+            if (isTuckedBehind) {
+                d1.draftTimer += dt;
+                if (d1.draftTimer > 320) {
+                    d1.isDrafting = true;
+                    if (Math.random() < 0.42) {
+                        this.particles.addDraftingTrail(d1.x - 16, d1.y);
+                    }
+                }
+            } else {
+                d1.draftTimer = Math.max(0, d1.draftTimer - dt * 2);
+                if (d1.draftTimer <= 0) {
+                    d1.isDrafting = false;
+                }
+            }
+        }
+
         // Camera Follow Logic (Smooth Tracking Camera Zoomed on the Flock)
         const activeDucks = this.ducks.filter(d => !d.finished);
-        const viewW = this.logicalWidth / this.zoom;
         if (activeDucks.length > 0) {
             const leaderX = Math.max(...activeDucks.map(d => d.x));
             const avgX = activeDucks.reduce((s, d) => s + d.x, 0) / activeDucks.length;
@@ -921,23 +1272,36 @@ class DuckRaceGame {
         const startDrawX = this.cameraX - 100;
         const endDrawX = this.cameraX + viewW + 100;
 
-        // 1. Draw River & Water Waves
+        // 1. Draw River & Water Waves (with Dynamic Weather Gradients)
         this.drawRiverEnvironment(startDrawX, endDrawX, worldH);
 
-        // 2. Draw Start Line & Track Props
+        // 2. Draw Environmental Hazards (Rapids, Lilypads, Whirlpools)
+        this.drawHazards(startDrawX, endDrawX, worldH, performance.now());
+
+        // 3. Draw Start Line & Track Props
         this.drawTrackScenery(startDrawX, endDrawX, worldH);
 
-        // 3. Draw Finish Line
+        // 4. Draw Finish Line
         this.drawFinishLine(worldH);
 
-        // 4. Draw Ducks with Z-Ordering (Y-depth sorting: background ducks first, foreground ducks overlap on top!)
+        // 5. Draw Ducks with Z-Ordering (Y-depth sorting)
         const sortedDucks = [...this.ducks].sort((a, b) => a.y - b.y);
         for (const duck of sortedDucks) {
             this.drawDuck(duck);
         }
 
-        // 5. Draw Particle System
+        // 6. Draw Team Rivalry Clash Sparks (when opposing teams swim neck-and-neck)
+        this.drawClashSparks(ctx);
+
+        // 7. Draw Particle System (Splashes, Confetti, Sparks, Rain, Wind Leaves)
         this.particles.draw(ctx);
+
+        // 8. Lightning Flash Overlay (for Thunderstorm Weather)
+        if (this.lightningFlash > 0) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.lightningFlash * 0.08})`;
+            ctx.fillRect(startDrawX, 0, endDrawX - startDrawX, worldH);
+            this.lightningFlash--;
+        }
 
         ctx.restore();
     }
@@ -949,20 +1313,31 @@ class DuckRaceGame {
     drawRiverEnvironment(startDrawX, endDrawX, H) {
         const ctx = this.ctx;
 
-        // River water gradient
+        // River water gradient based on weather
         const riverGrad = ctx.createLinearGradient(0, 0, 0, H);
-        riverGrad.addColorStop(0, '#0c4a6e');
-        riverGrad.addColorStop(0.5, '#075985');
-        riverGrad.addColorStop(1, '#0369a1');
+        if (this.weather === 'sunset') {
+            riverGrad.addColorStop(0, '#581c87');    // tím hoàng hôn
+            riverGrad.addColorStop(0.45, '#9a3412'); // cam sẫm
+            riverGrad.addColorStop(1, '#c2410c');    // cam đỏ rực rỡ
+        } else if (this.weather === 'thunderstorm') {
+            riverGrad.addColorStop(0, '#09182a');    // xanh đen bão tố
+            riverGrad.addColorStop(0.5, '#0f2942');
+            riverGrad.addColorStop(1, '#0c1e30');
+        } else {
+            // sunny & wind
+            riverGrad.addColorStop(0, '#0c4a6e');
+            riverGrad.addColorStop(0.5, '#075985');
+            riverGrad.addColorStop(1, '#0369a1');
+        }
         ctx.fillStyle = riverGrad;
         ctx.fillRect(startDrawX, 0, endDrawX - startDrawX, H);
 
         // Animated wavy surface water lines
         ctx.save();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.strokeStyle = this.weather === 'sunset' ? 'rgba(254, 215, 170, 0.14)' : 'rgba(255, 255, 255, 0.08)';
         ctx.lineWidth = 1.5;
 
-        for (let y = 50; y < H - 50; y += 38) {
+        for (let y = 46; y < H - 46; y += 38) {
             ctx.beginPath();
             const step = 20;
             const startXAligned = Math.floor(startDrawX / step) * step;
@@ -976,7 +1351,8 @@ class DuckRaceGame {
         ctx.restore();
 
         // Top River Bank (Grass + Stone border + Water foam)
-        ctx.fillStyle = '#15803d';
+        const grassColor = this.weather === 'sunset' ? '#4d7c0f' : (this.weather === 'thunderstorm' ? '#14532d' : '#15803d');
+        ctx.fillStyle = grassColor;
         ctx.fillRect(startDrawX, 0, endDrawX - startDrawX, 26);
         ctx.fillStyle = '#334155';
         ctx.fillRect(startDrawX, 26, endDrawX - startDrawX, 6);
@@ -988,8 +1364,151 @@ class DuckRaceGame {
         ctx.fillRect(startDrawX, H - 34.5, endDrawX - startDrawX, 2.5);
         ctx.fillStyle = '#334155';
         ctx.fillRect(startDrawX, H - 32, endDrawX - startDrawX, 6);
-        ctx.fillStyle = '#15803d';
+        ctx.fillStyle = grassColor;
         ctx.fillRect(startDrawX, H - 26, endDrawX - startDrawX, 26);
+    }
+
+    drawHazards(startDrawX, endDrawX, H, now) {
+        const ctx = this.ctx;
+
+        for (const h of this.hazards) {
+            if (h.x + (h.width || h.radius * 2) < startDrawX - 60 || h.x - 60 > endDrawX + 60) continue;
+
+            ctx.save();
+            if (h.type === 'rapids') {
+                // Rapids zone: glowing aqua speed stream with water lines
+                const grad = ctx.createLinearGradient(h.x, 0, h.x + h.width, 0);
+                grad.addColorStop(0, 'rgba(14, 165, 233, 0.05)');
+                grad.addColorStop(0.5, 'rgba(56, 189, 248, 0.32)');
+                grad.addColorStop(1, 'rgba(14, 165, 233, 0.08)');
+
+                ctx.fillStyle = grad;
+                if (typeof ctx.roundRect === 'function') {
+                    ctx.beginPath();
+                    ctx.roundRect(h.x, h.y - h.height / 2, h.width, h.height, 14);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(h.x, h.y - h.height / 2, h.width, h.height);
+                }
+
+                // Moving wave arrows >>>
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+                ctx.lineWidth = 2;
+                const flowOffset = (now * 0.12) % 32;
+                for (let arrowX = h.x + flowOffset; arrowX < h.x + h.width; arrowX += 32) {
+                    ctx.beginPath();
+                    ctx.moveTo(arrowX - 8, h.y - 10);
+                    ctx.lineTo(arrowX, h.y);
+                    ctx.lineTo(arrowX - 8, h.y + 10);
+                    ctx.stroke();
+                }
+
+                // Small neon badge
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = 'bold 9px "Plus Jakarta Sans", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚡ NƯỚC XIẾT', h.x + h.width / 2, h.y - h.height / 2 - 4);
+
+            } else if (h.type === 'lilypad') {
+                // Lilypad obstacle: clump of 4 green pads + a pink lotus flower
+                ctx.translate(h.x + h.width / 2, h.y);
+                const pads = [
+                    { ox: -16, oy: -8, r: 15 },
+                    { ox: 14, oy: -10, r: 17 },
+                    { ox: -10, oy: 12, r: 16 },
+                    { ox: 12, oy: 10, r: 14 }
+                ];
+
+                for (const pad of pads) {
+                    ctx.fillStyle = '#15803d';
+                    ctx.beginPath();
+                    // Draw lily pad with a slight pie notch cut
+                    ctx.arc(pad.ox, pad.oy, pad.r, 0.3, Math.PI * 1.85);
+                    ctx.lineTo(pad.ox, pad.oy);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#166534';
+                    ctx.lineWidth = 1.2;
+                    ctx.stroke();
+                }
+
+                // Lotus flower in center
+                ctx.fillStyle = '#f472b6';
+                ctx.beginPath();
+                ctx.arc(0, 0, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fde047';
+                ctx.beginPath();
+                ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#86efac';
+                ctx.font = 'bold 8.5px "Plus Jakarta Sans", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🌸 BÈO TÂY', 0, -h.height / 2 - 5);
+
+            } else if (h.type === 'whirlpool') {
+                // Whirlpool: spinning Archimedes spiral
+                ctx.translate(h.x, h.y);
+                const spin = now * 0.005;
+                ctx.rotate(spin);
+
+                // Deep gradient
+                const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, h.radius);
+                grad.addColorStop(0, '#020617');
+                grad.addColorStop(0.6, 'rgba(30, 58, 138, 0.6)');
+                grad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(0, 0, h.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Spiral rings
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                for (let a = 0; a < Math.PI * 4; a += 0.2) {
+                    const r = (a / (Math.PI * 4)) * (h.radius - 2);
+                    const sx = Math.cos(a) * r;
+                    const sy = Math.sin(a) * r;
+                    if (a === 0) ctx.moveTo(sx, sy);
+                    else ctx.lineTo(sx, sy);
+                }
+                ctx.stroke();
+
+                ctx.rotate(-spin);
+                ctx.fillStyle = '#818cf8';
+                ctx.font = 'bold 8.5px "Plus Jakarta Sans", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🌀 XOÁY NƯỚC', 0, -h.radius - 4);
+            }
+            ctx.restore();
+        }
+    }
+
+    drawClashSparks(ctx) {
+        if (!this.activeClashes || this.activeClashes.length === 0) return;
+
+        ctx.save();
+        for (const c of this.activeClashes) {
+            const midX = (c.x1 + c.x2) / 2;
+            const midY = (c.y1 + c.y2) / 2;
+
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(c.x1, c.y1);
+            ctx.lineTo(midX + (Math.random() - 0.5) * 12, midY + (Math.random() - 0.5) * 10);
+            ctx.lineTo(c.x2, c.y2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#fde047';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⚡', midX, midY - 6);
+        }
+        ctx.restore();
     }
 
     drawTrackScenery(startDrawX, endDrawX, H) {
@@ -1110,6 +1629,22 @@ class DuckRaceGame {
         ctx.save();
         ctx.translate(duck.x, duck.y + bobbingY);
 
+        // Slipstream Drafting Aura Trail (Aerodynamic streamlines)
+        if (duck.isDrafting) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([7, 4]);
+            ctx.beginPath();
+            ctx.moveTo(-size * 0.45, -size * 0.22);
+            ctx.lineTo(-size * 0.95, -size * 0.22);
+            ctx.moveTo(-size * 0.45, size * 0.22);
+            ctx.lineTo(-size * 0.95, size * 0.22);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+
         if (duck.spinAngle !== 0) {
             ctx.rotate(duck.spinAngle);
         } else if (duck.tiltAngle !== 0) {
@@ -1136,8 +1671,11 @@ class DuckRaceGame {
         ctx.save();
         const avatarImg = this.avatarImages[duck.id];
         let displayName = duck.nickname;
-        if (displayName.length > 12) {
-            displayName = displayName.substring(0, 11) + '…';
+        if (duck.isDrafting) {
+            displayName = '💨 ' + displayName;
+        }
+        if (displayName.length > 14) {
+            displayName = displayName.substring(0, 13) + '…';
         }
 
         ctx.font = 'bold 9.5px "Plus Jakarta Sans", sans-serif';
@@ -1149,8 +1687,8 @@ class DuckRaceGame {
         const tagY = duck.y + bobbingY - size * 0.54;
         const tagX = duck.x - tagW / 2;
 
-        // Dark translucent glassmorphism pill
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        // Dark translucent glassmorphism pill (Cyan glow on drafting)
+        ctx.fillStyle = duck.isDrafting ? 'rgba(12, 74, 110, 0.92)' : 'rgba(15, 23, 42, 0.88)';
         ctx.beginPath();
         if (typeof ctx.roundRect === 'function') {
             ctx.roundRect(tagX, tagY - tagH / 2, tagW, tagH, 8.5);
@@ -1158,8 +1696,8 @@ class DuckRaceGame {
             ctx.rect(tagX, tagY - tagH / 2, tagW, tagH);
         }
         ctx.fill();
-        ctx.strokeStyle = duck.finished && duck.rank === 1 ? '#f59e0b' : 'rgba(255, 255, 255, 0.22)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = duck.isDrafting ? '#38bdf8' : (duck.finished && duck.rank === 1 ? '#f59e0b' : 'rgba(255, 255, 255, 0.22)');
+        ctx.lineWidth = duck.isDrafting ? 1.6 : 1;
         ctx.stroke();
 
         let textStartX = tagX + 6;
