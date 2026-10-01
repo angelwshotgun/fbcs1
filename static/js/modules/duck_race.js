@@ -459,8 +459,7 @@ class DuckRaceGame {
         this.finishLineX = 2480;
         this.duckSize = 52;
 
-        // Environmental Hazards & Dynamic Weather
-        this.hazards = [];
+        // Dynamic Weather & Environment
         this.weather = 'sunny'; // 'sunny' | 'sunset' | 'wind' | 'thunderstorm'
         this.lightningFlash = 0;
         this.nextLightningTime = 0;
@@ -472,43 +471,6 @@ class DuckRaceGame {
         this.weather = weathers[Math.floor(Math.random() * weathers.length)];
         this.lightningFlash = 0;
         this.nextLightningTime = performance.now() + 2500 + Math.random() * 4000;
-    }
-
-    setupHazards() {
-        this.hazards = [];
-        const trackDist = this.finishLineX - this.startLineX;
-        if (trackDist < 600) return;
-
-        // 5 Hazards placed strategically along the river
-        const hazardDefs = [
-            { type: 'rapids', relX: 0.18, width: 110, height: 50 },
-            { type: 'lilypad', relX: 0.38, width: 85, height: 46 },
-            { type: 'whirlpool', relX: 0.56, radius: 28 },
-            { type: 'rapids', relX: 0.74, width: 110, height: 50 },
-            { type: 'lilypad', relX: 0.88, width: 85, height: 46 }
-        ];
-
-        const waterTop = 50;
-        const waterBottom = this.worldHeight - 50;
-        const waterSpan = waterBottom - waterTop;
-
-        hazardDefs.forEach((def, idx) => {
-            const posX = this.startLineX + trackDist * def.relX + (Math.random() - 0.5) * 60;
-            const lanePos = (idx % 3);
-            let posY = waterTop + 25 + lanePos * ((waterSpan - 50) / 2) + (Math.random() - 0.5) * 20;
-            posY = Math.max(waterTop + 25, Math.min(waterBottom - 25, posY));
-
-            this.hazards.push({
-                id: `hazard_${idx}`,
-                type: def.type,
-                x: posX,
-                y: posY,
-                width: def.width || 0,
-                height: def.height || 0,
-                radius: def.radius || 0,
-                hitCooldowns: {}
-            });
-        });
     }
 
     init() {
@@ -664,7 +626,6 @@ class DuckRaceGame {
         this.cameraX = 0;
         this.targetCameraX = 0;
 
-        this.setupHazards();
         this.setupWeather();
 
         const activePlayers = this.getActivePlayers();
@@ -828,85 +789,88 @@ class DuckRaceGame {
         this.loop();
     }
 
-    triggerSurpriseEvent() {
+    triggerGlobalEnvironmentEvent() {
         if (this.state !== 'racing') return;
         const total = this.ducks.length;
-        if (this.finishOrder.length >= Math.ceil(total * 0.65)) return;
+        if (this.finishOrder.length >= Math.ceil(total * 0.75)) return;
+
+        const activeDucks = this.ducks.filter(d => !d.finished);
+        if (activeDucks.length === 0) return;
 
         const events = [
-            { type: 'boost', label: 'TĂNG TỐC TÊN LỬA!', icon: '🚀', bg: 'bg-amber-500' },
-            { type: 'lightning', label: 'SÉT ĐÁNH TÊ LIỆT!', icon: '⚡', bg: 'bg-yellow-400' },
-            { type: 'whirlpool', label: 'XOÁY NƯỚC KẸT VỊT!', icon: '🌀', bg: 'bg-blue-600' },
-            { type: 'giant_wave', label: 'SÓNG THẦN ĐẨY LÙI!', icon: '🌊', bg: 'bg-cyan-500' },
-            { type: 'tailwind', label: 'GIÓ THUẬN TỪ ĐÁY!', icon: '🍀', bg: 'bg-emerald-500' },
-            { type: 'swap', label: 'HOÁN ĐỔI VỊ TRÍ!', icon: '🔄', bg: 'bg-purple-600' }
+            { type: 'tidal_surge', label: 'SÓNG THẦN XUÔI DÒNG!', desc: 'Toàn bầy vịt cưỡi sóng lướt nhanh!', icon: '🌊', bg: 'bg-cyan-600' },
+            { type: 'gale_winds', label: 'CUỒNG PHONG ĐẨY LƯNG!', desc: 'Gió giật xuôi dòng bứt phá toàn đàn!', icon: '🍃', bg: 'bg-emerald-600' },
+            { type: 'undercurrent_drag', label: 'DÒNG XOÁY NGẦM!', desc: 'Dòng nước ngược ghì tốc độ toàn bầy!', icon: '🌀', bg: 'bg-blue-700' },
+            { type: 'thunder_squall', label: 'DÔNG BÃO SẤM CHỚP!', desc: 'Mặt sông nhiễm điện làm tê liệt toàn đàn!', icon: '⛈️', bg: 'bg-amber-600' },
+            { type: 'rainbow_blessing', label: 'CẦU VỒNG BAN PHƯỚC!', desc: 'Thanh tẩy mặt sông, trợ lực toàn thể vịt đua!', icon: '🌈', bg: 'bg-purple-600' },
+            { type: 'river_tremor', label: 'DƯ CHẤN SÔNG NƯỚC!', desc: 'Sóng dập dềnh xáo trộn đường bơi!', icon: '🌊', bg: 'bg-teal-600' }
         ];
 
         const evt = events[Math.floor(Math.random() * events.length)];
-        const activeDucks = this.ducks.filter(d => !d.finished);
-        if (activeDucks.length < 2) return;
-
-        activeDucks.sort((a, b) => b.x - a.x);
         const durationScale = Math.max(0.6, this.targetDuration / 30);
+        const waterTop = 36;
+        const waterBottom = this.worldHeight - 36;
 
-        if (evt.type === 'boost') {
-            const target = activeDucks[Math.floor(Math.random() * activeDucks.length)];
-            target.effect = 'boost';
-            target.speedMultiplier = 2.4;
-            target.effectDuration = 1800 * durationScale;
-            this.showToast(`${evt.icon} ${target.nickname} được ${evt.label}`, evt.bg);
-            duckAudio.playBoost();
-        } else if (evt.type === 'lightning') {
-            const candidates = activeDucks.slice(0, Math.min(3, activeDucks.length));
-            const target = candidates[Math.floor(Math.random() * candidates.length)];
-            target.effect = 'shock';
-            target.speedMultiplier = 0.15;
-            target.effectDuration = 1600 * durationScale;
-            this.showToast(`${evt.icon} Sét giáng vào ${target.nickname}!`, evt.bg);
-            duckAudio.playLightning();
-        } else if (evt.type === 'whirlpool') {
-            const target = activeDucks[0];
-            target.effect = 'whirlpool';
-            target.speedMultiplier = 0.2;
-            target.effectDuration = 2000 * durationScale;
-            target.x = Math.max(0, target.x - (35 * durationScale));
-            this.showToast(`${evt.icon} ${target.nickname} sẩy chân dính ${evt.label}`, evt.bg);
-            duckAudio.playWhirlpool();
-        } else if (evt.type === 'giant_wave') {
-            const lucky = activeDucks[activeDucks.length - 1];
+        if (evt.type === 'tidal_surge') {
             activeDucks.forEach(d => {
-                if (d === lucky) {
-                    d.speedMultiplier = 2.0;
-                    d.effectDuration = 1600 * durationScale;
-                    d.effect = 'boost';
-                } else {
-                    d.x = Math.max(0, d.x - (25 * durationScale));
-                }
+                d.effect = 'boost';
+                d.speedMultiplier = 1.75;
+                d.effectDuration = 2200 * durationScale;
+                this.particles.addWaterSplash(d.x, d.y, 5);
             });
-            this.showToast(`🌊 Sóng lớn dội ngược! ${lucky.nickname} cưỡi sóng bứt phá!`, evt.bg);
+            this.showToast(`${evt.icon} ${evt.label} ${evt.desc}`, evt.bg);
+            duckAudio.playSplash();
+        } else if (evt.type === 'gale_winds') {
+            activeDucks.forEach(d => {
+                d.effect = 'tailwind';
+                d.speedMultiplier = 1.45;
+                d.effectDuration = 2500 * durationScale;
+            });
+            const viewW = this.logicalWidth / this.zoom;
+            this.particles.addWindLeaves(this.cameraX - 40, this.cameraX + viewW + 40, 16);
+            this.showToast(`${evt.icon} ${evt.label} ${evt.desc}`, evt.bg);
             duckAudio.playBoost();
-        } else if (evt.type === 'tailwind') {
-            const tailDuck = activeDucks[activeDucks.length - 1];
-            tailDuck.effect = 'tailwind';
-            tailDuck.speedMultiplier = 2.8;
-            tailDuck.effectDuration = 2200 * durationScale;
-            this.showToast(`🍀 Thần may mắn trợ lực cho ${tailDuck.nickname} từ chót bảng!`, evt.bg);
+        } else if (evt.type === 'undercurrent_drag') {
+            activeDucks.forEach(d => {
+                d.effect = 'whirlpool';
+                d.speedMultiplier = 0.65;
+                d.effectDuration = 2000 * durationScale;
+                d.spinAngle = (Math.random() - 0.5) * 0.4;
+            });
+            this.showToast(`${evt.icon} ${evt.label} ${evt.desc}`, evt.bg);
+            duckAudio.playWhirlpool();
+        } else if (evt.type === 'thunder_squall') {
+            this.lightningFlash = 9;
+            activeDucks.forEach(d => {
+                d.effect = 'shock';
+                d.speedMultiplier = 0.72;
+                d.effectDuration = 2200 * durationScale;
+            });
+            duckAudio.playThunder();
+            duckAudio.playLightning();
+            this.showToast(`${evt.icon} ${evt.label} ${evt.desc}`, evt.bg);
+        } else if (evt.type === 'rainbow_blessing') {
+            activeDucks.forEach(d => {
+                d.effect = 'blessing';
+                d.speedMultiplier = 1.40;
+                d.effectDuration = 2400 * durationScale;
+                this.particles.addConfetti(d.x, d.y, 4);
+            });
+            this.showToast(`${evt.icon} ${evt.label} ${evt.desc}`, evt.bg);
             duckAudio.playBoost();
-        } else if (evt.type === 'swap') {
-            if (activeDucks.length >= 2) {
-                const leader = activeDucks[0];
-                const challenger = activeDucks[1];
-                const tmpX = leader.x;
-                leader.x = challenger.x;
-                challenger.x = tmpX;
-                leader.effect = 'shock';
-                leader.effectDuration = 800 * durationScale;
-                challenger.effect = 'boost';
-                challenger.effectDuration = 1000 * durationScale;
-                this.showToast(`🔄 Hoán đổi ma thuật giữa ${leader.nickname} & ${challenger.nickname}!`, evt.bg);
-                duckAudio.playWhirlpool();
-            }
+        } else if (evt.type === 'river_tremor') {
+            activeDucks.forEach(d => {
+                const shift = (Math.random() - 0.5) * 36;
+                d.baseY = Math.max(waterTop + 20, Math.min(waterBottom - 20, d.baseY + shift));
+                this.particles.addWaterSplash(d.x, d.y, 6);
+            });
+            this.showToast(`${evt.icon} ${evt.label} ${evt.desc}`, evt.bg);
+            duckAudio.playSplash();
         }
+    }
+
+    triggerSurpriseEvent() {
+        this.triggerGlobalEnvironmentEvent();
     }
 
     showToast(message, bgClass = 'bg-amber-500') {
@@ -971,9 +935,9 @@ class DuckRaceGame {
         const weatherSpeedMod = this.weather === 'wind' ? 1.13 : 1.0;
 
         if (now > this.nextEventCheck && this.state === 'racing') {
-            this.triggerSurpriseEvent();
-            const minInterval = (this.targetDuration / 30) * 2200;
-            const randInterval = (this.targetDuration / 30) * 2500;
+            this.triggerGlobalEnvironmentEvent();
+            const minInterval = (this.targetDuration / 30) * 2600;
+            const randInterval = (this.targetDuration / 30) * 2800;
             this.nextEventCheck = now + minInterval + Math.random() * randInterval;
         }
 
@@ -1003,41 +967,6 @@ class DuckRaceGame {
             const drift = Math.sin(now * 0.002 + duck.driftSeed) * 11 + Math.sin(now * 0.004 + duck.driftSeed * 2.3) * 5;
             duck.y = Math.max(waterTop + 20, Math.min(waterBottom - 20, duck.baseY + drift));
 
-            // Hazard Interaction Check
-            for (const h of this.hazards) {
-                const lastHit = h.hitCooldowns[duck.id] || 0;
-                if (now - lastHit < 1600) continue;
-
-                if (h.type === 'rapids') {
-                    if (duck.x >= h.x - 15 && duck.x <= h.x + h.width + 15 && Math.abs(duck.y - h.y) < h.height / 2 + 12) {
-                        h.hitCooldowns[duck.id] = now;
-                        duck.effect = 'boost';
-                        duck.speedMultiplier = 1.85;
-                        duck.effectDuration = 1200;
-                        this.particles.addWaterSplash(duck.x, duck.y, 8);
-                        duckAudio.playSplash();
-                    }
-                } else if (h.type === 'lilypad') {
-                    if (duck.x >= h.x - 10 && duck.x <= h.x + h.width + 10 && Math.abs(duck.y - h.y) < h.height / 2 + 8) {
-                        h.hitCooldowns[duck.id] = now;
-                        duck.effect = 'shock';
-                        duck.speedMultiplier = 0.58;
-                        duck.effectDuration = 1000;
-                        this.particles.addWaterSplash(duck.x, duck.y, 4);
-                    }
-                } else if (h.type === 'whirlpool') {
-                    const distToCenter = Math.hypot(duck.x - h.x, duck.y - h.y);
-                    if (distToCenter < h.radius + 14) {
-                        h.hitCooldowns[duck.id] = now;
-                        duck.effect = 'whirlpool';
-                        duck.speedMultiplier = 0.28;
-                        duck.effectDuration = 850;
-                        duck.spinAngle = 0.4;
-                        duckAudio.playWhirlpool();
-                    }
-                }
-            }
-
             // Tilt forward on boost
             duck.tiltAngle = (duck.speedMultiplier > 1.2 ? 0.14 : (duck.speedMultiplier < 0.8 ? -0.09 : 0));
 
@@ -1047,6 +976,10 @@ class DuckRaceGame {
 
             if (duck.effect === 'boost' || duck.effect === 'tailwind') {
                 this.particles.addFireTrail(duck.x - 18, duck.y);
+            } else if (duck.effect === 'blessing') {
+                if (Math.random() < 0.35) {
+                    this.particles.addConfetti(duck.x - 12, duck.y, 1);
+                }
             }
 
             if (duck.effect === 'whirlpool') {
@@ -1275,10 +1208,7 @@ class DuckRaceGame {
         // 1. Draw River & Water Waves (with Dynamic Weather Gradients)
         this.drawRiverEnvironment(startDrawX, endDrawX, worldH);
 
-        // 2. Draw Environmental Hazards (Rapids, Lilypads, Whirlpools)
-        this.drawHazards(startDrawX, endDrawX, worldH, performance.now());
-
-        // 3. Draw Start Line & Track Props
+        // 2. Draw Start Line & Track Props
         this.drawTrackScenery(startDrawX, endDrawX, worldH);
 
         // 4. Draw Finish Line
@@ -1366,125 +1296,6 @@ class DuckRaceGame {
         ctx.fillRect(startDrawX, H - 32, endDrawX - startDrawX, 6);
         ctx.fillStyle = grassColor;
         ctx.fillRect(startDrawX, H - 26, endDrawX - startDrawX, 26);
-    }
-
-    drawHazards(startDrawX, endDrawX, H, now) {
-        const ctx = this.ctx;
-
-        for (const h of this.hazards) {
-            if (h.x + (h.width || h.radius * 2) < startDrawX - 60 || h.x - 60 > endDrawX + 60) continue;
-
-            ctx.save();
-            if (h.type === 'rapids') {
-                // Rapids zone: glowing aqua speed stream with water lines
-                const grad = ctx.createLinearGradient(h.x, 0, h.x + h.width, 0);
-                grad.addColorStop(0, 'rgba(14, 165, 233, 0.05)');
-                grad.addColorStop(0.5, 'rgba(56, 189, 248, 0.32)');
-                grad.addColorStop(1, 'rgba(14, 165, 233, 0.08)');
-
-                ctx.fillStyle = grad;
-                if (typeof ctx.roundRect === 'function') {
-                    ctx.beginPath();
-                    ctx.roundRect(h.x, h.y - h.height / 2, h.width, h.height, 14);
-                    ctx.fill();
-                } else {
-                    ctx.fillRect(h.x, h.y - h.height / 2, h.width, h.height);
-                }
-
-                // Moving wave arrows >>>
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-                ctx.lineWidth = 2;
-                const flowOffset = (now * 0.12) % 32;
-                for (let arrowX = h.x + flowOffset; arrowX < h.x + h.width; arrowX += 32) {
-                    ctx.beginPath();
-                    ctx.moveTo(arrowX - 8, h.y - 10);
-                    ctx.lineTo(arrowX, h.y);
-                    ctx.lineTo(arrowX - 8, h.y + 10);
-                    ctx.stroke();
-                }
-
-                // Small neon badge
-                ctx.fillStyle = '#38bdf8';
-                ctx.font = 'bold 9px "Plus Jakarta Sans", sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('⚡ NƯỚC XIẾT', h.x + h.width / 2, h.y - h.height / 2 - 4);
-
-            } else if (h.type === 'lilypad') {
-                // Lilypad obstacle: clump of 4 green pads + a pink lotus flower
-                ctx.translate(h.x + h.width / 2, h.y);
-                const pads = [
-                    { ox: -16, oy: -8, r: 15 },
-                    { ox: 14, oy: -10, r: 17 },
-                    { ox: -10, oy: 12, r: 16 },
-                    { ox: 12, oy: 10, r: 14 }
-                ];
-
-                for (const pad of pads) {
-                    ctx.fillStyle = '#15803d';
-                    ctx.beginPath();
-                    // Draw lily pad with a slight pie notch cut
-                    ctx.arc(pad.ox, pad.oy, pad.r, 0.3, Math.PI * 1.85);
-                    ctx.lineTo(pad.ox, pad.oy);
-                    ctx.closePath();
-                    ctx.fill();
-
-                    ctx.strokeStyle = '#166534';
-                    ctx.lineWidth = 1.2;
-                    ctx.stroke();
-                }
-
-                // Lotus flower in center
-                ctx.fillStyle = '#f472b6';
-                ctx.beginPath();
-                ctx.arc(0, 0, 7, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#fde047';
-                ctx.beginPath();
-                ctx.arc(0, 0, 3, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillStyle = '#86efac';
-                ctx.font = 'bold 8.5px "Plus Jakarta Sans", sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('🌸 BÈO TÂY', 0, -h.height / 2 - 5);
-
-            } else if (h.type === 'whirlpool') {
-                // Whirlpool: spinning Archimedes spiral
-                ctx.translate(h.x, h.y);
-                const spin = now * 0.005;
-                ctx.rotate(spin);
-
-                // Deep gradient
-                const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, h.radius);
-                grad.addColorStop(0, '#020617');
-                grad.addColorStop(0.6, 'rgba(30, 58, 138, 0.6)');
-                grad.addColorStop(1, 'rgba(56, 189, 248, 0)');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.arc(0, 0, h.radius, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Spiral rings
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                for (let a = 0; a < Math.PI * 4; a += 0.2) {
-                    const r = (a / (Math.PI * 4)) * (h.radius - 2);
-                    const sx = Math.cos(a) * r;
-                    const sy = Math.sin(a) * r;
-                    if (a === 0) ctx.moveTo(sx, sy);
-                    else ctx.lineTo(sx, sy);
-                }
-                ctx.stroke();
-
-                ctx.rotate(-spin);
-                ctx.fillStyle = '#818cf8';
-                ctx.font = 'bold 8.5px "Plus Jakarta Sans", sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('🌀 XOÁY NƯỚC', 0, -h.radius - 4);
-            }
-            ctx.restore();
-        }
     }
 
     drawClashSparks(ctx) {

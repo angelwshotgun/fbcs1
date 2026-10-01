@@ -1,5 +1,6 @@
 import os
 import time
+import base64
 from flask import Blueprint, request, jsonify, current_app
 from services.player_service import player_service
 
@@ -110,15 +111,22 @@ def api_upload_duck_image(player_id: str):
         if 'file' in request.files or 'duck_image' in request.files:
             file = request.files.get('file') or request.files.get('duck_image')
             if file and file.filename:
-                # Tạo thư mục uploads nếu chưa có
-                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                upload_dir = os.path.join(base_dir, 'static', 'uploads', 'ducks')
-                os.makedirs(upload_dir, exist_ok=True)
+                file_bytes = file.read()
+                content_type = file.content_type or 'image/png'
+                b64_str = base64.b64encode(file_bytes).decode('utf-8')
+                duck_img_url = f"data:{content_type};base64,{b64_str}"
 
-                filename = f"{pid}.png"
-                file_path = os.path.join(upload_dir, filename)
-                file.save(file_path)
-                duck_img_url = f"/static/uploads/ducks/{filename}?t={int(time.time())}"
+                # Đồng thời lưu một bản sao local nếu có thể
+                try:
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    upload_dir = os.path.join(base_dir, 'static', 'uploads', 'ducks')
+                    os.makedirs(upload_dir, exist_ok=True)
+                    filename = f"{pid}.png"
+                    file_path = os.path.join(upload_dir, filename)
+                    with open(file_path, 'wb') as f:
+                        f.write(file_bytes)
+                except Exception:
+                    pass
 
         # 2. Trường hợp gửi JSON payload (URL hoặc Base64 Data URL)
         elif request.is_json:

@@ -162,11 +162,11 @@ function handleDuckFileSelect(event) {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > 5 * 1024 * 1024) {
         Swal.fire({
             icon: 'warning',
             title: 'File quá lớn',
-            text: 'Vui lòng chọn ảnh dung lượng dưới 2MB để đảm bảo hiệu năng Canvas.',
+            text: 'Vui lòng chọn ảnh dung lượng dưới 5MB.',
             ...SWAL_THEME
         });
         event.target.value = '';
@@ -175,11 +175,43 @@ function handleDuckFileSelect(event) {
 
     const reader = new FileReader();
     reader.onload = function(e) {
-        const dataUrl = e.target.result;
-        const input = document.getElementById('form-duck-image');
-        const preview = document.getElementById('form-duck-preview');
-        if (input) input.value = dataUrl;
-        if (preview) preview.src = dataUrl;
+        const rawDataUrl = e.target.result;
+        // Auto resize and compress to 128x128 transparent PNG to ensure persistent storage without disk limits
+        const img = new Image();
+        img.onload = function() {
+            const maxDim = 128;
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) {
+                    h = Math.round((h * maxDim) / w);
+                    w = maxDim;
+                } else {
+                    w = Math.round((w * maxDim) / h);
+                    h = maxDim;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+
+            const compressedDataUrl = canvas.toDataURL('image/png');
+            const input = document.getElementById('form-duck-image');
+            const preview = document.getElementById('form-duck-preview');
+            if (input) input.value = compressedDataUrl;
+            if (preview) preview.src = compressedDataUrl;
+        };
+        img.onerror = function() {
+            const input = document.getElementById('form-duck-image');
+            const preview = document.getElementById('form-duck-preview');
+            if (input) input.value = rawDataUrl;
+            if (preview) preview.src = rawDataUrl;
+        };
+        img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
 }

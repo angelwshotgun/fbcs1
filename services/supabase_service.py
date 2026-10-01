@@ -221,7 +221,7 @@ class SupabaseService:
 
         rows = []
         for pid, p in local_players.items():
-            rows.append({
+            r = {
                 'id': pid,
                 'nickname': p.get('nickname', pid.capitalize()),
                 'avatar': p.get('avatar', f"https://api.dicebear.com/7.x/bottts/svg?seed={pid}"),
@@ -232,7 +232,10 @@ class SupabaseService:
                 'stats_ovr': float(p.get('stats_ovr', 6.9)),
                 'primary_role': p.get('primary_role', 'ALL'),
                 'favorite_champions': p.get('favorite_champions', [])
-            })
+            }
+            if p.get('duck_image'):
+                r['duck_image'] = p.get('duck_image')
+            rows.append(r)
 
         ok, res = self._request(
             'players',
@@ -240,6 +243,17 @@ class SupabaseService:
             data=rows,
             prefer='resolution=merge-duplicates,return=representation'
         )
+        if not ok:
+            # Fallback nếu bảng Supabase chưa có cột duck_image
+            for r in rows:
+                r.pop('duck_image', None)
+            ok, res = self._request(
+                'players',
+                method='POST',
+                data=rows,
+                prefer='resolution=merge-duplicates,return=representation'
+            )
+
         if ok:
             return True, f"Đã đồng bộ {len(rows)} tuyển thủ lên Supabase!", len(rows)
         return False, f"Lỗi đồng bộ Supabase: {res}", 0
