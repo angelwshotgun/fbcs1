@@ -200,6 +200,80 @@ class DuckAudioFx {
             osc.stop(t + 0.7);
         } catch (e) {}
     }
+
+    playSkillChime() {
+        if (!this.enabled) return;
+        try {
+            this.init();
+            if (!this.ctx) return;
+            const notes = [659.25, 830.61, 987.77, 1318.51];
+            notes.forEach((freq, idx) => {
+                setTimeout(() => {
+                    this.playTone(freq, 'sine', 0.12, 0.16);
+                }, idx * 55);
+            });
+        } catch (e) {}
+    }
+
+    playKakari() {
+        if (!this.enabled) return;
+        try {
+            this.init();
+            if (!this.ctx) return;
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(450, t);
+            osc.frequency.linearRampToValueAtTime(280, t + 0.12);
+            gain.gain.setValueAtTime(0.18, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.15);
+        } catch (e) {}
+    }
+
+    playExhausted() {
+        if (!this.enabled) return;
+        try {
+            this.init();
+            if (!this.ctx) return;
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(220, t);
+            osc.frequency.linearRampToValueAtTime(110, t + 0.35);
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.4);
+        } catch (e) {}
+    }
+
+    playSpurtBurst() {
+        if (!this.enabled) return;
+        try {
+            this.init();
+            if (!this.ctx) return;
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(280, t);
+            osc.frequency.exponentialRampToValueAtTime(780, t + 0.3);
+            gain.gain.setValueAtTime(0.22, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.35);
+        } catch (e) {}
+    }
 }
 
 const duckAudio = new DuckAudioFx();
@@ -344,6 +418,20 @@ class ParticleSystem {
         }
     }
 
+    addExhaustSweat(x, y) {
+        this.particles.push({
+            x: x + (Math.random() - 0.5) * 10,
+            y: y - 8,
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: 2.2 + Math.random() * 2,
+            size: Math.random() * 2.5 + 1.5,
+            color: '#38bdf8',
+            life: 0.85,
+            decay: 0.05,
+            type: 'water'
+        });
+    }
+
     update() {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
@@ -419,6 +507,137 @@ class ParticleSystem {
 // Embedded Default Duck SVG Data URI (100% resilient fallback)
 const DEFAULT_DUCK_DATA_URI = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128"><defs><linearGradient id="duckBody" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="%23fff176"/><stop offset="50%" stop-color="%23fdd835"/><stop offset="100%" stop-color="%23fbc02d"/></linearGradient><linearGradient id="duckWing" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23ffee58"/><stop offset="100%" stop-color="%23f9a825"/></linearGradient><linearGradient id="duckBeak" x1="0%" y1="0%" x2="100%" y2="50%"><stop offset="0%" stop-color="%23ff9800"/><stop offset="100%" stop-color="%23e65100"/></linearGradient></defs><path d="M 22 75 C 10 70 8 50 20 46 C 26 44 32 55 35 63 Z" fill="%23fbc02d" stroke="%23f57f17" stroke-width="2.5"/><ellipse cx="60" cy="80" rx="42" ry="32" fill="url(%23duckBody)" stroke="%23f57f17" stroke-width="2.5"/><path d="M 44 72 C 38 72 32 78 35 86 C 39 96 54 98 68 93 C 78 89 82 81 78 76 C 73 70 54 72 44 72 Z" fill="url(%23duckWing)" stroke="%23f57f17" stroke-width="2.5"/><path d="M 72 70 C 72 65 74 54 77 46 C 78 40 82 30 92 30 C 104 30 110 40 108 52 C 107 60 102 67 96 74 Z" fill="url(%23duckBody)" stroke="%23f57f17" stroke-width="2.5"/><path d="M 103 48 C 112 47 124 50 126 55 C 127 57 122 62 113 63 C 103 64 98 62 98 56 Z" fill="url(%23duckBeak)" stroke="%23bf360c" stroke-width="2"/><ellipse cx="94" cy="42" rx="6.5" ry="8" fill="%231e293b"/><ellipse cx="96" cy="39.5" rx="2.5" ry="3.5" fill="%23ffffff"/><circle cx="92.5" cy="45" r="1.2" fill="%23ffffff"/><ellipse cx="89" cy="54" rx="4.5" ry="3" fill="%23ff7043" opacity="0.4"/></svg>`;
 
+// ========================================================
+// UMAMUSUME RACING MECHANICS ENGINE (100% FAIR RANDOM & DYNAMIC)
+// ========================================================
+
+const RUNNING_STYLES = {
+    runner: {
+        id: 'runner',
+        name: 'Tiên Phong',
+        icon: '🚀',
+        color: '#f59e0b',
+        badgeClass: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-400/50',
+        desc: 'Bơi dẫn đầu sớm, đốt nhiều thể lực, dễ hụt hơi cuối chặng nếu không có kỹ năng hồi sức',
+        phasePacing: [1.30, 1.12, 0.96, 1.08],
+        staminaBurnRate: 1.25
+    },
+    leader: {
+        id: 'leader',
+        name: 'Tiên Hành',
+        icon: '🎯',
+        color: '#10b981',
+        badgeClass: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-400/50',
+        desc: 'Bám sát top 2-4, nhịp bơi ổn định, bứt phá ở chặng cuối',
+        phasePacing: [1.02, 1.06, 1.16, 1.24],
+        staminaBurnRate: 1.0
+    },
+    betweener: {
+        id: 'betweener',
+        name: 'Sai Đoàn',
+        icon: '🌪️',
+        color: '#6366f1',
+        badgeClass: 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-400/50',
+        desc: 'Núp giữa bầy, tiết kiệm thể lực nhờ núp gió, gia tốc cực mạnh khi vào cua cuối',
+        phasePacing: [0.90, 0.98, 1.20, 1.38],
+        staminaBurnRate: 0.88
+    },
+    chaser: {
+        id: 'chaser',
+        name: 'Truy Kích',
+        icon: '⚡',
+        color: '#ec4899',
+        badgeClass: 'bg-pink-500/20 text-pink-700 dark:text-pink-300 border-pink-400/50',
+        desc: 'Thong thả ở cuối đàn, giữ trọn thể lực, bùng nổ Top Speed kinh hoàng ở Last Spurt!',
+        phasePacing: [0.80, 0.90, 1.08, 1.58],
+        staminaBurnRate: 0.78
+    }
+};
+
+const UMAMUSUME_SKILLS = [
+    {
+        id: 'last_spurt_king',
+        name: 'Vua Nước Rút',
+        icon: '⚡',
+        tagBg: '#eab308',
+        tagText: '#0f172a',
+        phases: [3],
+        condition: (duck) => duck.progress >= 0.82,
+        effect: (duck) => {
+            duck.speedMultiplier = Math.max(duck.speedMultiplier, 1.48);
+            duck.isSpurting = true;
+        }
+    },
+    {
+        id: 'comeback_gust',
+        name: 'Cú Lội Ngược Dòng',
+        icon: '🚀',
+        tagBg: '#f97316',
+        tagText: '#ffffff',
+        phases: [2, 3],
+        condition: (duck, race) => duck.rankEstimate > Math.ceil(race.ducks.length * 0.45) && duck.progress >= 0.64,
+        effect: (duck) => {
+            duck.speedMultiplier = Math.max(duck.speedMultiplier, 1.52);
+            duck.isSpurting = true;
+        }
+    },
+    {
+        id: 'golden_accel',
+        name: 'Gia Tốc Hoàng Kim',
+        icon: '💥',
+        tagBg: '#ef4444',
+        tagText: '#ffffff',
+        phases: [2],
+        condition: (duck) => duck.progress >= 0.65 && duck.progress <= 0.82,
+        effect: (duck) => {
+            duck.speedMultiplier = Math.max(duck.speedMultiplier, 1.38);
+        }
+    },
+    {
+        id: 'stamina_drink',
+        name: 'Uống Nước Tăng Lực',
+        icon: '💚',
+        tagBg: '#10b981',
+        tagText: '#ffffff',
+        phases: [1, 2],
+        condition: (duck) => duck.stamina < 60,
+        effect: (duck) => {
+            duck.stamina = Math.min(duck.maxStamina, duck.stamina + 35);
+            duck.isExhausted = false;
+        }
+    },
+    {
+        id: 'glare_stare',
+        name: 'Ánh Mắt Đe Dọa',
+        icon: '💢',
+        tagBg: '#8b5cf6',
+        tagText: '#ffffff',
+        phases: [1, 2, 3],
+        condition: (duck, race) => {
+            return race.ducks.some(d => !d.finished && d.x > duck.x && (d.x - duck.x) < 80 && Math.abs(d.y - duck.y) < 32);
+        },
+        effect: (duck, race) => {
+            const frontDucks = race.ducks.filter(d => !d.finished && d.x > duck.x && (d.x - duck.x) < 80 && Math.abs(d.y - duck.y) < 32);
+            frontDucks.forEach(fd => {
+                fd.speedMultiplier = Math.min(fd.speedMultiplier, 0.78);
+                fd.stamina = Math.max(0, fd.stamina - 14);
+            });
+        }
+    },
+    {
+        id: 'lead_pride',
+        name: 'Thần Tốc Tiên Phong',
+        icon: '👑',
+        tagBg: '#38bdf8',
+        tagText: '#0f172a',
+        phases: [1, 2],
+        condition: (duck) => duck.strategy === 'runner' && duck.rankEstimate <= 2,
+        effect: (duck) => {
+            duck.speedMultiplier = Math.max(duck.speedMultiplier, 1.32);
+        }
+    }
+];
+
 // Main Duck Race Game Class
 class DuckRaceGame {
     constructor(canvasId, allPlayers = []) {
@@ -464,6 +683,46 @@ class DuckRaceGame {
         this.lightningFlash = 0;
         this.nextLightningTime = 0;
         this.activeClashes = [];
+
+        // Umamusume Race Engine State
+        this.raceStartTime = 0;
+        this.currentPhase = 0; // 0: Opening Leg, 1: Middle Leg, 2: Final Leg, 3: Last Spurt
+        this.commentaryLog = [];
+        this.nextSkillCheckTime = 0;
+        this.lastDuelAnnounce = 0;
+    }
+
+    addCommentary(msg, type = 'info') {
+        const timestamp = this.raceStartTime > 0 ? Math.max(0, Math.floor((performance.now() - this.raceStartTime) / 1000)) : 0;
+        const item = { time: timestamp, msg, type };
+        this.commentaryLog.unshift(item);
+        if (this.commentaryLog.length > 25) this.commentaryLog.pop();
+
+        const tickerEls = [
+            document.getElementById('duck-race-ticker-text'),
+            document.getElementById('tab-duck-race-ticker-text')
+        ];
+        tickerEls.forEach(el => {
+            if (!el) return;
+            el.innerHTML = msg;
+            el.classList.remove('animate-fade-in');
+            void el.offsetWidth;
+            el.classList.add('animate-fade-in');
+        });
+    }
+
+    updatePhaseUI(phase) {
+        const names = ['Khởi Động', 'Giữa Chặng', 'Chặng Cuối', 'LAST SPURT 🔥'];
+        const colors = ['text-slate-300', 'text-sky-400', 'text-amber-400', 'text-rose-400 font-black animate-pulse'];
+        const phaseBadges = [
+            document.getElementById('duck-phase-badge'),
+            document.getElementById('tab-duck-phase-badge')
+        ];
+        phaseBadges.forEach(b => {
+            if (!b) return;
+            b.innerText = `Chặng: ${names[phase] || 'Khởi Động'}`;
+            b.className = `px-2.5 py-0.5 rounded-lg bg-slate-800 border border-slate-700 text-[11px] shrink-0 font-bold ${colors[phase] || 'text-slate-300'}`;
+        });
     }
 
     setupWeather() {
@@ -651,9 +910,15 @@ class DuckRaceGame {
         const rows = Math.ceil(N / cols);
         const rowStep = rows > 1 ? (waterSpan - 36) / (rows - 1) : 0;
 
+        this.currentPhase = 0;
+        this.updatePhaseUI(0);
+
+        const stylesList = ['runner', 'leader', 'betweener', 'chaser'];
+
         activePlayers.forEach((p, idx) => {
-            const variance = (Math.random() - 0.5) * 0.22;
-            const baseSpd = nominalSpeed * (1 + variance);
+            const styleId = p.strategy || stylesList[idx % stylesList.length];
+            p.strategy = styleId;
+            const style = RUNNING_STYLES[styleId] || RUNNING_STYLES.runner;
 
             const col = idx % cols;
             const row = Math.floor(idx / cols);
@@ -676,19 +941,39 @@ class DuckRaceGame {
             const jitterX = (Math.random() - 0.5) * 10;
             const startX = this.startLineX - 32 - colOffsetX + jitterX;
 
+            // Pick 2-3 distinct random skills for each duck
+            const shuffledSkills = [...UMAMUSUME_SKILLS].sort(() => Math.random() - 0.5);
+            const assignedSkills = shuffledSkills.slice(0, Math.random() > 0.4 ? 3 : 2);
+
             this.ducks.push({
                 id: p.id,
                 nickname: p.nickname || `Tuyển Thủ ${idx + 1}`,
                 team: p.team || 0,
                 avatar: p.avatar,
                 duck_image: p.duck_image || '',
+                strategy: styleId,
+                styleConfig: style,
                 x: startX,
                 y: finalY,
                 baseY: finalY,
                 driftSeed: Math.random() * Math.PI * 2,
-                baseSpeed: baseSpd,
+                baseSpeed: nominalSpeed, // PURE RNG: ALL DUCKS SHARE EXACT SAME BASELINE SPEED!
                 nominalSpeed: nominalSpeed,
                 speedMultiplier: 1.0,
+                stamina: 100,
+                maxStamina: 100,
+                isKakari: false,
+                kakariDuration: 0,
+                hasKakariRolled: false,
+                isExhausted: false,
+                isSpurting: false,
+                isKurabeai: false,
+                progress: 0.0,
+                phase: 0,
+                rankEstimate: idx + 1,
+                assignedSkills: assignedSkills,
+                skillCooldowns: {},
+                activeSkillBanner: null,
                 tiltAngle: 0,
                 effect: null,
                 effectDuration: 0,
@@ -769,6 +1054,12 @@ class DuckRaceGame {
     startRacing() {
         this.state = 'racing';
         this.lastTime = performance.now();
+        this.raceStartTime = performance.now();
+        this.currentPhase = 0;
+        this.nextSkillCheckTime = performance.now() + 1000;
+        this.updatePhaseUI(0);
+        this.addCommentary(`🚦 <b>XUẤT PHÁT!</b> Cờ hiệu phất! Toàn bầy vịt lao vút khỏi bệ xuất phát với 4 phong cách chiến thuật!`, 'start');
+
         const firstEventDelay = (this.targetDuration / 30) * 1800;
         this.nextEventCheck = performance.now() + firstEventDelay;
 
@@ -943,7 +1234,40 @@ class DuckRaceGame {
 
         const waterTop = 36;
         const waterBottom = this.worldHeight - 36;
+        const trackLength = Math.max(1, this.finishLineX - this.startLineX);
 
+        // 1. Calculate live ranking positions & overall race progress
+        const sortedDucks = [...this.ducks].sort((a, b) => b.x - a.x);
+        sortedDucks.forEach((d, idx) => {
+            d.rankEstimate = idx + 1;
+        });
+
+        const activeDucks = this.ducks.filter(d => !d.finished);
+        const maxProgress = activeDucks.length > 0
+            ? Math.max(...activeDucks.map(d => Math.max(0, (d.x - this.startLineX) / trackLength)))
+            : 1.0;
+
+        // Overall Race Phase Progression
+        let newPhase = 0;
+        if (maxProgress >= 0.83) newPhase = 3;
+        else if (maxProgress >= 0.67) newPhase = 2;
+        else if (maxProgress >= 0.17) newPhase = 1;
+
+        if (newPhase !== this.currentPhase) {
+            this.currentPhase = newPhase;
+            this.updatePhaseUI(newPhase);
+            if (newPhase === 1) {
+                this.addCommentary(`🌊 <b>CHẶNG GIỮA (Middle Leg):</b> Các tuyển thủ duy trì cự ly chiến thuật, núp gió và quản lý thể lực!`, 'phase');
+            } else if (newPhase === 2) {
+                this.addCommentary(`🚀 <b>CHẶNG CUỐI (Final Leg):</b> Bắt đầu gia tốc bứt phá! Các vịt Tiên Hành và Sai Đoàn tăng tốc tìm khoảng trống!`, 'phase');
+                duckAudio.playBoost();
+            } else if (newPhase === 3) {
+                this.addCommentary(`🔥 <b>ĐẠI CHIẾN LAST SPURT (Nước Rút):</b> Toàn bộ bầy vịt bùng nổ năng lượng tối đa, bứt tốc về đích!`, 'spurt');
+                duckAudio.playSpurtBurst();
+            }
+        }
+
+        // 2. Individual Duck Physics, Stamina & Skills
         for (const duck of this.ducks) {
             if (duck.finished) continue;
 
@@ -955,26 +1279,99 @@ class DuckRaceGame {
                 }
             }
 
+            // Active Skill Banner Countdown
+            if (duck.activeSkillBanner) {
+                duck.activeSkillBanner.timer -= dt;
+                if (duck.activeSkillBanner.timer <= 0) {
+                    duck.activeSkillBanner = null;
+                }
+            }
+
+            // Duck Progress & Individual Phase
+            duck.progress = Math.max(0, Math.min(1, (duck.x - this.startLineX) / trackLength));
+            duck.phase = duck.progress >= 0.83 ? 3 : (duck.progress >= 0.67 ? 2 : (duck.progress >= 0.17 ? 1 : 0));
+
+            // Dynamic Kakari (Hưng phấn quá đà 💢) Roll in early race
+            if (!duck.hasKakariRolled && duck.progress >= 0.05 && duck.progress <= 0.26) {
+                duck.hasKakariRolled = true;
+                if (Math.random() < 0.14) {
+                    duck.isKakari = true;
+                    duck.kakariDuration = 3200 + Math.random() * 1500;
+                    duckAudio.playKakari();
+                    this.addCommentary(`⚠️ Tuyển thủ <b>${duck.nickname}</b> dính <b>Hưng Phấn Quá Đà (Kakari)</b>! Bơi vụt lên trước nhưng đốt cạn thể lực!`, 'kakari');
+                }
+            }
+
+            if (duck.isKakari) {
+                duck.kakariDuration -= dt;
+                if (duck.kakariDuration <= 0) {
+                    duck.isKakari = false;
+                }
+            }
+
+            // Stamina Consumption & Exhaustion (Out of Gas 💦)
+            const styleBurn = duck.styleConfig ? duck.styleConfig.staminaBurnRate : 1.0;
+            let drainMultiplier = styleBurn;
+            if (duck.isKakari) drainMultiplier *= 2.2;
+            if (duck.isSpurting || duck.phase === 3) drainMultiplier *= 1.6;
+            if (duck.isDrafting) drainMultiplier *= 0.6; // drafting saves stamina!
+
+            const baseDrain = (dt / 1000) * (100 / this.targetDuration) * 0.96 * drainMultiplier;
+            duck.stamina = Math.max(0, duck.stamina - baseDrain);
+
+            if (duck.stamina <= 0) {
+                if (!duck.isExhausted) {
+                    duck.isExhausted = true;
+                    duckAudio.playExhausted();
+                    this.addCommentary(`💦 Tuyển thủ <b>${duck.nickname}</b> đã <b>CẠN THỂ LỰC (Out of Gas)</b>! Tốc độ tụt dốc nghiêm trọng!`, 'exhaust');
+                }
+                if (Math.random() < 0.35) {
+                    this.particles.addExhaustSweat(duck.x, duck.y);
+                }
+            } else {
+                duck.isExhausted = false;
+            }
+
             duck.bobOffset += 0.12;
             const strokeRhythm = 1 + Math.sin(duck.bobOffset * 2) * 0.22;
-            const noise = (Math.random() - 0.48) * (duck.nominalSpeed * 0.30);
+
+            // Strategy phase pacing modifier
+            const pacing = duck.styleConfig ? duck.styleConfig.phasePacing[duck.phase] : 1.0;
+            let dynamicSpeedMod = duck.speedMultiplier;
+
+            if (duck.isKakari) dynamicSpeedMod *= 1.38;
+            if (duck.isExhausted) dynamicSpeedMod *= 0.58; // severe slowdown!
+            if (duck.isKurabeai) dynamicSpeedMod *= 1.16;
+
+            // Last Spurt Burst for Chasers & Betweeners!
+            if (duck.phase === 3 && !duck.isExhausted) {
+                duck.isSpurting = true;
+                if (duck.strategy === 'chaser') dynamicSpeedMod *= 1.25;
+                else if (duck.strategy === 'betweener') dynamicSpeedMod *= 1.15;
+            } else {
+                duck.isSpurting = false;
+            }
 
             const draftingMod = duck.isDrafting ? 1.25 : 1.0;
-            const speed = (duck.baseSpeed * duck.speedMultiplier * draftingMod * weatherSpeedMod * strokeRhythm + noise) * (dt / 16.6);
-            duck.x += Math.max(0.1, speed);
+            // Dynamic micro-flutter variance (+/- 8%) so ducks naturally breathe and shift
+            const microFlutter = 1 + (Math.sin(now * 0.005 + duck.driftSeed * 3) * 0.08);
+            const noise = (Math.random() - 0.5) * 0.04;
+
+            const speed = (duck.baseSpeed * pacing * dynamicSpeedMod * draftingMod * weatherSpeedMod * strokeRhythm * (microFlutter + noise)) * (dt / 16.6);
+            duck.x += Math.max(0.08, speed);
 
             // Natural undulating sinusoidal swimming drift inside open river
             const drift = Math.sin(now * 0.002 + duck.driftSeed) * 11 + Math.sin(now * 0.004 + duck.driftSeed * 2.3) * 5;
             duck.y = Math.max(waterTop + 20, Math.min(waterBottom - 20, duck.baseY + drift));
 
             // Tilt forward on boost
-            duck.tiltAngle = (duck.speedMultiplier > 1.2 ? 0.14 : (duck.speedMultiplier < 0.8 ? -0.09 : 0));
+            duck.tiltAngle = (dynamicSpeedMod > 1.2 ? 0.14 : (dynamicSpeedMod < 0.8 ? -0.09 : 0));
 
             if (Math.random() < 0.28) {
                 this.particles.addWaterSplash(duck.x - 22, duck.y + Math.sin(duck.bobOffset) * 2.8);
             }
 
-            if (duck.effect === 'boost' || duck.effect === 'tailwind') {
+            if (duck.effect === 'boost' || duck.effect === 'tailwind' || duck.isSpurting) {
                 this.particles.addFireTrail(duck.x - 18, duck.y);
             } else if (duck.effect === 'blessing') {
                 if (Math.random() < 0.35) {
@@ -988,6 +1385,7 @@ class DuckRaceGame {
                 duck.spinAngle = 0;
             }
 
+            // Finish Line Reached
             if (duck.x >= this.finishLineX) {
                 duck.finished = true;
                 duck.finishTime = now;
@@ -999,6 +1397,7 @@ class DuckRaceGame {
                 if (duck.rank === 1) {
                     duckAudio.playFinishFanfare();
                     this.showToast(`🥇 QUÁN QUÂN: ${duck.nickname} về đích ĐẦU TIÊN! 🏆`, 'bg-amber-400');
+                    this.addCommentary(`🏆 <b>QUÁN QUÂN VỀ ĐÍCH:</b> Tuyển thủ <b>${duck.nickname}</b> đã xuất sắc cán đích ĐẦU TIÊN!`, 'finish');
                 } else {
                     duckAudio.playQuack();
                 }
@@ -1007,15 +1406,61 @@ class DuckRaceGame {
             }
         }
 
-        // Competitive Rivalry: Elastic Bumping, Slipstream Drafting & Team Sparks
+        // 3. Periodic Individual Skill Evaluation Loop
+        if (now > this.nextSkillCheckTime && this.state === 'racing') {
+            this.nextSkillCheckTime = now + 650;
+            for (const duck of activeDucks) {
+                if (!duck.assignedSkills || duck.assignedSkills.length === 0) continue;
+                for (const skill of duck.assignedSkills) {
+                    const onCd = duck.skillCooldowns[skill.id] && now < duck.skillCooldowns[skill.id];
+                    if (!onCd && skill.phases.includes(duck.phase) && skill.condition(duck, this)) {
+                        if (Math.random() < 0.38) {
+                            duck.skillCooldowns[skill.id] = now + 5000;
+                            skill.effect(duck, this);
+                            duck.activeSkillBanner = {
+                                name: skill.name,
+                                icon: skill.icon,
+                                tagBg: skill.tagBg,
+                                tagText: skill.tagText,
+                                timer: 1800
+                            };
+                            duckAudio.playSkillChime();
+                            this.particles.addConfetti(duck.x, duck.y, 6);
+                            this.addCommentary(`✨ <b>${duck.nickname}</b> kích hoạt [<b>${skill.name}</b>] ${skill.icon}!`, 'skill');
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Competitive Rivalry: Elastic Bumping, Slipstream Drafting & Kurabeai Duel
         this.activeClashes = [];
-        const activeList = this.ducks.filter(d => !d.finished);
-        const activeCount = activeList.length;
+        const activeCount = activeDucks.length;
+
+        // Kurabeai Duel check in Last Spurt (Phase 3)
+        if (this.currentPhase === 3 && activeCount >= 2) {
+            const top1 = sortedDucks.find(d => !d.finished);
+            const top2 = sortedDucks.filter(d => !d.finished && d.id !== top1?.id)[0];
+            if (top1 && top2 && Math.abs(top1.x - top2.x) < 28 && Math.abs(top1.y - top2.y) < 32) {
+                top1.isKurabeai = true;
+                top2.isKurabeai = true;
+                this.particles.addBumpSpark((top1.x + top2.x) / 2, (top1.y + top2.y) / 2, 2);
+                if (now - (this.lastDuelAnnounce || 0) > 4000) {
+                    this.lastDuelAnnounce = now;
+                    duckAudio.playBump();
+                    this.addCommentary(`⚡ <b>SO KÈ NẢY LỬA!</b> <b>${top1.nickname}</b> và <b>${top2.nickname}</b> đang tranh chấp nghẹt thở từng xích lô!`, 'duel');
+                }
+            } else {
+                if (top1) top1.isKurabeai = false;
+                if (top2) top2.isKurabeai = false;
+            }
+        }
 
         for (let i = 0; i < activeCount; i++) {
-            const d1 = activeList[i];
+            const d1 = activeDucks[i];
             for (let j = i + 1; j < activeCount; j++) {
-                const d2 = activeList[j];
+                const d2 = activeDucks[j];
                 const dx = Math.abs(d1.x - d2.x);
                 const dy = Math.abs(d1.y - d2.y);
 
@@ -1049,7 +1494,7 @@ class DuckRaceGame {
             let isTuckedBehind = false;
             for (let k = 0; k < activeCount; k++) {
                 if (i === k) continue;
-                const frontDuck = activeList[k];
+                const frontDuck = activeDucks[k];
                 const gapX = frontDuck.x - d1.x;
                 const gapY = Math.abs(frontDuck.y - d1.y);
 
@@ -1076,7 +1521,6 @@ class DuckRaceGame {
         }
 
         // Camera Follow Logic (Smooth Tracking Camera Zoomed on the Flock)
-        const activeDucks = this.ducks.filter(d => !d.finished);
         if (activeDucks.length > 0) {
             const leaderX = Math.max(...activeDucks.map(d => d.x));
             const avgX = activeDucks.reduce((s, d) => s + d.x, 0) / activeDucks.length;
@@ -1160,6 +1604,82 @@ class DuckRaceGame {
                 grid.appendChild(card);
             });
         });
+
+        // Render 2 Teams Split View (Đội Xanh & Đội Đỏ)
+        const team1ListEl = document.getElementById('duck-result-team1-list');
+        const team2ListEl = document.getElementById('duck-result-team2-list');
+        const team1Badge = document.getElementById('duck-team1-count-badge');
+        const team2Badge = document.getElementById('duck-team2-count-badge');
+
+        const team1Ducks = this.finishOrder.filter(d => d.team === 1);
+        const team2Ducks = this.finishOrder.filter(d => d.team === 2);
+
+        if (team1Badge) team1Badge.innerText = `${team1Ducks.length} người`;
+        if (team2Badge) team2Badge.innerText = `${team2Ducks.length} người`;
+
+        if (team1ListEl) {
+            team1ListEl.innerHTML = '';
+            if (team1Ducks.length === 0) {
+                team1ListEl.innerHTML = '<p class="text-xs text-blue-400/80 italic p-2">Chưa có thành viên Đội Xanh về đích...</p>';
+            } else {
+                team1Ducks.forEach((duck, idx) => {
+                    const pickRank = idx + 1;
+                    const styleIcon = duck.styleConfig ? duck.styleConfig.icon : '';
+                    const item = document.createElement('div');
+                    item.className = 'p-2.5 rounded-xl bg-white border border-blue-200/90 shadow-2xs flex items-center justify-between gap-2 transition hover:border-blue-400 animate-in fade-in duration-150';
+                    item.innerHTML = `
+                        <div class="flex items-center gap-2 truncate">
+                            <span class="px-2 py-0.5 rounded-lg bg-blue-100 text-blue-800 border border-blue-200 text-[11px] font-black shrink-0">
+                                Pick #${pickRank}
+                            </span>
+                            <span class="font-bold text-xs text-slate-900 truncate" title="${duck.nickname}">
+                                ${styleIcon} ${duck.nickname}
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-semibold shrink-0">
+                                (Hạng #${duck.rank})
+                            </span>
+                        </div>
+                        <button type="button" onclick="eliminatePlayerAndContinue('${duck.id}')" title="Loại người này"
+                                class="px-1.5 py-0.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[10px] font-bold transition shrink-0">
+                            <i class="fa-solid fa-xmark text-[9px]"></i> Loại
+                        </button>
+                    `;
+                    team1ListEl.appendChild(item);
+                });
+            }
+        }
+
+        if (team2ListEl) {
+            team2ListEl.innerHTML = '';
+            if (team2Ducks.length === 0) {
+                team2ListEl.innerHTML = '<p class="text-xs text-rose-400/80 italic p-2">Chưa có thành viên Đội Đỏ về đích...</p>';
+            } else {
+                team2Ducks.forEach((duck, idx) => {
+                    const pickRank = idx + 1;
+                    const styleIcon = duck.styleConfig ? duck.styleConfig.icon : '';
+                    const item = document.createElement('div');
+                    item.className = 'p-2.5 rounded-xl bg-white border border-rose-200/90 shadow-2xs flex items-center justify-between gap-2 transition hover:border-rose-400 animate-in fade-in duration-150';
+                    item.innerHTML = `
+                        <div class="flex items-center gap-2 truncate">
+                            <span class="px-2 py-0.5 rounded-lg bg-rose-100 text-rose-800 border border-rose-200 text-[11px] font-black shrink-0">
+                                Pick #${pickRank}
+                            </span>
+                            <span class="font-bold text-xs text-slate-900 truncate" title="${duck.nickname}">
+                                ${styleIcon} ${duck.nickname}
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-semibold shrink-0">
+                                (Hạng #${duck.rank})
+                            </span>
+                        </div>
+                        <button type="button" onclick="eliminatePlayerAndContinue('${duck.id}')" title="Loại người này"
+                                class="px-1.5 py-0.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[10px] font-bold transition shrink-0">
+                            <i class="fa-solid fa-xmark text-[9px]"></i> Loại
+                        </button>
+                    `;
+                    team2ListEl.appendChild(item);
+                });
+            }
+        }
 
         // Update Winner Hero Card in Tab
         if (this.finishOrder.length > 0) {
@@ -1465,8 +1985,20 @@ class DuckRaceGame {
         // Draw the Duck Image
         ctx.drawImage(img, -size / 2, -size / 2, size, size);
 
-        // Powerup Indicators
-        if (duck.effect === 'boost' || duck.effect === 'tailwind') {
+        // Powerup & Umamusume Emotion Indicators
+        if (duck.isKakari) {
+            ctx.font = '18px sans-serif';
+            ctx.fillText('💢', -2, -size * 0.44);
+        } else if (duck.isExhausted) {
+            ctx.font = '18px sans-serif';
+            ctx.fillText('💦', -2, -size * 0.44);
+        } else if (duck.isKurabeai) {
+            ctx.font = '18px sans-serif';
+            ctx.fillText('⚡', -2, -size * 0.46);
+        } else if (duck.isSpurting) {
+            ctx.font = '18px sans-serif';
+            ctx.fillText('🔥', -size * 0.52, -size * 0.15);
+        } else if (duck.effect === 'boost' || duck.effect === 'tailwind') {
             ctx.font = '16px sans-serif';
             ctx.fillText('🚀', -size * 0.5, -size * 0.15);
         } else if (duck.effect === 'shock') {
@@ -1478,15 +2010,18 @@ class DuckRaceGame {
         }
         ctx.restore();
 
-        // 3. Clean Name Tag (Option B: No team badge, just clear pill with mini avatar and nickname)
+        // 3. Clean Name Tag with Strategy Icon (Umamusume Style)
         ctx.save();
         const avatarImg = this.avatarImages[duck.id];
+        const styleIcon = duck.styleConfig ? duck.styleConfig.icon : '';
         let displayName = duck.nickname;
+        if (displayName.length > 12) {
+            displayName = displayName.substring(0, 11) + '…';
+        }
         if (duck.isDrafting) {
             displayName = '💨 ' + displayName;
-        }
-        if (displayName.length > 14) {
-            displayName = displayName.substring(0, 13) + '…';
+        } else if (styleIcon) {
+            displayName = styleIcon + ' ' + displayName;
         }
 
         ctx.font = 'bold 9.5px "Plus Jakarta Sans", sans-serif';
@@ -1498,8 +2033,8 @@ class DuckRaceGame {
         const tagY = duck.y + bobbingY - size * 0.54;
         const tagX = duck.x - tagW / 2;
 
-        // Dark translucent glassmorphism pill (Cyan glow on drafting)
-        ctx.fillStyle = duck.isDrafting ? 'rgba(12, 74, 110, 0.92)' : 'rgba(15, 23, 42, 0.88)';
+        // Dark translucent glassmorphism pill (Cyan glow on drafting / Amber on Kurabeai)
+        ctx.fillStyle = duck.isDrafting ? 'rgba(12, 74, 110, 0.92)' : (duck.isKurabeai ? 'rgba(120, 53, 15, 0.94)' : 'rgba(15, 23, 42, 0.88)');
         ctx.beginPath();
         if (typeof ctx.roundRect === 'function') {
             ctx.roundRect(tagX, tagY - tagH / 2, tagW, tagH, 8.5);
@@ -1507,8 +2042,8 @@ class DuckRaceGame {
             ctx.rect(tagX, tagY - tagH / 2, tagW, tagH);
         }
         ctx.fill();
-        ctx.strokeStyle = duck.isDrafting ? '#38bdf8' : (duck.finished && duck.rank === 1 ? '#f59e0b' : 'rgba(255, 255, 255, 0.22)');
-        ctx.lineWidth = duck.isDrafting ? 1.6 : 1;
+        ctx.strokeStyle = duck.isDrafting ? '#38bdf8' : (duck.isKurabeai ? '#f59e0b' : (duck.finished && duck.rank === 1 ? '#f59e0b' : 'rgba(255, 255, 255, 0.22)'));
+        ctx.lineWidth = (duck.isDrafting || duck.isKurabeai) ? 1.6 : 1;
         ctx.stroke();
 
         let textStartX = tagX + 6;
@@ -1548,6 +2083,67 @@ class DuckRaceGame {
             ctx.textAlign = 'center';
             ctx.fillText(medal, badgeX, tagY + 0.5);
         }
+
+        // 4. Mini Stamina Bar (Umamusume HP Bar)
+        const staH = 3;
+        const staW = tagW;
+        const staX = tagX;
+        const staY = tagY + tagH / 2 + 2;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(staX, staY, staW, staH, 1.5);
+        } else {
+            ctx.rect(staX, staY, staW, staH);
+        }
+        ctx.fill();
+
+        const staPercent = Math.max(0, Math.min(1, duck.stamina / duck.maxStamina));
+        if (staPercent > 0) {
+            ctx.fillStyle = staPercent > 0.5 ? '#10b981' : (staPercent > 0.2 ? '#f59e0b' : '#ef4444');
+            ctx.beginPath();
+            if (typeof ctx.roundRect === 'function') {
+                ctx.roundRect(staX, staY, staW * staPercent, staH, 1.5);
+            } else {
+                ctx.rect(staX, staY, staW * staPercent, staH);
+            }
+            ctx.fill();
+        }
+
+        // 5. Floating Skill Cut-In Banner (Umamusume Pop-Up)
+        if (duck.activeSkillBanner) {
+            const banner = duck.activeSkillBanner;
+            const skillText = `${banner.icon} ${banner.name}`;
+            ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
+            const sW = ctx.measureText(skillText).width + 16;
+            const sH = 18;
+            const sX = duck.x - sW / 2;
+            const sY = tagY - tagH - 8;
+
+            ctx.save();
+            ctx.fillStyle = banner.tagBg || '#f59e0b';
+            ctx.shadowColor = banner.tagBg || '#f59e0b';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            if (typeof ctx.roundRect === 'function') {
+                ctx.roundRect(sX, sY, sW, sH, 9);
+            } else {
+                ctx.rect(sX, sY, sW, sH);
+            }
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+
+            ctx.fillStyle = banner.tagText || '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(skillText, duck.x, sY + sH / 2);
+            ctx.restore();
+        }
+
         ctx.restore();
     }
 
@@ -1565,10 +2161,14 @@ class DuckRaceGame {
             this.animFrameId = null;
         }
         this.state = 'idle';
+        this.currentPhase = 0;
+        this.raceStartTime = 0;
+        this.updatePhaseUI(0);
         this.setupDucks();
         this.renderStatic();
 
         this.updateStatusText(`Sẵn sàng xuất phát (${this.ducks.length} tuyển thủ, ~${this.targetDuration}s)!`);
+        this.addCommentary('Chuẩn bị xuất phát! Đường đua vịt mô phỏng Umamusume đang sẵn sàng...', 'ready');
 
         const grids = [
             document.getElementById('duck-race-result-grid'),
@@ -1667,7 +2267,13 @@ function renderDuckRaceRoster() {
         `;
     } else {
         container.innerHTML = '';
-        duckRaceRoster.forEach(p => {
+        const stylesList = ['runner', 'leader', 'betweener', 'chaser'];
+        duckRaceRoster.forEach((p, idx) => {
+            if (!p.strategy) {
+                p.strategy = stylesList[idx % stylesList.length];
+            }
+            const style = RUNNING_STYLES[p.strategy] || RUNNING_STYLES.runner;
+
             const isBlue = p.team === 1;
             const isRed = p.team === 2;
             const borderClass = isBlue ? 'border-blue-300 bg-blue-50/80 text-blue-900' : (isRed ? 'border-rose-300 bg-rose-50/80 text-rose-900' : 'border-amber-300 bg-amber-50/80 text-slate-900');
@@ -1677,7 +2283,11 @@ function renderDuckRaceRoster() {
             chip.className = `inline-flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-xl border text-xs font-semibold shadow-2xs transition hover:shadow-xs ${borderClass}`;
             chip.innerHTML = `
                 <span class="w-2 h-2 rounded-full ${teamDot} shrink-0"></span>
-                <span class="font-bold truncate max-w-[120px]">${p.nickname}</span>
+                <span class="font-bold truncate max-w-[110px]">${p.nickname}</span>
+                <button type="button" onclick="cyclePlayerStrategy('${p.id}')" title="Chiến thuật: ${style.name} (${style.desc}) — Bấm để đổi"
+                        class="px-1.5 py-0.5 rounded-lg text-[10px] font-bold border transition shrink-0 ${style.badgeClass}">
+                    ${style.icon} ${style.name}
+                </button>
                 <button type="button" onclick="removePlayerFromDuckRaceRoster('${p.id}')" title="Xoá tuyển thủ này"
                         class="w-5 h-5 rounded-lg hover:bg-slate-200/80 text-slate-400 hover:text-rose-600 flex items-center justify-center transition text-xs shrink-0">
                     <i class="fa-solid fa-xmark"></i>
@@ -1690,6 +2300,15 @@ function renderDuckRaceRoster() {
     if (window.duckRaceGameInstance) {
         window.duckRaceGameInstance.setAllPlayers(duckRaceRoster);
     }
+}
+
+function cyclePlayerStrategy(playerId) {
+    const p = duckRaceRoster.find(r => r.id === playerId);
+    if (!p) return;
+    const styles = ['runner', 'leader', 'betweener', 'chaser'];
+    const currIdx = styles.indexOf(p.strategy || 'runner');
+    p.strategy = styles[(currIdx + 1) % styles.length];
+    renderDuckRaceRoster();
 }
 
 function handleAddCustomDuckPlayer() {
@@ -1952,3 +2571,574 @@ function restartDuckRace() {
         window.duckRaceGameInstance.reset();
     }
 }
+
+// ==========================================
+// RESULT VIEW MODE & COPY HELPERS
+// ==========================================
+let currentDuckResultViewMode = 'teams';
+
+function setDuckResultViewMode(mode) {
+    currentDuckResultViewMode = mode;
+    const teamsView = document.getElementById('duck-result-teams-view');
+    const overallView = document.getElementById('duck-result-overall-view');
+    const btnTeams = document.getElementById('btn-result-view-teams');
+    const btnOverall = document.getElementById('btn-result-view-overall');
+
+    if (mode === 'teams') {
+        if (teamsView) teamsView.classList.remove('hidden');
+        if (overallView) overallView.classList.add('hidden');
+        if (btnTeams) btnTeams.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition bg-indigo-600 text-white shadow-xs';
+        if (btnOverall) btnOverall.className = 'px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+    } else {
+        if (teamsView) teamsView.classList.add('hidden');
+        if (overallView) overallView.classList.remove('hidden');
+        if (btnTeams) btnTeams.className = 'px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+        if (btnOverall) btnOverall.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition bg-indigo-600 text-white shadow-xs';
+    }
+}
+
+function generateDuckRaceResultsText() {
+    if (!window.duckRaceGameInstance || window.duckRaceGameInstance.finishOrder.length === 0) {
+        return 'Chưa có kết quả cuộc đua.';
+    }
+
+    const finishList = window.duckRaceGameInstance.finishOrder;
+    const winner = finishList[0];
+
+    const team1Ducks = finishList.filter(d => d.team === 1);
+    const team2Ducks = finishList.filter(d => d.team === 2);
+    const neutralDucks = finishList.filter(d => d.team !== 1 && d.team !== 2);
+
+    let text = `🦆 KẾT QUẢ ĐUA VỊT — THỨ TỰ BAN / PICK 🏆\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `👑 QUÁN QUÂN: ${winner.nickname} (Cán đích #1 Toàn đoàn)\n\n`;
+
+    if (team1Ducks.length > 0 || team2Ducks.length > 0) {
+        text += `🔵 ĐỘI XANH (Thứ tự Pick nội bộ):\n`;
+        team1Ducks.forEach((d, idx) => {
+            text += `  ${idx + 1}. [Pick #${idx + 1}] ${d.nickname} (Hạng chung cuộc: #${d.rank})\n`;
+        });
+        text += `\n`;
+
+        text += `🔴 ĐỘI ĐỎ (Thứ tự Pick nội bộ):\n`;
+        team2Ducks.forEach((d, idx) => {
+            text += `  ${idx + 1}. [Pick #${idx + 1}] ${d.nickname} (Hạng chung cuộc: #${d.rank})\n`;
+        });
+        text += `\n`;
+    }
+
+    if (neutralDucks.length > 0) {
+        text += `👥 DANH SÁCH TỰ DO:\n`;
+        neutralDucks.forEach((d, idx) => {
+            text += `  ${idx + 1}. #${d.rank} - ${d.nickname}\n`;
+        });
+        text += `\n`;
+    }
+
+    text += `📋 THỨ TỰ VỀ ĐÍCH TOÀN ĐOÀN:\n`;
+    finishList.forEach((d, idx) => {
+        const teamTag = d.team === 1 ? ' [Đội Xanh]' : (d.team === 2 ? ' [Đội Đỏ]' : '');
+        text += `  #${idx + 1}. ${d.nickname}${teamTag}\n`;
+    });
+
+    return text;
+}
+
+async function copyDuckRaceResults() {
+    if (!window.duckRaceGameInstance || window.duckRaceGameInstance.finishOrder.length === 0) {
+        Swal.fire({
+            icon: 'info',
+            title: 'Chưa có kết quả',
+            text: 'Cuộc đua chưa hoàn thành hoặc chưa có vịt về đích!',
+            ...SWAL_THEME
+        });
+        return;
+    }
+
+    const text = generateDuckRaceResultsText();
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã copy kết quả Ban / Pick! 📋',
+            html: '<p class="text-xs text-slate-600">Đã sao chép danh sách theo 2 đội vào bộ nhớ tạm. Bạn có thể dán (Ctrl+V) vào Zalo, Messenger hoặc Discord!</p>',
+            timer: 2200,
+            showConfirmButton: false,
+            ...SWAL_THEME
+        });
+    } catch (e) {
+        viewDuckRaceResultsText();
+    }
+}
+
+function viewDuckRaceResultsText() {
+    const text = generateDuckRaceResultsText();
+    Swal.fire({
+        title: '📋 Kết Quả Đua Vịt Theo 2 Đội',
+        html: `
+            <div class="text-left">
+                <p class="text-xs text-slate-500 mb-2">Sao chép nội dung bên dưới để gửi cho các thành viên:</p>
+                <textarea id="swal-duck-results-textarea" readonly rows="12" 
+                          class="w-full text-xs font-mono bg-slate-900 text-slate-200 p-3 rounded-xl border border-slate-700 select-all outline-none">${text}</textarea>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa-solid fa-copy"></i> Copy Nội Dung',
+        cancelButtonText: 'Đóng',
+        ...SWAL_THEME,
+        preConfirm: () => {
+            const ta = document.getElementById('swal-duck-results-textarea');
+            if (ta) {
+                ta.select();
+                try {
+                    navigator.clipboard.writeText(ta.value);
+                } catch(e) {}
+            }
+        }
+    });
+}
+
+// ==========================================
+// RESULT CARD CANVAS & IMAGE EXPORT
+// ==========================================
+function drawCanvasRoundRect(ctx, x, y, w, h, r) {
+    if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r);
+        return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y + w, x, y, r);
+    ctx.closePath();
+}
+
+function truncateCanvasText(ctx, text, maxWidth) {
+    if (!text) return '';
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    let t = text;
+    while (t.length > 0 && ctx.measureText(t + '...').width > maxWidth) {
+        t = t.slice(0, -1);
+    }
+    return t + '...';
+}
+
+function generateDuckRaceResultsCanvas() {
+    if (!window.duckRaceGameInstance || window.duckRaceGameInstance.finishOrder.length === 0) {
+        return null;
+    }
+
+    const finishList = window.duckRaceGameInstance.finishOrder;
+    const winner = finishList[0];
+    const team1Ducks = finishList.filter(d => d.team === 1);
+    const team2Ducks = finishList.filter(d => d.team === 2);
+    const neutralDucks = finishList.filter(d => d.team !== 1 && d.team !== 2);
+    const hasTeams = team1Ducks.length > 0 || team2Ducks.length > 0;
+
+    const W = 920;
+    const itemH = 48;
+    const itemGap = 8;
+    const rowUnit = itemH + itemGap;
+
+    let maxRows;
+    if (hasTeams) {
+        maxRows = Math.max(team1Ducks.length, team2Ducks.length, neutralDucks.length, 1);
+    } else {
+        maxRows = Math.ceil(finishList.length / 2);
+    }
+
+    const headerH = 175;
+    const colHeaderH = 42;
+    const footerH = 55;
+    const listH = maxRows * rowUnit;
+    const H = Math.max(480, headerH + colHeaderH + listH + footerH + 20);
+
+    const canvas = document.createElement('canvas');
+    const dpr = 2; // Retina 2x for crisp text and graphics
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    // 1. Dark Tournament Theme Gradient Background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    bgGrad.addColorStop(0, '#0b1120');
+    bgGrad.addColorStop(0.5, '#0f172a');
+    bgGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Outer border
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.5;
+    drawCanvasRoundRect(ctx, 12, 12, W - 24, H - 24, 18);
+    ctx.stroke();
+
+    // Subtle ambient top glow
+    const glowGrad = ctx.createLinearGradient(0, 0, W, 0);
+    glowGrad.addColorStop(0, 'rgba(59, 130, 246, 0.25)');
+    glowGrad.addColorStop(0.5, 'rgba(245, 158, 11, 0.35)');
+    glowGrad.addColorStop(1, 'rgba(239, 68, 68, 0.25)');
+    ctx.strokeStyle = glowGrad;
+    ctx.lineWidth = 3;
+    drawCanvasRoundRect(ctx, 13, 13, W - 26, H - 26, 17);
+    ctx.stroke();
+
+    // 2. Header Title & Subtitle
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '900 23px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('🏆 KẾT QUẢ ĐUA VỊT — THỨ TỰ BAN / PICK', W / 2, 46);
+
+    const now = new Date();
+    const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Thời gian: ${dateStr}   •   Chế độ Umamusume Racing (FBCS Engine)`, W / 2, 69);
+
+    // 3. Winner Hero Card Banner
+    const winY = 88;
+    const winH = 68;
+    const winGrad = ctx.createLinearGradient(36, winY, W - 36, winY);
+    winGrad.addColorStop(0, '#78350f');
+    winGrad.addColorStop(0.6, '#451a03');
+    winGrad.addColorStop(1, '#78350f');
+    ctx.fillStyle = winGrad;
+    drawCanvasRoundRect(ctx, 36, winY, W - 72, winH, 14);
+    ctx.fill();
+
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2;
+    drawCanvasRoundRect(ctx, 36, winY, W - 72, winH, 14);
+    ctx.stroke();
+
+    // Trophy icon
+    ctx.font = '32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🏆', 72, winY + 45);
+
+    // Winner texts
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#fde68a';
+    ctx.font = '800 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('QUÁN QUÂN VỀ ĐÍCH ĐẦU TIÊN (HẠNG #1 TOÀN ĐOÀN)', 110, winY + 26);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    const winStyleIcon = winner.styleConfig ? winner.styleConfig.icon : '🦆';
+    const winText = truncateCanvasText(ctx, `${winStyleIcon} ${winner.nickname}`, 460);
+    ctx.fillText(winText, 110, winY + 52);
+
+    // Winner Team Badge on Right
+    ctx.textAlign = 'right';
+    if (winner.team === 1) {
+        ctx.fillStyle = '#3b82f6';
+        drawCanvasRoundRect(ctx, W - 180, winY + 20, 130, 28, 8);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🔵 ĐỘI XANH', W - 115, winY + 38);
+    } else if (winner.team === 2) {
+        ctx.fillStyle = '#ef4444';
+        drawCanvasRoundRect(ctx, W - 180, winY + 20, 130, 28, 8);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🔴 ĐỘI ĐỎ', W - 115, winY + 38);
+    } else {
+        ctx.fillStyle = '#64748b';
+        drawCanvasRoundRect(ctx, W - 180, winY + 20, 130, 28, 8);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('👥 TỰ DO', W - 115, winY + 38);
+    }
+
+    // 4. Two Columns: Đội Xanh vs Đội Đỏ
+    const startListY = winY + winH + 20;
+
+    if (hasTeams) {
+        const colW = (W - 72 - 20) / 2;
+        const leftX = 36;
+        const rightX = leftX + colW + 20;
+
+        // Team 1 Header
+        ctx.fillStyle = 'rgba(30, 58, 138, 0.45)';
+        drawCanvasRoundRect(ctx, leftX, startListY, colW, 36, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 1.5;
+        drawCanvasRoundRect(ctx, leftX, startListY, colW, 36, 10);
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#93c5fd';
+        ctx.font = '900 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`🔵 ĐỘI XANH  •  ${team1Ducks.length} Tuyển Thủ`, leftX + 16, startListY + 23);
+
+        // Team 2 Header
+        ctx.fillStyle = 'rgba(136, 19, 55, 0.45)';
+        drawCanvasRoundRect(ctx, rightX, startListY, colW, 36, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1.5;
+        drawCanvasRoundRect(ctx, rightX, startListY, colW, 36, 10);
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#fca5a5';
+        ctx.font = '900 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`🔴 ĐỘI ĐỎ  •  ${team2Ducks.length} Tuyển Thủ`, rightX + 16, startListY + 23);
+
+        // Render Team 1 Rows
+        const itemsStartY = startListY + 44;
+        team1Ducks.forEach((duck, idx) => {
+            const rowY = itemsStartY + idx * rowUnit;
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+            drawCanvasRoundRect(ctx, leftX, rowY, colW, itemH, 10);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+            ctx.lineWidth = 1;
+            drawCanvasRoundRect(ctx, leftX, rowY, colW, itemH, 10);
+            ctx.stroke();
+
+            // Pick badge pill
+            ctx.fillStyle = '#2563eb';
+            drawCanvasRoundRect(ctx, leftX + 10, rowY + 11, 68, 26, 6);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Pick #${idx + 1}`, leftX + 44, rowY + 28);
+
+            // Nickname + style icon
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            const styleIcon = duck.styleConfig ? duck.styleConfig.icon : '🦆';
+            const nameStr = truncateCanvasText(ctx, `${styleIcon} ${duck.nickname}`, colW - 190);
+            ctx.fillText(nameStr, leftX + 88, rowY + 29);
+
+            // Overall rank
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(`(Hạng #${duck.rank})`, leftX + colW - 14, rowY + 29);
+        });
+
+        // Render Team 2 Rows
+        team2Ducks.forEach((duck, idx) => {
+            const rowY = itemsStartY + idx * rowUnit;
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+            drawCanvasRoundRect(ctx, rightX, rowY, colW, itemH, 10);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(244, 63, 94, 0.4)';
+            ctx.lineWidth = 1;
+            drawCanvasRoundRect(ctx, rightX, rowY, colW, itemH, 10);
+            ctx.stroke();
+
+            // Pick badge pill
+            ctx.fillStyle = '#e11d48';
+            drawCanvasRoundRect(ctx, rightX + 10, rowY + 11, 68, 26, 6);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Pick #${idx + 1}`, rightX + 44, rowY + 28);
+
+            // Nickname + style icon
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            const styleIcon = duck.styleConfig ? duck.styleConfig.icon : '🦆';
+            const nameStr = truncateCanvasText(ctx, `${styleIcon} ${duck.nickname}`, colW - 190);
+            ctx.fillText(nameStr, rightX + 88, rowY + 29);
+
+            // Overall rank
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillText(`(Hạng #${duck.rank})`, rightX + colW - 14, rowY + 29);
+        });
+    } else {
+        // Free for all mode: 2 columns of finish ranks
+        const colW = (W - 72 - 20) / 2;
+        const leftX = 36;
+        const rightX = leftX + colW + 20;
+        const midPoint = Math.ceil(finishList.length / 2);
+
+        finishList.forEach((duck, idx) => {
+            const isLeft = idx < midPoint;
+            const colX = isLeft ? leftX : rightX;
+            const rowIdx = isLeft ? idx : idx - midPoint;
+            const rowY = startListY + rowIdx * rowUnit;
+
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+            drawCanvasRoundRect(ctx, colX, rowY, colW, itemH, 10);
+            ctx.fill();
+            ctx.strokeStyle = idx === 0 ? '#f59e0b' : (idx === 1 ? '#94a3b8' : (idx === 2 ? '#d97706' : 'rgba(71, 85, 105, 0.4)'));
+            ctx.lineWidth = idx < 3 ? 1.5 : 1;
+            drawCanvasRoundRect(ctx, colX, rowY, colW, itemH, 10);
+            ctx.stroke();
+
+            let rankColor = '#475569';
+            if (idx === 0) rankColor = '#b45309';
+            else if (idx === 1) rankColor = '#64748b';
+            else if (idx === 2) rankColor = '#78350f';
+
+            ctx.fillStyle = rankColor;
+            drawCanvasRoundRect(ctx, colX + 10, rowY + 11, 56, 26, 6);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`#${idx + 1}`, colX + 38, rowY + 28);
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            const styleIcon = duck.styleConfig ? duck.styleConfig.icon : '🦆';
+            const nameStr = truncateCanvasText(ctx, `${styleIcon} ${duck.nickname}`, colW - 100);
+            ctx.fillText(nameStr, colX + 76, rowY + 29);
+        });
+    }
+
+    // 5. Footer Branding
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#64748b';
+    ctx.font = '500 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('🎮 FBCS Mini-Games  •  Hệ Thống Phân Định Thứ Tự Ban / Pick Công Bằng & Ngẫu Nhiên', W / 2, H - 24);
+
+    return canvas;
+}
+
+async function copyDuckRaceResultsImage() {
+    if (!window.duckRaceGameInstance || window.duckRaceGameInstance.finishOrder.length === 0) {
+        Swal.fire({
+            icon: 'info',
+            title: 'Chưa có kết quả',
+            text: 'Cuộc đua chưa hoàn thành hoặc chưa có vịt về đích!',
+            ...SWAL_THEME
+        });
+        return;
+    }
+
+    try {
+        const canvas = generateDuckRaceResultsCanvas();
+        if (!canvas) return;
+
+        const dataUrl = canvas.toDataURL('image/png');
+
+        // Attempt Clipboard Item Write
+        let copied = false;
+        if (navigator.clipboard && window.ClipboardItem) {
+            try {
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                if (blob) {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    copied = true;
+                }
+            } catch (clipErr) {
+                console.warn('Clipboard write image failed, showing fallback modal:', clipErr);
+            }
+        }
+
+        if (copied) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã copy ảnh kết quả! 📸',
+                html: `
+                    <div class="space-y-3 text-center">
+                        <p class="text-xs text-slate-600">
+                            Đã sao chép ảnh thẻ kết quả vào bộ nhớ tạm. Bạn có thể <b>dán (Ctrl+V)</b> ngay vào Zalo, Messenger, Discord!
+                        </p>
+                        <div class="p-2 bg-slate-900 rounded-xl border border-slate-700 max-h-56 overflow-y-auto custom-scrollbar">
+                            <img src="${dataUrl}" alt="Race Results" class="rounded-lg shadow-xs mx-auto w-full">
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa-solid fa-download"></i> Tải Ảnh PNG',
+                cancelButtonText: 'Đóng',
+                ...SWAL_THEME
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    downloadDuckRaceResultImage(dataUrl);
+                }
+            });
+        } else {
+            openDuckRaceResultImageModal(dataUrl);
+        }
+    } catch (err) {
+        console.error('Error generating race result image:', err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Lỗi xuất ảnh',
+            text: 'Không thể tạo ảnh kết quả: ' + err.message,
+            ...SWAL_THEME
+        });
+    }
+}
+
+function downloadDuckRaceResultImage(dataUrl) {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    const now = new Date();
+    const timeStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+    a.download = `KetQua_DuaVit_BanPick_${timeStr}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+function openDuckRaceResultImageModal(dataUrl) {
+    Swal.fire({
+        title: '📸 Ảnh Thẻ Kết Quả Đua Vịt',
+        html: `
+            <div class="space-y-3 text-center">
+                <p class="text-xs text-slate-500">
+                    Trình duyệt chưa cho phép ghi trực tiếp ảnh vào clipboard. Bạn có thể <b>Click chuột phải > Sao chép hình ảnh</b> hoặc <b>Tải ảnh về máy</b>:
+                </p>
+                <div class="p-2 bg-slate-900 rounded-2xl border border-slate-700 max-h-[360px] overflow-y-auto custom-scrollbar">
+                    <img src="${dataUrl}" alt="Race Results" class="rounded-xl shadow-md mx-auto w-full">
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa-solid fa-download"></i> Tải Ảnh Về Máy',
+        cancelButtonText: 'Đóng',
+        ...SWAL_THEME
+    }).then((res) => {
+        if (res.isConfirmed) {
+            downloadDuckRaceResultImage(dataUrl);
+        }
+    });
+}
+
+// Global window bindings
+window.generateDuckRaceResultsCanvas = generateDuckRaceResultsCanvas;
+window.copyDuckRaceResultsImage = copyDuckRaceResultsImage;
+window.downloadDuckRaceResultImage = downloadDuckRaceResultImage;
+window.openDuckRaceResultImageModal = openDuckRaceResultImageModal;
+

@@ -129,6 +129,28 @@
             </button>
         </div>
 
+        <!-- Running Styles Legend Bar -->
+        <div class="flex items-center gap-2 flex-wrap text-[11px] px-3.5 py-2 bg-slate-50/90 rounded-2xl border border-slate-200/80 text-slate-600">
+            <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                <i class="fa-solid fa-horse-head text-indigo-500"></i> Chiến thuật Umamusume:
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
+                🚀 Tiên Phong (Dẫn đầu)
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+                🎯 Tiên Hành (Top 2-4)
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
+                🌪️ Sai Đoàn (Giữa đàn)
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-pink-50 text-pink-700 border border-pink-200 font-semibold">
+                ⚡ Truy Kích (Đuôi đàn - Spurt)
+            </span>
+            <span class="text-slate-400 italic ml-auto hidden md:inline text-[10px]">
+                *Bấm vào badge chiến thuật trên tên vịt để đổi phong cách tùy ý
+            </span>
+        </div>
+
         <!-- Active Player Chips Container -->
         <div id="duck-roster-chips-container" class="flex flex-wrap items-center gap-2 p-3 bg-slate-50/70 rounded-2xl border border-slate-200/80 min-h-[58px]">
             <!-- Dynamic Player Chips Rendered via JS -->
@@ -190,6 +212,22 @@
                 </div>
             </div>
         </div>
+
+        <!-- Live Sports Broadcast Commentary Ticker -->
+        <div class="px-5 py-2.5 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold shrink-0 text-[11px]">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                    <span>TRỰC TIẾP</span>
+                </span>
+                <p id="tab-duck-race-ticker-text" class="text-slate-300 font-medium truncate">
+                    Chuẩn bị xuất phát! Đường đua vịt mô phỏng Umamusume đang sẵn sàng...
+                </p>
+            </div>
+            <div id="tab-duck-phase-badge" class="px-2.5 py-1 rounded-lg bg-slate-800 text-amber-400 border border-slate-700 font-bold text-[11px] shrink-0">
+                Chặng: Khởi Động
+            </div>
+        </div>
     </div>
 
     <!-- Race Results & Elimination Section -->
@@ -230,17 +268,90 @@
         </div>
 
         <!-- Full Finish Ranking Board -->
-        <div>
-            <div class="flex items-center justify-between mb-3">
-                <h4 class="text-sm font-bold font-heading text-slate-900 flex items-center gap-2">
-                    <i class="fa-solid fa-list-ol text-indigo-600"></i>
-                    <span>Bảng Xếp Hạng Về Đích (<span id="duck-finished-count">0</span>/<span id="duck-total-count">0</span>)</span>
-                </h4>
-                <span class="text-xs text-slate-500">Bấm nút "Loại" ở từng thẻ để gạch tên bất kỳ người chơi nào</span>
+        <div class="space-y-3.5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                    <h4 class="text-sm font-bold font-heading text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-list-ol text-indigo-600"></i>
+                        <span>Kết Quả Về Đích (<span id="duck-finished-count">0</span>/<span id="duck-total-count">0</span>)</span>
+                    </h4>
+                    <!-- View Mode Toggle -->
+                    <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200" id="duck-results-view-mode">
+                        <button type="button" onclick="setDuckResultViewMode('teams')" id="btn-result-view-teams"
+                                class="px-2.5 py-1 rounded-lg text-xs font-bold transition bg-indigo-600 text-white shadow-xs">
+                            👥 Chia 2 Đội
+                        </button>
+                        <button type="button" onclick="setDuckResultViewMode('overall')" id="btn-result-view-overall"
+                                class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition">
+                            🏁 Thứ Tự Tổng Thể
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Action Toolbar: Copy Image, Copy Text & View text -->
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="copyDuckRaceResultsImage()" title="Xuất và sao chép ảnh thẻ kết quả"
+                            class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black font-heading text-xs shadow-xs transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-camera"></i>
+                        <span>Copy Dạng Ảnh</span>
+                    </button>
+                    <button type="button" onclick="copyDuckRaceResults()" title="Sao chép kết quả Ban / Pick vào clipboard"
+                            class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-copy"></i>
+                        <span>Copy Text</span>
+                    </button>
+                    <button type="button" onclick="viewDuckRaceResultsText()" title="Xem toàn bộ kết quả dạng text để copy thủ công"
+                            class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-lines text-slate-500"></i>
+                        <span>Xem Text</span>
+                    </button>
+                </div>
             </div>
 
-            <div id="duck-race-result-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-                <!-- Dynamically Rendered Finish Cards with Remove Buttons -->
+            <!-- View 1: Chia Theo 2 Đội (Mặc định) -->
+            <div id="duck-result-teams-view" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Cột Đội Xanh -->
+                <div class="bg-blue-50/60 rounded-2xl border-2 border-blue-200 p-4 space-y-3">
+                    <div class="flex items-center justify-between border-b border-blue-200/80 pb-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                            <h5 class="font-black font-heading text-xs uppercase text-blue-900 tracking-wide">
+                                Thứ Tự Ban / Pick — Đội Xanh
+                            </h5>
+                        </div>
+                        <span id="duck-team1-count-badge" class="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold text-[10px] border border-blue-200">
+                            0 người
+                        </span>
+                    </div>
+                    <div id="duck-result-team1-list" class="space-y-2">
+                        <!-- Danh sách tuyển thủ Đội Xanh do JS render -->
+                    </div>
+                </div>
+
+                <!-- Cột Đội Đỏ -->
+                <div class="bg-rose-50/60 rounded-2xl border-2 border-rose-200 p-4 space-y-3">
+                    <div class="flex items-center justify-between border-b border-rose-200/80 pb-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+                            <h5 class="font-black font-heading text-xs uppercase text-rose-900 tracking-wide">
+                                Thứ Tự Ban / Pick — Đội Đỏ
+                            </h5>
+                        </div>
+                        <span id="duck-team2-count-badge" class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-200">
+                            0 người
+                        </span>
+                    </div>
+                    <div id="duck-result-team2-list" class="space-y-2">
+                        <!-- Danh sách tuyển thủ Đội Đỏ do JS render -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- View 2: Thứ Tự Tổng Thể Chung -->
+            <div id="duck-result-overall-view" class="hidden">
+                <div id="duck-race-result-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+                    <!-- Dynamically Rendered Finish Cards with Remove Buttons -->
+                </div>
             </div>
         </div>
     </div>
