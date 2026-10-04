@@ -519,8 +519,8 @@ const RUNNING_STYLES = {
         color: '#f59e0b',
         badgeClass: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-400/50',
         desc: 'Bơi dẫn đầu sớm, đốt nhiều thể lực, dễ hụt hơi cuối chặng nếu không có kỹ năng hồi sức',
-        phasePacing: [1.30, 1.12, 0.96, 1.08],
-        staminaBurnRate: 1.25
+        phasePacing: [1.135, 1.05, 0.945, 0.945],
+        staminaBurnRate: 1.12
     },
     leader: {
         id: 'leader',
@@ -529,8 +529,8 @@ const RUNNING_STYLES = {
         color: '#10b981',
         badgeClass: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-400/50',
         desc: 'Bám sát top 2-4, nhịp bơi ổn định, bứt phá ở chặng cuối',
-        phasePacing: [1.02, 1.06, 1.16, 1.24],
-        staminaBurnRate: 1.0
+        phasePacing: [1.025, 1.045, 1.075, 1.09],
+        staminaBurnRate: 1.00
     },
     betweener: {
         id: 'betweener',
@@ -539,8 +539,8 @@ const RUNNING_STYLES = {
         color: '#6366f1',
         badgeClass: 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-400/50',
         desc: 'Núp giữa bầy, tiết kiệm thể lực nhờ núp gió, gia tốc cực mạnh khi vào cua cuối',
-        phasePacing: [0.90, 0.98, 1.20, 1.38],
-        staminaBurnRate: 0.88
+        phasePacing: [0.96, 0.99, 1.11, 1.17],
+        staminaBurnRate: 0.92
     },
     chaser: {
         id: 'chaser',
@@ -549,8 +549,8 @@ const RUNNING_STYLES = {
         color: '#ec4899',
         badgeClass: 'bg-pink-500/20 text-pink-700 dark:text-pink-300 border-pink-400/50',
         desc: 'Thong thả ở cuối đàn, giữ trọn thể lực, bùng nổ Top Speed kinh hoàng ở Last Spurt!',
-        phasePacing: [0.80, 0.90, 1.08, 1.58],
-        staminaBurnRate: 0.78
+        phasePacing: [0.92, 0.96, 1.15, 1.28],
+        staminaBurnRate: 0.86
     }
 };
 
@@ -631,9 +631,9 @@ const UMAMUSUME_SKILLS = [
         tagBg: '#38bdf8',
         tagText: '#0f172a',
         phases: [1, 2],
-        condition: (duck) => duck.strategy === 'runner' && duck.rankEstimate <= 2,
+        condition: (duck) => duck.rankEstimate <= 2,
         effect: (duck) => {
-            duck.speedMultiplier = Math.max(duck.speedMultiplier, 1.32);
+            duck.speedMultiplier = Math.max(duck.speedMultiplier, 1.30);
         }
     }
 ];
@@ -1312,11 +1312,11 @@ class DuckRaceGame {
             // Stamina Consumption & Exhaustion (Out of Gas 💦)
             const styleBurn = duck.styleConfig ? duck.styleConfig.staminaBurnRate : 1.0;
             let drainMultiplier = styleBurn;
-            if (duck.isKakari) drainMultiplier *= 2.2;
-            if (duck.isSpurting || duck.phase === 3) drainMultiplier *= 1.6;
-            if (duck.isDrafting) drainMultiplier *= 0.6; // drafting saves stamina!
+            if (duck.isKakari) drainMultiplier *= 2.0;
+            if (duck.isSpurting || duck.phase === 3) drainMultiplier *= 1.5;
+            if (duck.isDrafting) drainMultiplier *= 0.65; // drafting saves stamina!
 
-            const baseDrain = (dt / 1000) * (100 / this.targetDuration) * 0.96 * drainMultiplier;
+            const baseDrain = (dt / 1000) * (100 / this.targetDuration) * 1.02 * drainMultiplier;
             duck.stamina = Math.max(0, duck.stamina - baseDrain);
 
             if (duck.stamina <= 0) {
@@ -1339,15 +1339,17 @@ class DuckRaceGame {
             const pacing = duck.styleConfig ? duck.styleConfig.phasePacing[duck.phase] : 1.0;
             let dynamicSpeedMod = duck.speedMultiplier;
 
-            if (duck.isKakari) dynamicSpeedMod *= 1.38;
-            if (duck.isExhausted) dynamicSpeedMod *= 0.58; // severe slowdown!
+            if (duck.isKakari) dynamicSpeedMod *= 1.32;
+            if (duck.isExhausted) dynamicSpeedMod *= 0.62; // slowdown on out-of-gas
             if (duck.isKurabeai) dynamicSpeedMod *= 1.16;
 
-            // Last Spurt Burst for Chasers & Betweeners!
+            // Last Spurt Burst for each strategy!
             if (duck.phase === 3 && !duck.isExhausted) {
                 duck.isSpurting = true;
-                if (duck.strategy === 'chaser') dynamicSpeedMod *= 1.25;
-                else if (duck.strategy === 'betweener') dynamicSpeedMod *= 1.15;
+                if (duck.strategy === 'chaser') dynamicSpeedMod *= 1.18;
+                else if (duck.strategy === 'betweener') dynamicSpeedMod *= 1.10;
+                else if (duck.strategy === 'leader') dynamicSpeedMod *= 1.04;
+                else if (duck.strategy === 'runner') dynamicSpeedMod *= 1.00;
             } else {
                 duck.isSpurting = false;
             }
@@ -1415,7 +1417,8 @@ class DuckRaceGame {
                     const onCd = duck.skillCooldowns[skill.id] && now < duck.skillCooldowns[skill.id];
                     if (!onCd && skill.phases.includes(duck.phase) && skill.condition(duck, this)) {
                         if (Math.random() < 0.38) {
-                            duck.skillCooldowns[skill.id] = now + 5000;
+                            duck.skillCooldowns[skill.id] = now + 4500;
+                            duck.effectDuration = 2200; // Skill effect lasts 2.2s!
                             skill.effect(duck, this);
                             duck.activeSkillBanner = {
                                 name: skill.name,
